@@ -5,6 +5,7 @@
 const assert = require('assert');
 const http = require('http');
 const { server, startServer } = require('../src/server/server');
+const roomManager = require('../src/server/room_manager');
 
 const TEST_PORT = 3333;
 const BASE_URL = `http://localhost:${TEST_PORT}`;
@@ -117,7 +118,7 @@ async function runMultiplayerTests() {
       roomCode: roomCode,
       message: 'Impersonated message'
     });
-    assert.strictEqual(unauthenticatedChatRes.status, 400);
+    assert.strictEqual(unauthenticatedChatRes.status, 401);
     console.log('   ✓ Authenticated room chat accepts valid messages and rejects abuse');
 
     // 3. Prevent duplicate display name
@@ -200,6 +201,71 @@ async function runMultiplayerTests() {
     assert.strictEqual(reconnectRes.data.player.id, guestPlayer.id);
     console.log('   ✓ Session restored seamlessly upon reconnect');
 
+    // 8b. Disconnecting mid-game keeps the seat instead of forfeiting the match
+    console.log('8b. Guest drops connection mid-game...');
+    const fakeStream = { write() {} };
+    roomManager.addSubscriber(roomCode, fakeStream, guestPlayer.id);
+    roomManager.removeSubscriber(roomCode, fakeStream);
+    assert(!roomManager.disconnectTimers.has(`${roomCode}:${guestPlayer.id}`), 'No eviction timer mid-game');
+    const droppedPlayer = roomManager.rooms.get(roomCode).players.find(p => p.id === guestPlayer.id);
+    assert(droppedPlayer && droppedPlayer.connected === false, 'Seat kept and marked offline');
+    console.log('   ✓ Seat kept while the player is offline');
+
+    // 8c. Server restart wipes memory; the client checkpoint rebuilds the room exactly
+    console.log('8c. Simulating a server restart and restoring from checkpoint...');
+    const latest = await post('/api/rooms/join', { roomCode, reconnectToken: guestToken });
+    const checkpoint = latest.data.checkpoint;
+    assert(checkpoint && checkpoint.data && checkpoint.version > 1, 'Responses carry a checkpoint');
+    const before = latest.data.room.gameState;
+    assert(!checkpoint.data.includes(guestToken), 'Checkpoint must not expose secrets');
+
+    roomManager.rooms.clear();
+    roomManager.subscribers.clear();
+    const lostPing = await post('/api/rooms/ping', { roomCode }, guestToken);
+    assert.strictEqual(lostPing.status, 404);
+
+    const flipped = checkpoint.data.slice(0, 40) + (checkpoint.data[40] === 'A' ? 'B' : 'A') + checkpoint.data.slice(41);
+    const tampered = await post('/api/rooms/restore', { checkpoint: flipped }, guestToken);
+    assert.strictEqual(tampered.status, 400, 'Tampered checkpoints are rejected');
+    const stranger = await post('/api/rooms/restore', { checkpoint: checkpoint.data }, 'not-a-member');
+    assert.strictEqual(stranger.status, 401, 'Only room members can restore');
+
+    const restoreRes = await post('/api/rooms/restore', { checkpoint: checkpoint.data }, guestToken);
+    assert.strictEqual(restoreRes.status, 200);
+    assert.strictEqual(restoreRes.data.restored, true);
+    assert.strictEqual(restoreRes.data.room.status, 'IN_GAME');
+    assert.deepStrictEqual(restoreRes.data.room.gameState.lastRoll, before.lastRoll);
+    assert.strictEqual(restoreRes.data.room.gameState.currentTurnIndex, before.currentTurnIndex);
+    assert.deepStrictEqual(
+      restoreRes.data.room.gameState.players.map(p => p.tokens),
+      before.players.map(p => p.tokens)
+    );
+
+    const secondRestore = await post('/api/rooms/restore', { checkpoint: checkpoint.data }, hostToken);
+    assert.strictEqual(secondRestore.status, 200);
+    assert.strictEqual(secondRestore.data.restored, false, 'Older or equal checkpoints never overwrite');
+
+    const restoredRoom = roomManager.rooms.get(roomCode);
+    const realId = restoredRoom.id;
+    restoredRoom.id = 'someone-elses-room';
+    restoredRoom.version = 0;
+    const collision = await post('/api/rooms/restore', { checkpoint: checkpoint.data }, guestToken);
+    assert.strictEqual(collision.status, 409, 'A reused room code is never overwritten');
+    restoredRoom.id = realId;
+    restoredRoom.version = 100;
+
+    const tokenById = { [hostPlayer.id]: hostToken, [guestPlayer.id]: guestToken };
+    const restoredGame = restoreRes.data.room.gameState;
+    const currentId = restoredGame.players[restoredGame.currentTurnIndex].id;
+    const actionAfterRestore = await post('/api/rooms/action', {
+      roomCode,
+      action: restoredGame.phase === 'MOVE'
+        ? { type: 'MOVE_TOKEN', tokenIndex: restoredGame.legalMoves[0].tokenIndex }
+        : { type: 'ROLL_DICE' }
+    }, tokenById[currentId]);
+    assert.strictEqual(actionAfterRestore.status, 200, 'Play continues after restore');
+    console.log('   ✓ Room rebuilt from checkpoint; tampering, strangers and stale copies rejected');
+
     // 9. Host handoff test
     console.log('9. Host leaves room, testing host handoff...');
     const leaveRes = await post('/api/rooms/leave', {
@@ -246,6 +312,21 @@ async function runMultiplayerTests() {
     assert.deepStrictEqual(Object.keys(tambolaReconnect.data.room.gameState.tickets), [tambolaGuest.id]);
     assert.strictEqual(tambolaReconnect.data.room.gameState.ballPool, undefined);
     console.log('   ✓ Tickets and future ball order are private per player');
+
+    // 11. Idle lobby seats are still released after the grace period
+    console.log('11. Lobby player goes offline past the grace period...');
+    const lobbyCreate = await post('/api/rooms/create', { hostName: 'Lobby Host', gameType: 'ludo', maxPlayers: 4 });
+    const lobbyCode = lobbyCreate.data.roomCode;
+    const lobbyJoin = await post('/api/rooms/join', { roomCode: lobbyCode, playerName: 'Wanderer' });
+    const previousGrace = roomManager.lobbyDisconnectGraceMs;
+    roomManager.lobbyDisconnectGraceMs = 30;
+    const lobbyStream = { write() {} };
+    roomManager.addSubscriber(lobbyCode, lobbyStream, lobbyJoin.data.player.id);
+    roomManager.removeSubscriber(lobbyCode, lobbyStream);
+    await new Promise(resolve => setTimeout(resolve, 120));
+    roomManager.lobbyDisconnectGraceMs = previousGrace;
+    assert(!roomManager.rooms.get(lobbyCode).players.some(p => p.id === lobbyJoin.data.player.id));
+    console.log('   ✓ Offline lobby seat released after grace period');
 
     console.log('\n====================================================');
     console.log('ALL MULTIPLAYER INTEGRATION TESTS PASSED! 🎉');

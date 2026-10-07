@@ -113,7 +113,8 @@ const server = http.createServer(async (req, res) => {
         roomCode: result.roomCode,
         player: roomManager.getPublicPlayer(result.player),
         reconnectToken: result.reconnectToken,
-        room: roomManager.getRoomSummary(room, result.player.id)
+        room: roomManager.getRoomSummary(room, result.player.id),
+        checkpoint: roomManager.createCheckpoint(room)
       });
     }
 
@@ -124,7 +125,26 @@ const server = http.createServer(async (req, res) => {
         room: roomManager.getRoomSummary(result.room, result.player.id),
         player: roomManager.getPublicPlayer(result.player),
         reconnectToken: result.reconnectToken,
-        reconnected: result.reconnected
+        reconnected: result.reconnected,
+        checkpoint: roomManager.createCheckpoint(result.room)
+      });
+    }
+
+    if (pathname === '/api/rooms/ping' && method === 'POST') {
+      const body = await parseJsonBody(req);
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      auth.room.lastActivity = Date.now();
+      return sendJson(res, 200, { ok: true, version: auth.room.version || 0 });
+    }
+
+    if (pathname === '/api/rooms/restore' && method === 'POST') {
+      const body = await parseJsonBody(req);
+      const result = roomManager.restoreRoom(body.checkpoint, getReconnectToken(req));
+      return sendJson(res, 200, {
+        restored: result.restored,
+        room: roomManager.getRoomSummary(result.room, result.player.id),
+        player: roomManager.getPublicPlayer(result.player),
+        checkpoint: roomManager.createCheckpoint(result.room)
       });
     }
 
@@ -167,7 +187,8 @@ const server = http.createServer(async (req, res) => {
       roomManager.startGame(body.roomCode, auth.player.id);
       return sendJson(res, 200, {
         gameState: roomManager.getClientGameState(auth.room, auth.player.id),
-        room: roomManager.getRoomSummary(auth.room, auth.player.id)
+        room: roomManager.getRoomSummary(auth.room, auth.player.id),
+        checkpoint: roomManager.createCheckpoint(auth.room)
       });
     }
 
@@ -177,7 +198,8 @@ const server = http.createServer(async (req, res) => {
       const result = roomManager.executeAction(body.roomCode, auth.player.id, body.action);
       return sendJson(res, 200, {
         gameState: roomManager.getClientGameState(auth.room, auth.player.id),
-        actionResult: roomManager.getClientActionResult(result.actionResult)
+        actionResult: roomManager.getClientActionResult(result.actionResult),
+        checkpoint: roomManager.createCheckpoint(auth.room)
       });
     }
 
@@ -195,7 +217,8 @@ const server = http.createServer(async (req, res) => {
       const room = roomManager.rooms.get(roomManager.normalizeRoomCode(body.roomCode));
       return sendJson(res, 200, {
         chat: room ? room.chat.slice(-50) : [],
-        message: message
+        message: message,
+        checkpoint: room ? roomManager.createCheckpoint(room) : null
       });
     }
 
@@ -243,7 +266,7 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 404, { error: 'Not found' });
   } catch (err) {
     console.error('Server error on', method, pathname, err);
-    sendJson(res, 400, { error: err.message || 'Internal server error' });
+    sendJson(res, err.statusCode || 400, { error: err.message || 'Internal server error' });
   }
 });
 
@@ -251,6 +274,10 @@ function startServer(port = PORT) {
   return new Promise((resolve, reject) => {
     server.listen(port, () => {
       console.log(`🏰 myArena Royalty Server running at http://localhost:${port}`);
+      if (roomManager.checkpointKeyIsEphemeral) {
+        console.warn('MYARENA_CHECKPOINT_SECRET is not set: rooms cannot be restored after a server ' +
+          'restart. Set it to a long random value in your hosting environment.');
+      }
       resolve(server);
     });
     server.on('error', reject);

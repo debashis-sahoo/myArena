@@ -209,7 +209,10 @@
     lastActivityKey: null,
     resultsGameId: null,
     sseDisconnected: false,
-    aiTimer: null
+    aiTimer: null,
+    checkpoint: null,
+    recovering: null,
+    keepaliveTimer: null
   };
 
   // Announce to Screen Reader
@@ -414,19 +417,203 @@
   // =========================================================================
   // 6. ROOM LIFECYCLE & MULTIPLAYER API
   // =========================================================================
-  async function apiPost(endpoint, data) {
+  async function apiPost(endpoint, data, options = {}) {
     const headers = { 'Content-Type': 'application/json' };
-    if (state.reconnectToken) {
-      headers['X-Reconnect-Token'] = state.reconnectToken;
+    const token = options.token || state.reconnectToken;
+    if (token) {
+      headers['X-Reconnect-Token'] = token;
     }
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(data)
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Request failed');
+    let res;
+    try {
+      res = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data)
+      });
+    } catch (networkErr) {
+      throw new Error('Network unavailable. Retrying...');
+    }
+    let json;
+    try {
+      json = await res.json();
+    } catch (parseErr) {
+      // e.g. a host's "waking up" HTML page while the server instance restarts.
+      const err = new Error('Server is starting up. Retrying...');
+      err.status = res.status;
+      err.transient = true;
+      throw err;
+    }
+    if (json && json.checkpoint) {
+      rememberCheckpoint(json.checkpoint, (data && data.roomCode) || json.roomCode);
+    }
+    if (!res.ok) {
+      const err = new Error(json.error || 'Request failed');
+      err.status = res.status;
+      const forCurrentRoom = state.room && !state.isSolo && data && data.roomCode === state.room.code;
+      if (!options.noRecover && forCurrentRoom && isRoomMissingError(err)) {
+        if (await ensureRoomConnection()) {
+          return apiPost(endpoint, data, Object.assign({}, options, { noRecover: true }));
+        }
+      }
+      throw err;
+    }
     return json;
+  }
+
+  // =========================================================================
+  // CONNECTION RESILIENCE
+  // Rooms live in server memory, which hosts like Render wipe on restarts, deploys and
+  // idle spin-downs. Clients keep the server's latest encrypted checkpoint and use it to
+  // rebuild the room, reconnect automatically, and ping so the instance stays awake.
+  // =========================================================================
+  const KEEPALIVE_MS = 4 * 60 * 1000;
+  const MAX_RECONNECT_DELAY_MS = 15000;
+
+  function isRoomMissingError(err) {
+    return !!err && (err.status === 404 || /room not found|does not exist/i.test(err.message || ''));
+  }
+
+  function isPermanentError(err) {
+    return !!err && !err.transient && typeof err.status === 'number' && err.status >= 400 && err.status < 500;
+  }
+
+  function checkpointStorageKey(roomCode) {
+    return `myarena_cp_${roomCode}`;
+  }
+
+  function loadCheckpoint(roomCode) {
+    if (state.checkpoint && state.checkpoint.code === roomCode) return state.checkpoint;
+    try {
+      const saved = JSON.parse(safeStorage.getItem(checkpointStorageKey(roomCode)) || 'null');
+      return saved && saved.code === roomCode && saved.data ? saved : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function rememberCheckpoint(checkpoint, roomCode) {
+    const code = roomCode || (state.room && state.room.code);
+    if (!checkpoint || !checkpoint.data || !code) return;
+    const current = loadCheckpoint(code);
+    if (current && current.version > checkpoint.version) return;
+    state.checkpoint = { code, version: checkpoint.version, data: checkpoint.data };
+    safeStorage.setItem(checkpointStorageKey(code), JSON.stringify(state.checkpoint));
+  }
+
+  function applyRoomSnapshot(room) {
+    state.room = room;
+    state.isHost = room.hostId === state.playerId;
+    if ((room.status === 'IN_GAME' || room.status === 'FINISHED') && room.gameState) {
+      if (state.view === 'game') {
+        updateGameDisplay();
+      } else {
+        setupGameView();
+        switchView('game');
+      }
+    } else {
+      renderLobby();
+      switchView('lobby');
+    }
+  }
+
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // Single-flight: concurrent callers share one recovery attempt.
+  function ensureRoomConnection() {
+    if (!state.room || state.isSolo || !state.reconnectToken) return Promise.resolve(false);
+    if (state.recovering) return state.recovering;
+    const roomCode = state.room.code;
+    const stillHere = () => state.room && state.room.code === roomCode && !state.isSolo;
+
+    state.recovering = (async () => {
+      let wait = 1000;
+      while (stillHere()) {
+        try {
+          await apiPost('/api/rooms/ping', { roomCode }, { noRecover: true });
+          if (!state.sseSource || state.sseSource.readyState === EventSource.CLOSED) setupSSE(roomCode);
+          return true;
+        } catch (err) {
+          if (isRoomMissingError(err)) {
+            const checkpoint = loadCheckpoint(roomCode);
+            if (!checkpoint) {
+              abandonRoom('This room is no longer available on the server.');
+              return false;
+            }
+            try {
+              const result = await apiPost('/api/rooms/restore', { roomCode, checkpoint: checkpoint.data }, { noRecover: true });
+              if (!stillHere()) return false;
+              applyRoomSnapshot(result.room);
+              setupSSE(roomCode);
+              showToast(result.restored ? 'Server restarted - your game was restored' : 'Reconnected to your game');
+              return true;
+            } catch (restoreErr) {
+              if (isPermanentError(restoreErr)) {
+                abandonRoom(`Could not restore the room: ${restoreErr.message}`);
+                return false;
+              }
+            }
+          } else if (isPermanentError(err)) {
+            abandonRoom(`Disconnected from the room: ${err.message}`);
+            return false;
+          }
+        }
+        await delay(wait);
+        wait = Math.min(wait * 2, MAX_RECONNECT_DELAY_MS);
+      }
+      return false;
+    })().finally(() => {
+      state.recovering = null;
+    });
+    return state.recovering;
+  }
+
+  function startKeepalive() {
+    stopKeepalive();
+    state.keepaliveTimer = setInterval(() => {
+      if (!state.room || state.isSolo) return stopKeepalive();
+      apiPost('/api/rooms/ping', { roomCode: state.room.code }, { noRecover: true })
+        .catch(() => ensureRoomConnection());
+    }, KEEPALIVE_MS);
+  }
+
+  function stopKeepalive() {
+    clearInterval(state.keepaliveTimer);
+    state.keepaliveTimer = null;
+  }
+
+  function clearLocalRoom(roomCode) {
+    if (state.sseSource) {
+      state.sseSource.close();
+      state.sseSource = null;
+    }
+    stopKeepalive();
+    if (state.tambolaAutoTimer) {
+      clearInterval(state.tambolaAutoTimer);
+      state.tambolaAutoTimer = null;
+    }
+    if (roomCode) {
+      safeStorage.removeItem(`myarena_rec_${roomCode}`);
+      safeStorage.removeItem(`myarena_pid_${roomCode}`);
+      safeStorage.removeItem(checkpointStorageKey(roomCode));
+    }
+    state.room = null;
+    state.playerId = null;
+    state.reconnectToken = null;
+    state.checkpoint = null;
+    state.isHost = false;
+    state.isSolo = false;
+    state.currentGameId = null;
+    state.lastActivityKey = null;
+    state.sseDisconnected = false;
+    clearAITimer();
+  }
+
+  function abandonRoom(message) {
+    clearLocalRoom(state.room && state.room.code);
+    showToast(message);
+    switchView('landing');
   }
 
   async function createRoomAction() {
@@ -494,14 +681,24 @@
     updateNavProfile();
 
     const savedToken = safeStorage.getItem(`myarena_rec_${roomCode}`);
+    const joinRequest = {
+      roomCode: roomCode,
+      playerName: joinName,
+      heroId: state.user.heroId,
+      reconnectToken: savedToken || null
+    };
 
     try {
-      const result = await apiPost('/api/rooms/join', {
-        roomCode: roomCode,
-        playerName: joinName,
-        heroId: state.user.heroId,
-        reconnectToken: savedToken || null
-      });
+      let result;
+      try {
+        result = await apiPost('/api/rooms/join', joinRequest);
+      } catch (err) {
+        // Rejoining after the server lost the room (restart/redeploy): rebuild it first.
+        const checkpoint = savedToken && loadCheckpoint(roomCode);
+        if (!isRoomMissingError(err) || !checkpoint) throw err;
+        await apiPost('/api/rooms/restore', { roomCode, checkpoint: checkpoint.data }, { token: savedToken, noRecover: true });
+        result = await apiPost('/api/rooms/join', joinRequest);
+      }
 
       state.room = result.room;
       state.isHost = result.room.hostId === result.player.id;
@@ -542,26 +739,33 @@
         state.sseDisconnected = false;
       };
       source.onmessage = (event) => {
+        let data;
         try {
-          const data = JSON.parse(event.data);
-          handleNetworkEvent(data);
+          data = JSON.parse(event.data);
         } catch (e) {
-          // ignore heartbeat
+          return; // heartbeat comment frames
         }
+        if (data.checkpoint) rememberCheckpoint(data.checkpoint, roomCode);
+        handleNetworkEvent(data);
       };
       source.onerror = () => {
-        if (state.sseSource === source && !state.sseDisconnected) {
+        if (state.sseSource !== source) return;
+        if (!state.sseDisconnected) {
           state.sseDisconnected = true;
           showToast('Connection interrupted. Reconnecting...');
         }
+        // CONNECTING means the browser retries by itself; CLOSED means the server refused
+        // the stream (e.g. it restarted and lost the room), so recover explicitly.
+        if (source.readyState === EventSource.CLOSED) ensureRoomConnection();
       };
+      startKeepalive();
     } catch (err) {
       console.warn('SSE not supported or local file mode');
     }
   }
 
   function handleNetworkEvent(event) {
-    if (event.type === 'ROOM_SYNC') {
+    if (event.type === 'ROOM_SYNC' || event.type === 'ROOM_RESTORED') {
       state.room = event.room;
       state.isHost = event.room.hostId === state.playerId;
       if (state.room.status === 'IN_GAME' && state.view !== 'game') {
@@ -2075,37 +2279,30 @@
 
     if (!state.isSolo) {
       try {
-        await apiPost('/api/rooms/leave', { roomCode });
+        await apiPost('/api/rooms/leave', { roomCode }, { noRecover: true });
       } catch (err) {
-        showToast(`Unable to leave room: ${err.message}`);
-        return;
+        // A room the server no longer knows about (or a seat it already released) is
+        // already left; anything else is a real failure worth surfacing.
+        if (!isRoomMissingError(err) && err.status !== 401) {
+          showToast(`Unable to leave room: ${err.message}`);
+          return;
+        }
       }
     }
 
-    if (state.sseSource) {
-      state.sseSource.close();
-      state.sseSource = null;
-    }
-    if (state.tambolaAutoTimer) {
-      clearInterval(state.tambolaAutoTimer);
-      state.tambolaAutoTimer = null;
-    }
-    safeStorage.removeItem(`myarena_rec_${roomCode}`);
-    safeStorage.removeItem(`myarena_pid_${roomCode}`);
-    state.room = null;
-    state.playerId = null;
-    state.reconnectToken = null;
-    state.isHost = false;
-    state.isSolo = false;
-    state.currentGameId = null;
-    state.lastActivityKey = null;
-    clearAITimer();
+    clearLocalRoom(roomCode);
     switchView('landing');
   }
 
   function initApp() {
     updateNavProfile();
     setupHeroPickers();
+
+    // Phones suspend background tabs; check the room as soon as the player is back.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') ensureRoomConnection();
+    });
+    window.addEventListener('online', () => ensureRoomConnection());
 
     const activityBox = document.querySelector('.activity-feed-box');
     if (activityBox && typeof ResizeObserver === 'function') {

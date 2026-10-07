@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: myarena-royalty
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      # Encrypts the room checkpoints that let games survive restarts, deploys and
+      # free-tier spin-downs. Must stay constant across deploys; Render generates it once.
+      - key: MYARENA_CHECKPOINT_SECRET
+        generateValue: true

@@ -1,10 +1,10 @@
 # 👑 myArena Royalty — "Your friends. Your arena."
 
-Current version: **1.0.6**
+Current version: **1.0.7**
 
 A browser-based social board-game arcade designed for friends to play instantly across desktop, iPhone, and Android without account creation.
 
-Version 1.0.6 rounds the die edges, shows room chat by default with each player's sign-in name and an online roster, and trims match activity to the latest two entries with scroll. Version 1.0.5 fixes the Ludo die showing the wrong number (often 1) and AI turns occasionally rolling for a human player. Version 1.0.4 adds a seamless physics-style 3D die, cryptographically backed unbiased dice rolls when the platform supports Web Crypto, a board that resizes its CSS and high-DPI canvas surfaces with the browser, and authenticated real-time room chat.
+Version 1.0.7 keeps online games alive on hosts like Render: rooms are restored automatically after server restarts, deploys and spin-downs, disconnected players keep their seat, and clients reconnect on their own. Version 1.0.6 rounds the die edges, shows room chat by default with each player's sign-in name and an online roster, and trims match activity to the latest two entries with scroll. Version 1.0.5 fixes the Ludo die showing the wrong number (often 1) and AI turns occasionally rolling for a human player. Version 1.0.4 adds a seamless physics-style 3D die, cryptographically backed unbiased dice rolls when the platform supports Web Crypto, a board that resizes its CSS and high-DPI canvas surfaces with the browser, and authenticated real-time room chat.
 
 ---
 
@@ -74,7 +74,17 @@ All roadmap cards are clearly labeled "Coming soon" with disabled action buttons
    - Deterministic host handoff if the host disconnects or leaves.
    - Reconnect tokens authenticate every room mutation and SSE stream.
    - Personalized state serialization keeps Tambola tickets and future ball order private.
-3. **Firebase / Cloud Deployment Guide**:
+   - Disconnected players keep their seat for the whole match (phones locking or switching apps no longer forfeit the game); idle lobby seats are released after 5 minutes.
+3. **Surviving Restarts (Render & Other Hosts)**:
+   - Rooms live in server memory. Hosts such as Render restart instances on every deploy, may restart them at any time, and spin free instances down after 15 minutes without inbound requests, which wipes that memory.
+   - After every change the server sends each player an AES-256-GCM encrypted, tamper-proof checkpoint of the room. If the server comes back without the room, the first player to reconnect sends it back (`POST /api/rooms/restore`) and the game resumes exactly where it was: turn, board, dice, chat and seats. Only room members can restore, tampered or expired (12h) checkpoints are rejected, and an older checkpoint never overwrites a newer one.
+   - Clients reconnect automatically with backoff, on returning to the tab, and on regaining network, and also when rejoining from an invite link after a page reload.
+   - While a multiplayer room is open, clients ping the server every 4 minutes so a free instance is not spun down mid-game.
+4. **Deploying on Render**:
+   - **Set `MYARENA_CHECKPOINT_SECRET`** (Dashboard → your service → Environment) to a long random value and keep it unchanged across deploys. Without it the server logs a warning and rooms cannot be restored after a restart.
+   - The included [`render.yaml`](./render.yaml) Blueprint configures the service and generates this secret automatically.
+   - Build command `npm install`, start command `npm start`.
+5. **Firebase / Cloud Deployment Guide**:
    - To deploy for public online multiplayer across separate networks without maintaining a continuous Node.js server process:
      1. Enable Firebase Realtime Database or Firestore.
      2. Place room state under `/rooms/{roomCode}`.

@@ -4,15 +4,35 @@
  */
 
 const crypto = require('crypto');
+const zlib = require('zlib');
 const LudoEngine = require('../engine/ludo');
 const SnakesEngine = require('../engine/snakes');
 const TambolaEngine = require('../engine/tambola');
+
+// Hosts such as Render's free tier restart or spin down instances and lose all memory.
+// Every state change hands clients an encrypted checkpoint of their room so the first
+// player to reconnect afterwards can rebuild it exactly; clients can neither read nor forge it.
+const CHECKPOINT_FORMAT = 1;
+const CHECKPOINT_TTL_MS = 12 * 60 * 60 * 1000;
+const LOBBY_DISCONNECT_GRACE_MS = 5 * 60 * 1000;
+
+function roomError(message, statusCode) {
+  const err = new Error(message);
+  err.statusCode = statusCode;
+  return err;
+}
 
 class RoomManager {
   constructor() {
     this.rooms = new Map(); // roomCode -> room object
     this.subscribers = new Map(); // roomCode -> Set of response streams/sockets
     this.disconnectTimers = new Map(); // roomCode:playerId -> grace-period timer
+    this.lobbyDisconnectGraceMs = LOBBY_DISCONNECT_GRACE_MS;
+    const secret = process.env.MYARENA_CHECKPOINT_SECRET;
+    this.checkpointKey = secret
+      ? crypto.createHash('sha256').update(String(secret)).digest()
+      : crypto.randomBytes(32);
+    this.checkpointKeyIsEphemeral = !secret;
     this.cleanupTimer = setInterval(() => this.cleanupInactiveRooms(), 60000);
     this.cleanupTimer.unref();
   }
@@ -72,13 +92,113 @@ class RoomManager {
   authenticate(roomCode, reconnectToken) {
     const normalizedCode = this.normalizeRoomCode(roomCode);
     const room = this.rooms.get(normalizedCode);
-    if (!room) throw new Error('Room not found');
-    if (!reconnectToken) throw new Error('Authentication token is required');
+    if (!room) throw roomError('Room not found', 404);
+    if (!reconnectToken) throw roomError('Authentication token is required', 401);
 
     const player = room.players.find(p => p.reconnectToken === reconnectToken);
-    if (!player) throw new Error('Invalid authentication token');
+    if (!player) throw roomError('Invalid authentication token', 401);
     player.lastSeen = Date.now();
     return { room, player };
+  }
+
+  createCheckpoint(room) {
+    const snapshot = {
+      format: CHECKPOINT_FORMAT,
+      issuedAt: Date.now(),
+      room: {
+        id: room.id,
+        code: room.code,
+        gameType: room.gameType,
+        status: room.status,
+        hostId: room.hostId,
+        maxPlayers: room.maxPlayers,
+        rules: room.rules,
+        players: room.players,
+        gameState: room.gameState,
+        chat: room.chat,
+        createdAt: room.createdAt,
+        version: room.version || 0
+      }
+    };
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', this.checkpointKey, iv);
+    const sealed = Buffer.concat([
+      cipher.update(zlib.deflateRawSync(Buffer.from(JSON.stringify(snapshot)))),
+      cipher.final()
+    ]);
+    return {
+      version: snapshot.room.version,
+      data: Buffer.concat([iv, cipher.getAuthTag(), sealed]).toString('base64url')
+    };
+  }
+
+  readCheckpoint(data) {
+    let snapshot;
+    try {
+      const raw = Buffer.from(String(data || ''), 'base64url');
+      const decipher = crypto.createDecipheriv('aes-256-gcm', this.checkpointKey, raw.subarray(0, 12));
+      decipher.setAuthTag(raw.subarray(12, 28));
+      const packed = Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]);
+      snapshot = JSON.parse(zlib.inflateRawSync(packed, { maxOutputLength: 8 * 1024 * 1024 }).toString());
+    } catch (err) {
+      throw roomError('Invalid room checkpoint', 400);
+    }
+    if (!snapshot || snapshot.format !== CHECKPOINT_FORMAT || !snapshot.room || !Array.isArray(snapshot.room.players)) {
+      throw roomError('Invalid room checkpoint', 400);
+    }
+    if (Date.now() - snapshot.issuedAt > CHECKPOINT_TTL_MS) {
+      throw roomError('Room checkpoint has expired', 410);
+    }
+    return snapshot.room;
+  }
+
+  restoreRoom(checkpointData, reconnectToken) {
+    if (!reconnectToken) throw roomError('Authentication token is required', 401);
+    const saved = this.readCheckpoint(checkpointData);
+    if (!saved.players.some(p => p.reconnectToken === reconnectToken)) {
+      throw roomError('Invalid authentication token', 401);
+    }
+
+    const code = this.normalizeRoomCode(saved.code);
+    const existing = this.rooms.get(code);
+    if (existing) {
+      if (existing.id !== saved.id) {
+        throw roomError('That room code now belongs to a different room', 409);
+      }
+      // Another player already restored this room (possibly from a newer checkpoint).
+      if ((existing.version || 0) >= (saved.version || 0)) {
+        const player = existing.players.find(p => p.reconnectToken === reconnectToken);
+        if (!player) throw roomError('Invalid authentication token', 401);
+        return { room: existing, player, restored: false };
+      }
+    }
+
+    const now = Date.now();
+    const room = Object.assign({}, saved, {
+      code,
+      chat: Array.isArray(saved.chat) ? saved.chat : [],
+      lastActivity: now,
+      players: saved.players.map(p => Object.assign({}, p, { connected: false, lastSeen: now }))
+    });
+    this.rooms.set(code, room);
+    if (!this.subscribers.has(code)) this.subscribers.set(code, new Set());
+    this.clearDisconnectTimers(code);
+    // Clients still attached to a room replaced by a newer checkpoint must resync.
+    this.broadcast(code, { type: 'ROOM_RESTORED', room: this.getRoomSummary(room) });
+    return {
+      room,
+      player: room.players.find(p => p.reconnectToken === reconnectToken),
+      restored: true
+    };
+  }
+
+  clearDisconnectTimers(roomCode) {
+    for (const [key, timer] of this.disconnectTimers) {
+      if (key.startsWith(`${roomCode}:`)) {
+        clearTimeout(timer);
+        this.disconnectTimers.delete(key);
+      }
+    }
   }
 
   getPublicPlayer(player) {
@@ -115,6 +235,7 @@ class RoomManager {
     };
 
     const room = {
+      id: crypto.randomBytes(8).toString('hex'),
       code: roomCode,
       gameType: gameType,
       status: 'LOBBY', // 'LOBBY' | 'IN_GAME' | 'FINISHED'
@@ -128,7 +249,8 @@ class RoomManager {
       gameState: null,
       chat: [],
       createdAt: Date.now(),
-      lastActivity: Date.now()
+      lastActivity: Date.now(),
+      version: 1
     };
 
     this.rooms.set(roomCode, room);
@@ -141,7 +263,7 @@ class RoomManager {
     roomCode = this.normalizeRoomCode(roomCode);
     const room = this.rooms.get(roomCode);
     if (!room) {
-      throw new Error(`Room with code ${roomCode} does not exist`);
+      throw roomError(`Room with code ${roomCode} does not exist`, 404);
     }
 
     // Check if this is an existing player reconnecting
@@ -592,31 +714,38 @@ class RoomManager {
             playerId,
             connected: false
           });
-          const timerKey = `${roomCode}:${playerId}`;
-          const timer = setTimeout(() => {
-            this.disconnectTimers.delete(timerKey);
-            const currentSet = this.subscribers.get(roomCode);
-            const reconnected = currentSet &&
-              Array.from(currentSet).some(subscriber => subscriber.playerId === playerId);
-            if (!reconnected && this.rooms.has(roomCode)) {
-              this.leaveRoom(roomCode, playerId);
-            }
-          }, 60000);
-          timer.unref();
-          this.disconnectTimers.set(timerKey, timer);
+          // Mid-game seats are kept: a phone locking or switching apps must not forfeit the
+          // match. Only idle lobby seats are released, so the room can still fill and start.
+          if (room.status === 'LOBBY') {
+            const timerKey = `${roomCode}:${playerId}`;
+            const timer = setTimeout(() => {
+              this.disconnectTimers.delete(timerKey);
+              const currentRoom = this.rooms.get(roomCode);
+              const currentSet = this.subscribers.get(roomCode);
+              const reconnected = currentSet &&
+                Array.from(currentSet).some(subscriber => subscriber.playerId === playerId);
+              if (!reconnected && currentRoom && currentRoom.status === 'LOBBY') {
+                this.leaveRoom(roomCode, playerId);
+              }
+            }, this.lobbyDisconnectGraceMs);
+            timer.unref();
+            this.disconnectTimers.set(timerKey, timer);
+          }
         }
-      }
-      if (set.size === 0) {
-        // Keep room until expiry
       }
     }
   }
 
   broadcast(roomCode, eventData) {
-    const set = this.subscribers.get(roomCode);
-    if (!set) return;
-
+    roomCode = this.normalizeRoomCode(roomCode);
     const room = this.rooms.get(roomCode);
+    // Every broadcast follows a state change, so it doubles as the version clock.
+    if (room) room.version = (room.version || 0) + 1;
+
+    const set = this.subscribers.get(roomCode);
+    if (!set || set.size === 0) return;
+
+    const checkpoint = room ? this.createCheckpoint(room) : null;
     for (const subscriber of set) {
       try {
         if (typeof subscriber.res.write === 'function') {
@@ -630,6 +759,7 @@ class RoomManager {
           if (clientEvent.actionResult && clientEvent.actionResult.game) {
             clientEvent.actionResult = this.getClientActionResult(clientEvent.actionResult);
           }
+          if (checkpoint) clientEvent.checkpoint = checkpoint;
           const payload = `data: ${JSON.stringify(clientEvent)}\n\n`;
           subscriber.res.write(payload);
         }
