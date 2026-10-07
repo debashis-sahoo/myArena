@@ -199,8 +199,12 @@ def run_e2e():
         canvas_backing_width = driver.execute_script(
             "return document.getElementById('boardCanvas').width;"
         )
+        # The canvas fills the board inside its border, so compare against clientWidth.
+        board_inner_width = driver.execute_script(
+            "return document.getElementById('boardCanvasWrapper').clientWidth;"
+        )
         expected_backing_width = round(
-            mobile_board.size["width"] * min(driver.execute_script("return window.devicePixelRatio;"), 2)
+            board_inner_width * min(driver.execute_script("return window.devicePixelRatio;"), 2)
         )
         assert abs(canvas_backing_width - expected_backing_width) <= 2, \
             f"Canvas backing surface is stale: expected {expected_backing_width}, got {canvas_backing_width}"

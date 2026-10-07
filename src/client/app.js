@@ -1920,7 +1920,8 @@
     if (!canvas || !state.room || state.room.gameType === 'tambola') return;
     const wrapper = document.getElementById('boardCanvasWrapper');
     if (!wrapper) return;
-    const size = Math.round(wrapper.getBoundingClientRect().width);
+    // clientWidth excludes the decorative border, so canvas pixels map 1:1 to the screen.
+    const size = Math.round(wrapper.clientWidth);
     if (size <= 0) return;
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     const backingSize = Math.max(1, Math.round(size * pixelRatio));
@@ -2204,132 +2205,596 @@
     return { x: (cell.c + 0.5) * cellW, y: (cell.r + 0.5) * cellH };
   }
 
-  // Snakes & Ladders Board Renderer
-  function renderSnakesBoard() {
-    if (!canvas || !ctx) return;
-    const w = canvas.width;
-    const h = canvas.height;
-    const cellW = w / 10;
-    const cellH = h / 10;
+  // =========================================================================
+  // SNAKES & LADDERS RENDERING
+  // Tiles, ladders and snakes are painted once into a cached layer (keyed by size and
+  // theme); each update only redraws the tokens on top. All sizes derive from the cell
+  // size so the board stays crisp at any resolution.
+  // =========================================================================
+  const SNAKE_SKINS = [
+    { name: 'python', base: '#3d7a24', dark: '#163a0b', light: '#9ccc5a', pattern: 'diamond', patternColor: '#173a0c', patternLight: '#c8dd7a' },
+    { name: 'coral', base: '#c0392b', dark: '#4e0f08', light: '#ff8a6a', pattern: 'bands', patternColor: '#151515', patternLight: '#f6c945' },
+    { name: 'cobra', base: '#c8962e', dark: '#5a3c0c', light: '#ffe08a', pattern: 'chevron', patternColor: '#4a2f08', patternLight: '#fff1b8' },
+    { name: 'viper', base: '#2d6390', dark: '#0f2a44', light: '#86c3ec', pattern: 'blotch', patternColor: '#0b1f33', patternLight: '#bfe2f7' },
+    { name: 'amethyst', base: '#7046a8', dark: '#2a1150', light: '#c8a4f0', pattern: 'diamond', patternColor: '#22093f', patternLight: '#e6d2fb' },
+    { name: 'rattler', base: '#9a6a34', dark: '#3a230d', light: '#e8c08a', pattern: 'blotch', patternColor: '#2c1806', patternLight: '#f1d9b0' },
+    { name: 'mamba', base: '#23806f', dark: '#08362f', light: '#7fe0c8', pattern: 'chevron', patternColor: '#062a24', patternLight: '#c3f2e4' },
+    { name: 'krait', base: '#2e2e33', dark: '#0b0b0d', light: '#8a8a95', pattern: 'bands', patternColor: '#f0c929', patternLight: '#fff2a8' }
+  ];
 
-    ctx.clearRect(0, 0, w, h);
+  const TOKEN_COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b'];
+  const BOARD_LIGHT = { x: -0.55, y: -0.83 }; // light from the upper-left, normalized
 
-    // Grid Checkerboard
-    for (let i = 1; i <= 100; i++) {
-      const coord = window.SnakesEngine.getCellCoordinates(i);
-      const isEven = (coord.row + coord.col) % 2 === 0;
-      ctx.fillStyle = isEven ? '#1f1638' : '#2b1c4e';
-      ctx.fillRect(coord.col * cellW, (9 - coord.row) * cellH, cellW, cellH);
+  const snakesBoardCache = { key: null, layer: null };
 
-      ctx.strokeStyle = '#432e73';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(coord.col * cellW, (9 - coord.row) * cellH, cellW, cellH);
+  function snakesCellCenter(cellNumber, cell) {
+    const coord = window.SnakesEngine.getCellCoordinates(cellNumber);
+    return { x: (coord.col + 0.5) * cell, y: (9 - coord.row + 0.5) * cell };
+  }
 
-      // Cell Number
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(i, coord.col * cellW + 3, (9 - coord.row) * cellH + 3);
+  function shadeHex(hex, amount) {
+    const value = parseInt(hex.slice(1), 16);
+    const channel = shift => {
+      const c = (value >> shift) & 255;
+      return Math.round(amount >= 0 ? c + (255 - c) * amount : c * (1 + amount));
+    };
+    return `rgb(${channel(16)}, ${channel(8)}, ${channel(0)})`;
+  }
+
+  function roundedRectPath(context, x, y, width, height, radius) {
+    context.beginPath();
+    context.moveTo(x + radius, y);
+    context.arcTo(x + width, y, x + width, y + height, radius);
+    context.arcTo(x + width, y + height, x, y + height, radius);
+    context.arcTo(x, y + height, x, y, radius);
+    context.arcTo(x, y, x + width, y, radius);
+    context.closePath();
+  }
+
+  function drawBoardTiles(context, size, theme, fontFamily) {
+    const cell = size / 10;
+    const base = context.createLinearGradient(0, 0, size, size);
+    base.addColorStop(0, shadeHex(theme.primaryBg, 0.08));
+    base.addColorStop(1, shadeHex(theme.primaryBg, -0.35));
+    context.fillStyle = base;
+    context.fillRect(0, 0, size, size);
+
+    const gap = cell * 0.045;
+    for (let n = 1; n <= 100; n++) {
+      const coord = window.SnakesEngine.getCellCoordinates(n);
+      const x = coord.col * cell + gap;
+      const y = (9 - coord.row) * cell + gap;
+      const side = cell - gap * 2;
+      const alternate = (coord.row + coord.col) % 2 === 0;
+      let top = alternate ? shadeHex(theme.gridBg, 0.1) : shadeHex(theme.primaryBg, 0.12);
+      let bottom = alternate ? shadeHex(theme.gridBg, -0.18) : shadeHex(theme.primaryBg, -0.12);
+      if (n === 1) { top = '#2f9e5f'; bottom = '#16603a'; }
+      if (n === 100) { top = '#f4c543'; bottom = '#a8730f'; }
+
+      const fill = context.createLinearGradient(0, y, 0, y + side);
+      fill.addColorStop(0, top);
+      fill.addColorStop(1, bottom);
+      roundedRectPath(context, x, y, side, side, cell * 0.12);
+      context.fillStyle = fill;
+      context.fill();
+      // Bevel: bright top edge, darker bottom edge.
+      context.lineWidth = Math.max(1, cell * 0.018);
+      context.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      context.stroke();
+      context.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      context.fillRect(x + cell * 0.08, y + side - cell * 0.03, side - cell * 0.16, cell * 0.02);
+
+      const special = n === 1 || n === 100;
+      context.font = `700 ${cell * (special ? 0.17 : 0.2)}px ${fontFamily}`;
+      context.textAlign = 'left';
+      context.textBaseline = 'top';
+      context.fillStyle = special ? 'rgba(255, 255, 255, 0.95)' : (n % 10 === 0 ? theme.accentColor : 'rgba(226, 232, 240, 0.62)');
+      context.fillText(String(n), x + cell * 0.07, y + cell * 0.05);
     }
 
-    // Draw Ladders (blue glowing rails with golden rungs)
-    const ladders = window.SnakesEngine.LADDERS;
-    for (const [start, end] of Object.entries(ladders)) {
-      const p1 = window.SnakesEngine.getCellCoordinates(parseInt(start, 10));
-      const p2 = window.SnakesEngine.getCellCoordinates(parseInt(end, 10));
+    const start = snakesCellCenter(1, cell);
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.font = `800 ${cell * 0.16}px ${fontFamily}`;
+    context.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    context.fillText('START', start.x, start.y + cell * 0.18);
 
-      const x1 = (p1.col + 0.5) * cellW;
-      const y1 = (9 - p1.row + 0.5) * cellH;
-      const x2 = (p2.col + 0.5) * cellW;
-      const y2 = (9 - p2.row + 0.5) * cellH;
+    const finish = snakesCellCenter(100, cell);
+    context.font = `${cell * 0.42}px ${fontFamily}`;
+    context.fillText('👑', finish.x, finish.y + cell * 0.06);
+  }
 
-      ctx.save();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(x1 - 8, y1);
-      ctx.lineTo(x2 - 8, y2);
-      ctx.moveTo(x1 + 8, y1);
-      ctx.lineTo(x2 + 8, y2);
-      ctx.stroke();
+  function drawLadder(context, from, to, cell) {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy);
+    const ux = dx / length;
+    const uy = dy / length;
+    const nx = -uy;
+    const ny = ux;
+    const overhang = cell * 0.2;
+    const start = { x: from.x - ux * overhang, y: from.y - uy * overhang };
+    const end = { x: to.x + ux * overhang, y: to.y + uy * overhang };
+    const halfWidth = cell * 0.18;
+    const railWidth = cell * 0.085;
+    const rungWidth = cell * 0.06;
+    const rungCount = Math.max(2, Math.floor((length + overhang) / (cell * 0.34)));
+    const lightSide = nx * BOARD_LIGHT.x + ny * BOARD_LIGHT.y > 0 ? 1 : -1;
 
-      // Rungs
-      ctx.strokeStyle = '#facc15';
-      ctx.lineWidth = 2.5;
-      const steps = 7;
-      for (let s = 1; s < steps; s++) {
-        const t = s / steps;
-        const rx = x1 + (x2 - x1) * t;
-        const ry = y1 + (y2 - y1) * t;
-        ctx.beginPath();
-        ctx.moveTo(rx - 8, ry);
-        ctx.lineTo(rx + 8, ry);
-        ctx.stroke();
+    const rail = side => [
+      { x: start.x + nx * halfWidth * side, y: start.y + ny * halfWidth * side },
+      { x: end.x + nx * halfWidth * side, y: end.y + ny * halfWidth * side }
+    ];
+    const rungs = [];
+    for (let i = 1; i <= rungCount; i++) {
+      const t = i / (rungCount + 1);
+      const cx = start.x + (end.x - start.x) * t;
+      const cy = start.y + (end.y - start.y) * t;
+      rungs.push([
+        { x: cx - nx * halfWidth, y: cy - ny * halfWidth },
+        { x: cx + nx * halfWidth, y: cy + ny * halfWidth }
+      ]);
+    }
+    const strokeSegment = ([a, b], width, color, shiftX = 0, shiftY = 0) => {
+      context.beginPath();
+      context.moveTo(a.x + shiftX, a.y + shiftY);
+      context.lineTo(b.x + shiftX, b.y + shiftY);
+      context.lineWidth = width;
+      context.strokeStyle = color;
+      context.stroke();
+    };
+
+    context.save();
+    context.lineCap = 'round';
+
+    // Cast shadow of the whole ladder.
+    context.save();
+    context.shadowColor = 'rgba(0, 0, 0, 0.55)';
+    context.shadowBlur = cell * 0.12;
+    context.shadowOffsetX = cell * 0.06;
+    context.shadowOffsetY = cell * 0.09;
+    rungs.forEach(rung => strokeSegment(rung, rungWidth, '#4a2c12'));
+    [-1, 1].forEach(side => strokeSegment(rail(side), railWidth, '#4a2c12'));
+    context.restore();
+
+    // Rungs sit between the rails: dark wood with a lit upper face.
+    rungs.forEach(rung => {
+      strokeSegment(rung, rungWidth, '#6b4220');
+      strokeSegment(rung, rungWidth * 0.5, '#c98f4c', BOARD_LIGHT.x * rungWidth * 0.18, BOARD_LIGHT.y * rungWidth * 0.18);
+    });
+
+    // Rails: dark core, warm body, and a highlight along the side facing the light.
+    [-1, 1].forEach(side => {
+      const segment = rail(side);
+      strokeSegment(segment, railWidth, '#5a3616');
+      strokeSegment(segment, railWidth * 0.68, '#a8692e');
+      strokeSegment(segment, railWidth * 0.22, 'rgba(255, 214, 150, 0.85)',
+        nx * lightSide * railWidth * 0.2, ny * lightSide * railWidth * 0.2);
+    });
+
+    // Brass bolts where each rung meets the rails.
+    rungs.forEach(rung => rung.forEach(point => {
+      const bolt = context.createRadialGradient(point.x - cell * 0.008, point.y - cell * 0.008, 0, point.x, point.y, cell * 0.03);
+      bolt.addColorStop(0, '#fff4c2');
+      bolt.addColorStop(1, '#a0761c');
+      context.beginPath();
+      context.arc(point.x, point.y, cell * 0.026, 0, Math.PI * 2);
+      context.fillStyle = bolt;
+      context.fill();
+    }));
+    context.restore();
+  }
+
+  // Sample a sinuous body from head to tail; the wave fades out at both ends so the
+  // head and tail land exactly on their squares.
+  function buildSnakeBody(head, tail, cell, size, seed) {
+    const dx = tail.x - head.x;
+    const dy = tail.y - head.y;
+    const length = Math.hypot(dx, dy);
+    const nx = -dy / length;
+    const ny = dx / length;
+    const waves = Math.max(1, Math.round(length / (cell * 2.3)));
+    const amplitude = Math.min(cell * 0.45, length * 0.16);
+    const phase = seed % 2 ? 0 : Math.PI;
+    const samples = Math.max(60, Math.ceil(length / (cell * 0.05)));
+    const margin = cell * 0.2;
+    const points = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const sway = amplitude * Math.sin(Math.PI * 2 * waves * t + phase) * Math.sin(Math.PI * t);
+      points.push({
+        x: Math.min(size - margin, Math.max(margin, head.x + dx * t + nx * sway)),
+        y: Math.min(size - margin, Math.max(margin, head.y + dy * t + ny * sway)),
+        t
+      });
+    }
+    const maxWidth = cell * 0.34;
+    points.forEach((point, i) => {
+      const prev = points[Math.max(0, i - 1)];
+      const next = points[Math.min(points.length - 1, i + 1)];
+      const tx = next.x - prev.x;
+      const ty = next.y - prev.y;
+      const tl = Math.hypot(tx, ty) || 1;
+      point.tx = tx / tl;
+      point.ty = ty / tl;
+      point.nx = -point.ty;
+      point.ny = point.tx;
+      // Slim neck behind the head, full body, then a long taper to a pointed tail.
+      const t = point.t;
+      const neck = t < 0.1 ? 0.78 + 0.22 * (t / 0.1) : 1;
+      const taper = t > 0.5 ? Math.pow(1 - (t - 0.5) / 0.5, 0.85) : 1;
+      point.half = (maxWidth / 2) * neck * Math.max(0.06, taper);
+    });
+    return points;
+  }
+
+  // A strip running along the body between two signed fractions of its half-width.
+  function traceBodyStrip(context, points, inner, outer) {
+    context.beginPath();
+    points.forEach((p, i) => {
+      const o = typeof outer === 'function' ? outer(p) : outer;
+      const x = p.x + p.nx * p.half * o;
+      const y = p.y + p.ny * p.half * o;
+      if (i === 0) context.moveTo(x, y); else context.lineTo(x, y);
+    });
+    for (let i = points.length - 1; i >= 0; i--) {
+      const p = points[i];
+      const o = typeof inner === 'function' ? inner(p) : inner;
+      context.lineTo(p.x + p.nx * p.half * o, p.y + p.ny * p.half * o);
+    }
+    context.closePath();
+  }
+
+  function drawSnakePattern(context, points, skin, cell) {
+    const spacing = { diamond: cell * 0.3, bands: cell * 0.2, chevron: cell * 0.24, blotch: cell * 0.28 }[skin.pattern];
+    let travelled = 0;
+    let index = 0;
+    for (let i = 1; i < points.length; i++) {
+      travelled += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+      const p = points[i];
+      if (travelled < spacing || p.t < 0.07 || p.t > 0.97) continue;
+      travelled = 0;
+      index += 1;
+      const angle = Math.atan2(p.ty, p.tx);
+      context.save();
+      context.translate(p.x, p.y);
+      context.rotate(angle);
+      const w = p.half;
+      if (skin.pattern === 'diamond') {
+        const l = spacing * 0.48;
+        context.beginPath();
+        context.moveTo(-l, 0); context.lineTo(0, -w * 0.8); context.lineTo(l, 0); context.lineTo(0, w * 0.8);
+        context.closePath();
+        context.fillStyle = skin.patternColor;
+        context.fill();
+        context.beginPath();
+        context.moveTo(-l * 0.45, 0); context.lineTo(0, -w * 0.35); context.lineTo(l * 0.45, 0); context.lineTo(0, w * 0.35);
+        context.closePath();
+        context.fillStyle = skin.patternLight;
+        context.globalAlpha = 0.55;
+        context.fill();
+      } else if (skin.pattern === 'bands') {
+        context.fillStyle = index % 2 ? skin.patternColor : skin.patternLight;
+        context.fillRect(-spacing * 0.22, -w * 1.2, spacing * 0.44, w * 2.4);
+      } else if (skin.pattern === 'chevron') {
+        context.beginPath();
+        context.moveTo(-spacing * 0.35, -w);
+        context.lineTo(spacing * 0.15, 0);
+        context.lineTo(-spacing * 0.35, w);
+        context.lineWidth = spacing * 0.22;
+        context.strokeStyle = skin.patternColor;
+        context.stroke();
+      } else {
+        context.beginPath();
+        context.ellipse(0, (index % 2 ? 1 : -1) * w * 0.32, spacing * 0.32, w * 0.42, 0, 0, Math.PI * 2);
+        context.fillStyle = skin.patternColor;
+        context.fill();
+        context.globalAlpha = 0.5;
+        context.lineWidth = cell * 0.012;
+        context.strokeStyle = skin.patternLight;
+        context.stroke();
       }
-      ctx.restore();
+      context.restore();
     }
+  }
 
-    // Draw Snakes (curved slithering red/emerald body)
-    const snakes = window.SnakesEngine.SNAKES;
-    for (const [head, tail] of Object.entries(snakes)) {
-      const p1 = window.SnakesEngine.getCellCoordinates(parseInt(head, 10));
-      const p2 = window.SnakesEngine.getCellCoordinates(parseInt(tail, 10));
-
-      const hx = (p1.col + 0.5) * cellW;
-      const hy = (9 - p1.row + 0.5) * cellH;
-      const tx = (p2.col + 0.5) * cellW;
-      const ty = (9 - p2.row + 0.5) * cellH;
-
-      ctx.save();
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 8;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(hx, hy);
-      const midX = (hx + tx) / 2 + (Math.sin(hx) * 30);
-      const midY = (hy + ty) / 2;
-      ctx.quadraticCurveTo(midX, midY, tx, ty);
-      ctx.stroke();
-
-      // Snake Head (circle with eyes)
-      ctx.fillStyle = '#dc2626';
-      ctx.beginPath();
-      ctx.arc(hx, hy, 12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.arc(hx - 3, hy - 3, 2.5, 0, Math.PI * 2);
-      ctx.arc(hx + 3, hy - 3, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+  function drawSnakeScales(context, points, cell) {
+    const step = cell * 0.065;
+    let travelled = 0;
+    let row = 0;
+    context.save();
+    context.lineWidth = Math.max(0.6, cell * 0.008);
+    context.strokeStyle = 'rgba(0, 0, 0, 0.22)';
+    for (let i = 1; i < points.length; i++) {
+      travelled += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+      if (travelled < step) continue;
+      travelled = 0;
+      row += 1;
+      const p = points[i];
+      const radius = Math.max(cell * 0.016, p.half * 0.24);
+      const back = Math.atan2(-p.ty, -p.tx);
+      for (let k = -2; k <= 2; k++) {
+        const across = (k + (row % 2 ? 0.5 : 0)) * 0.36;
+        if (Math.abs(across) > 0.85) continue;
+        const sx = p.x + p.nx * p.half * across;
+        const sy = p.y + p.ny * p.half * across;
+        context.beginPath();
+        context.arc(sx, sy, radius, back - 1.1, back + 1.1);
+        context.stroke();
+      }
     }
+    context.restore();
+  }
 
-    // Draw Players
+  function drawSnakeHead(context, points, skin, cell, seed) {
+    const head = points[0];
+    const neckIndex = Math.min(points.length - 1, Math.ceil(points.length * 0.04));
+    const neck = points[neckIndex];
+    const angle = Math.atan2(head.y - neck.y, head.x - neck.x);
+    const length = cell * 0.52;
+    const width = points[neckIndex].half * 2 * 1.5;
+
+    context.save();
+    context.translate(head.x, head.y);
+    context.rotate(angle);
+    context.translate(-length * 0.12, 0);
+
+    const outline = () => {
+      context.beginPath();
+      context.moveTo(-length * 0.28, -width * 0.32);
+      context.bezierCurveTo(length * 0.02, -width * 0.66, length * 0.46, -width * 0.58, length * 0.64, -width * 0.2);
+      context.quadraticCurveTo(length * 0.75, 0, length * 0.64, width * 0.2);
+      context.bezierCurveTo(length * 0.46, width * 0.58, length * 0.02, width * 0.66, -length * 0.28, width * 0.32);
+      context.closePath();
+    };
+
+    context.save();
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    context.shadowBlur = cell * 0.12;
+    context.shadowOffsetX = cell * 0.05;
+    context.shadowOffsetY = cell * 0.08;
+    outline();
+    context.fillStyle = skin.base;
+    context.fill();
+    context.restore();
+
+    // Rounded skull shading, lit from the upper-left in board space.
+    const lx = Math.cos(-angle) * BOARD_LIGHT.x - Math.sin(-angle) * BOARD_LIGHT.y;
+    const ly = Math.sin(-angle) * BOARD_LIGHT.x + Math.cos(-angle) * BOARD_LIGHT.y;
+    const skull = context.createRadialGradient(length * 0.25 + lx * width * 0.25, ly * width * 0.25, width * 0.05,
+      length * 0.2, 0, length * 0.75);
+    skull.addColorStop(0, skin.light);
+    skull.addColorStop(0.45, skin.base);
+    skull.addColorStop(1, skin.dark);
+    outline();
+    context.fillStyle = skull;
+    context.fill();
+    context.lineWidth = Math.max(1, cell * 0.014);
+    context.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    context.stroke();
+
+    // Crown marking on top of the head.
+    context.beginPath();
+    context.moveTo(length * 0.5, 0);
+    context.quadraticCurveTo(length * 0.2, -width * 0.32, -length * 0.15, -width * 0.12);
+    context.quadraticCurveTo(length * 0.05, 0, -length * 0.15, width * 0.12);
+    context.quadraticCurveTo(length * 0.2, width * 0.32, length * 0.5, 0);
+    context.fillStyle = skin.patternColor;
+    context.globalAlpha = 0.45;
+    context.fill();
+    context.globalAlpha = 1;
+
+    // Eyes with vertical slit pupils and a glint.
+    [-1, 1].forEach(sideSign => {
+      const ex = length * 0.3;
+      const ey = sideSign * width * 0.33;
+      const eyeR = width * 0.13;
+      const iris = context.createRadialGradient(ex - eyeR * 0.3, ey - eyeR * 0.3, eyeR * 0.1, ex, ey, eyeR);
+      iris.addColorStop(0, '#fff6a8');
+      iris.addColorStop(0.6, '#f2b705');
+      iris.addColorStop(1, '#8a5a00');
+      context.beginPath();
+      context.ellipse(ex, ey, eyeR * 1.15, eyeR, 0, 0, Math.PI * 2);
+      context.fillStyle = iris;
+      context.fill();
+      context.lineWidth = Math.max(1, cell * 0.01);
+      context.strokeStyle = '#1a1205';
+      context.stroke();
+      context.beginPath();
+      context.ellipse(ex, ey, eyeR * 0.85, eyeR * 0.22, 0, 0, Math.PI * 2);
+      context.fillStyle = '#070502';
+      context.fill();
+      context.beginPath();
+      context.arc(ex - eyeR * 0.35, ey - eyeR * 0.35, eyeR * 0.22, 0, Math.PI * 2);
+      context.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      context.fill();
+    });
+
+    // Nostrils.
+    [-1, 1].forEach(sideSign => {
+      context.beginPath();
+      context.ellipse(length * 0.6, sideSign * width * 0.09, width * 0.035, width * 0.022, 0, 0, Math.PI * 2);
+      context.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      context.fill();
+    });
+
+    // Forked tongue on alternating snakes.
+    if (seed % 2 === 0) {
+      context.lineCap = 'round';
+      context.lineJoin = 'round';
+      context.lineWidth = Math.max(1.2, cell * 0.022);
+      context.strokeStyle = '#e11d48';
+      context.beginPath();
+      context.moveTo(length * 0.68, 0);
+      context.lineTo(length * 0.98, 0);
+      context.moveTo(length * 0.98, 0);
+      context.lineTo(length * 1.12, -width * 0.14);
+      context.moveTo(length * 0.98, 0);
+      context.lineTo(length * 1.12, width * 0.14);
+      context.stroke();
+    }
+    context.restore();
+  }
+
+  function drawSnake(context, head, tail, cell, size, seed) {
+    const skin = SNAKE_SKINS[seed % SNAKE_SKINS.length];
+    const points = buildSnakeBody(head, tail, cell, size, seed);
+    const lightAlong = p => Math.max(-1, Math.min(1, p.nx * BOARD_LIGHT.x + p.ny * BOARD_LIGHT.y));
+
+    context.save();
+    context.lineJoin = 'round';
+
+    // Body silhouette with its ground shadow.
+    context.save();
+    context.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    context.shadowBlur = cell * 0.14;
+    context.shadowOffsetX = cell * 0.06;
+    context.shadowOffsetY = cell * 0.1;
+    traceBodyStrip(context, points, -1, 1);
+    context.fillStyle = skin.base;
+    context.fill();
+    context.restore();
+
+    context.save();
+    traceBodyStrip(context, points, -1, 1);
+    context.clip();
+    // Belly glimpse on the shadowed flank, then markings and scales.
+    traceBodyStrip(context, points, p => -lightAlong(p) * 0.55 - 0.2, p => -lightAlong(p) * 1.1);
+    context.fillStyle = shadeHex(skin.base, 0.25);
+    context.globalAlpha = 0.25;
+    context.fill();
+    context.globalAlpha = 1;
+    drawSnakePattern(context, points, skin, cell);
+    drawSnakeScales(context, points, cell);
+    // Cylindrical shading: darken both flanks, then a soft highlight toward the light.
+    traceBodyStrip(context, points, 0.45, 1.05);
+    context.fillStyle = 'rgba(0, 0, 0, 0.32)';
+    context.fill();
+    traceBodyStrip(context, points, -1.05, -0.45);
+    context.fill();
+    traceBodyStrip(context, points, p => lightAlong(p) * 0.25 - 0.12, p => lightAlong(p) * 0.25 + 0.12);
+    context.fillStyle = 'rgba(255, 255, 255, 0.28)';
+    context.fill();
+    context.restore();
+
+    traceBodyStrip(context, points, -1, 1);
+    context.lineWidth = Math.max(1, cell * 0.014);
+    context.strokeStyle = skin.dark;
+    context.globalAlpha = 0.7;
+    context.stroke();
+    context.restore();
+
+    drawSnakeHead(context, points, skin, cell, seed);
+  }
+
+  function getSnakesStaticLayer(size, theme) {
+    const key = `${size}:${theme.id}`;
+    if (snakesBoardCache.key === key && snakesBoardCache.layer) return snakesBoardCache.layer;
+
+    const layer = document.createElement('canvas');
+    layer.width = size;
+    layer.height = size;
+    const context = layer.getContext('2d');
+    const cell = size / 10;
+    const fontFamily = getComputedStyle(document.body).fontFamily || 'sans-serif';
+
+    drawBoardTiles(context, size, theme, fontFamily);
+    Object.entries(window.SnakesEngine.LADDERS).forEach(([from, to]) => {
+      drawLadder(context, snakesCellCenter(Number(from), cell), snakesCellCenter(Number(to), cell), cell);
+    });
+    Object.entries(window.SnakesEngine.SNAKES).forEach(([head, tail], index) => {
+      drawSnake(context, snakesCellCenter(Number(head), cell), snakesCellCenter(Number(tail), cell), cell, size, index);
+    });
+
+    snakesBoardCache.key = key;
+    snakesBoardCache.layer = layer;
+    return layer;
+  }
+
+  function drawSnakesToken(context, x, y, radius, color, symbol, isActive, fontFamily) {
+    context.save();
+    // Contact shadow.
+    context.beginPath();
+    context.ellipse(x + radius * 0.12, y + radius * 0.82, radius * 0.95, radius * 0.38, 0, 0, Math.PI * 2);
+    context.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    context.fill();
+
+    if (isActive) {
+      context.shadowColor = 'rgba(251, 191, 36, 0.95)';
+      context.shadowBlur = radius * 0.9;
+    }
+    const body = context.createRadialGradient(x - radius * 0.35, y - radius * 0.4, radius * 0.1, x, y, radius);
+    body.addColorStop(0, shadeHex(color, 0.55));
+    body.addColorStop(0.55, color);
+    body.addColorStop(1, shadeHex(color, -0.45));
+    context.beginPath();
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fillStyle = body;
+    context.fill();
+    context.shadowBlur = 0;
+    context.lineWidth = radius * 0.13;
+    context.strokeStyle = isActive ? '#fde68a' : 'rgba(255, 255, 255, 0.85)';
+    context.stroke();
+
+    context.beginPath();
+    context.arc(x, y, radius * 0.66, 0, Math.PI * 2);
+    context.lineWidth = radius * 0.06;
+    context.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    context.stroke();
+
+    context.font = `700 ${radius * 0.95}px ${fontFamily}`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = '#ffffff';
+    context.shadowColor = 'rgba(0, 0, 0, 0.6)';
+    context.shadowBlur = radius * 0.2;
+    context.fillText(symbol, x, y + radius * 0.04);
+    context.shadowBlur = 0;
+
+    context.beginPath();
+    context.ellipse(x - radius * 0.32, y - radius * 0.42, radius * 0.42, radius * 0.22, -0.5, 0, Math.PI * 2);
+    context.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    context.fill();
+    context.restore();
+  }
+
+  function renderSnakesBoard() {
+    if (!canvas || !ctx || !state.room || !state.room.gameState) return;
+    const size = canvas.width;
+    const cell = size / 10;
     const gs = state.room.gameState;
-    const teamColors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b'];
-    gs.players.forEach((p, idx) => {
-      const posNum = p.position || 1;
-      const coord = window.SnakesEngine.getCellCoordinates(posNum);
-      const offset = (idx - (gs.players.length - 1) / 2) * 8;
-      const px = (coord.col + 0.5) * cellW + offset;
-      const py = (9 - coord.row + 0.5) * cellH;
+    const theme = gs.theme ||
+      window.SnakesEngine.THEMES.find(candidate => candidate.id === (gs.rules && gs.rules.themeId)) ||
+      window.SnakesEngine.THEMES[0];
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(px, py, cellW * 0.36, 0, Math.PI * 2);
-      ctx.fillStyle = teamColors[idx % teamColors.length];
-      ctx.fill();
-      ctx.strokeStyle = '#fef08a';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(getSnakesStaticLayer(size, theme), 0, 0);
 
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(p.hero?.symbol || '♟', px, py);
-      ctx.restore();
+    // Spread tokens that share a square so each stays visible.
+    const fontFamily = getComputedStyle(document.body).fontFamily || 'sans-serif';
+    const byCell = new Map();
+    gs.players.forEach((player, index) => {
+      const cellNumber = player.position || 1;
+      if (!byCell.has(cellNumber)) byCell.set(cellNumber, []);
+      byCell.get(cellNumber).push({ player, index });
+    });
+    const layouts = {
+      1: [[0, 0]],
+      2: [[-0.2, 0], [0.2, 0]],
+      3: [[-0.2, 0.14], [0.2, 0.14], [0, -0.18]],
+      4: [[-0.2, -0.18], [0.2, -0.18], [-0.2, 0.18], [0.2, 0.18]]
+    };
+    const currentId = gs.players[gs.currentTurnIndex] && gs.players[gs.currentTurnIndex].id;
+    byCell.forEach((occupants, cellNumber) => {
+      const center = snakesCellCenter(cellNumber, cell);
+      const layout = layouts[Math.min(occupants.length, 4)];
+      const radius = cell * (occupants.length > 1 ? 0.2 : 0.28);
+      occupants.forEach(({ player, index }, slot) => {
+        const [ox, oy] = layout[slot % layout.length];
+        drawSnakesToken(ctx, center.x + ox * cell, center.y + oy * cell, radius,
+          TOKEN_COLORS[index % TOKEN_COLORS.length], (player.hero && player.hero.symbol) || '♟',
+          gs.phase !== 'FINISHED' && player.id === currentId, fontFamily);
+      });
     });
   }
 
