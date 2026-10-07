@@ -128,6 +128,8 @@
       currentTurnIndex: 0,
       phase: 'ROLL', // 'ROLL' | 'FINISHED'
       currentDice: null,
+      lastRoll: null,
+      rollSeq: 0,
       winnerRankings: [],
       lastAction: { type: 'INIT', message: 'Snakes and Ladders match initialized.' },
       turnCount: 1,
@@ -160,6 +162,8 @@
     }
 
     game.currentDice = roll;
+    game.rollSeq = (game.rollSeq || 0) + 1;
+    game.lastRoll = { seq: game.rollSeq, value: roll, playerId: currentPlayer.id };
 
     const startPos = currentPlayer.position;
     let targetPos = startPos + roll;

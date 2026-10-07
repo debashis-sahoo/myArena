@@ -99,6 +99,38 @@ runTest('Ludo: Consecutive six counter resets when the turn advances', () => {
   assert.strictEqual(game.consecutiveSixes, 0);
 });
 
+runTest('Ludo: lastRoll keeps the rolled value and sequence after the move resolves', () => {
+  const players = [
+    { id: 'u1', name: 'Tony', teamIndex: 0 },
+    { id: 'u2', name: 'Bruce', teamIndex: 1 }
+  ];
+  const game = LudoEngine.createGame(players);
+  assert.strictEqual(game.lastRoll, null);
+
+  LudoEngine.rollDice(game, 6);
+  assert.deepStrictEqual(game.lastRoll, { seq: 1, value: 6, playerId: 'u1' });
+  LudoEngine.moveToken(game, 0);
+  // currentDice is cleared by the move, but the display source must not be.
+  assert.strictEqual(game.currentDice, null);
+  assert.deepStrictEqual(game.lastRoll, { seq: 1, value: 6, playerId: 'u1' });
+
+  LudoEngine.rollDice(game, 6);
+  assert.strictEqual(game.lastRoll.seq, 2, 'a repeated value must still be a new roll');
+  assert.strictEqual(game.lastRoll.value, 6);
+});
+
+runTest('Ludo: unforced rolls cover every face', () => {
+  const game = LudoEngine.createGame([
+    { id: 'u1', name: 'Tony', teamIndex: 0 },
+    { id: 'u2', name: 'Bruce', teamIndex: 1 }
+  ], { entryRoll: [], bonusOnSix: false, maxConsecutiveSixes: null });
+  const counts = [0, 0, 0, 0, 0, 0];
+  for (let i = 0; i < 600; i++) counts[LudoEngine.rollDice(game).roll - 1] += 1;
+  counts.forEach((count, face) => {
+    assert(count > 50 && count < 150, `Face ${face + 1} appeared ${count}/600 times`);
+  });
+});
+
 runTest('Ludo: Three consecutive sixes forfeits turn', () => {
   const players = [
     { id: 'u1', name: 'Tony', teamIndex: 0 },

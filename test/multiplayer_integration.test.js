@@ -182,6 +182,11 @@ async function runMultiplayerTests() {
       action: { type: 'ROLL_DICE' }
     }, hostToken);
     assert.strictEqual(rollRes.status, 200);
+    assert.deepStrictEqual(rollRes.data.gameState.lastRoll, {
+      seq: 1,
+      value: rollRes.data.actionResult.roll,
+      playerId: hostPlayer.id
+    });
     console.log(`   ✓ Dice rolled successfully: ${rollRes.data.actionResult.roll}`);
 
     // 8. Reconnection test

@@ -208,7 +208,8 @@
     currentGameId: null,
     lastActivityKey: null,
     resultsGameId: null,
-    sseDisconnected: false
+    sseDisconnected: false,
+    aiTimer: null
   };
 
   // Announce to Screen Reader
@@ -795,61 +796,64 @@
     showToast('Solo match started against AI bots!');
   }
 
+  // Exactly one AI step may be pending at a time. Each step re-validates that the AI still
+  // owns the turn, so a stale timer can never roll or move on behalf of a human player.
+  function clearAITimer() {
+    clearTimeout(state.aiTimer);
+    state.aiTimer = null;
+  }
+
+  function isAIStillOnTurn(gs, aiId, phase) {
+    if (!state.room || state.room.gameState !== gs || gs.phase !== phase) return false;
+    const current = gs.players[gs.currentTurnIndex];
+    return !!current && current.isAI && current.id === aiId;
+  }
+
+  function scheduleAIStep(delay, step) {
+    clearAITimer();
+    state.aiTimer = setTimeout(() => {
+      state.aiTimer = null;
+      step();
+    }, delay);
+  }
+
   function runAITurnIfApplicable() {
-    if (!state.room || !state.room.gameState) return;
+    if (!state.isSolo || state.aiTimer || !state.room || !state.room.gameState) return;
     const gs = state.room.gameState;
-    if (gs.phase === 'FINISHED') return;
+    if (gs.phase !== 'ROLL') return;
 
     const currentPlayer = gs.players[gs.currentTurnIndex];
     if (!currentPlayer || !currentPlayer.isAI) return;
+    const aiId = currentPlayer.id;
 
-    // AI thinking delay
-    setTimeout(() => {
-      if (!state.room || state.room.gameState !== gs) return;
+    // Let the previous throw finish landing so every roll is visible on the die.
+    const delay = Math.max(800, diceAnimationRemainingMs() + 300);
+    scheduleAIStep(delay, () => {
+      if (!isAIStillOnTurn(gs, aiId, 'ROLL')) return runAITurnIfApplicable();
+      sound.playDiceRoll();
+
       if (state.room.gameType === 'ludo') {
-        if (gs.phase === 'ROLL') {
-          sound.playDiceRoll();
-          const rollRes = window.LudoEngine.rollDice(gs);
+        const rollRes = window.LudoEngine.rollDice(gs);
+        updateGameDisplay();
+        if (rollRes.turnAdvanced || gs.phase !== 'MOVE') return runAITurnIfApplicable();
+
+        scheduleAIStep(Math.max(600, diceAnimationRemainingMs() + 150), () => {
+          if (!isAIStillOnTurn(gs, aiId, 'MOVE')) return runAITurnIfApplicable();
+          const bestToken = window.GameAI.pickLudoMove(gs);
+          if (bestToken === null) return;
+          sound.playMove();
+          const moveRes = window.LudoEngine.moveToken(gs, bestToken);
+          if (moveRes.captured) sound.playCapture();
           updateGameDisplay();
-
-          if (!rollRes.turnAdvanced && gs.phase === 'MOVE') {
-            setTimeout(() => {
-              if (!state.room || state.room.gameState !== gs) return;
-              const bestToken = window.GameAI.pickLudoMove(gs);
-              if (bestToken !== null) {
-                sound.playMove();
-                const moveRes = window.LudoEngine.moveToken(gs, bestToken);
-                if (moveRes.captured) sound.playCapture();
-                updateGameDisplay();
-                // Check if extra turn awarded to AI
-                if (moveRes.extraTurn && !moveRes.isGameOver) {
-                  runAITurnIfApplicable();
-                } else if (!moveRes.isGameOver) {
-                  runAITurnIfApplicable();
-                }
-              }
-            }, 600);
-          } else {
-            runAITurnIfApplicable();
-          }
-        }
+        });
       } else if (state.room.gameType === 'snakes') {
-        if (gs.phase === 'ROLL') {
-          sound.playDiceRoll();
-          const res = window.SnakesEngine.playTurn(gs);
-          if (res.shortcutType === 'LADDER') sound.playLadder();
-          else if (res.shortcutType === 'SNAKE') sound.playSnake();
-          else sound.playMove();
-
-          updateGameDisplay(res);
-          if (res.extraTurn && !res.isGameOver) {
-            runAITurnIfApplicable();
-          } else if (!res.isGameOver) {
-            runAITurnIfApplicable();
-          }
-        }
+        const res = window.SnakesEngine.playTurn(gs);
+        if (res.shortcutType === 'LADDER') sound.playLadder();
+        else if (res.shortcutType === 'SNAKE') sound.playSnake();
+        else sound.playMove();
+        updateGameDisplay(res);
       }
-    }, 800);
+    });
   }
 
   // =========================================================================
@@ -863,7 +867,8 @@
       state.resultsGameId = null;
       const activityList = document.getElementById('activityFeedList');
       if (activityList) activityList.innerHTML = '';
-      resetDiceState();
+      clearAITimer();
+      resetDiceState(r.gameState);
     }
     document.getElementById('gameRoomCodeBadge').textContent = r.code;
 
@@ -936,10 +941,10 @@
         canRoll = isMyTurn && !currentP.isAI;
         diceBtn.disabled = !canRoll;
         helper.textContent = isMyTurn ? 'Tap Roll Dice!' : `Waiting for ${currentP.name} to roll...`;
-        renderDiceFace(diceCube, getDisplayedDiceValue(gs));
+        syncDice(diceCube, gs);
       } else if (gs.phase === 'MOVE') {
         diceBtn.disabled = true;
-        renderDiceFace(diceCube, getDisplayedDiceValue(gs));
+        syncDice(diceCube, gs);
         helper.textContent = isMyTurn ? 'Tap a glowing legal token to move!' : `${currentP.name} is selecting a token...`;
       }
       renderLudoBoard();
@@ -947,7 +952,7 @@
       const isMyTurn = currentP && currentP.id === state.playerId;
       canRoll = isMyTurn && !currentP.isAI;
       diceBtn.disabled = !canRoll;
-      renderDiceFace(diceCube, getDisplayedDiceValue(gs));
+      syncDice(diceCube, gs);
       helper.textContent = isMyTurn ? 'Tap Roll Dice to advance!' : `Waiting for ${currentP.name}...`;
       renderSnakesBoard();
     } else if (r.gameType === 'tambola') {
@@ -975,25 +980,6 @@
     }
   }
 
-  function getDisplayedDiceValue(gameState) {
-    if (!gameState) return null;
-
-    if (Number.isInteger(gameState.currentDice) && gameState.currentDice >= 1 && gameState.currentDice <= 6) {
-      return gameState.currentDice;
-    }
-
-    const lastRoll = gameState.lastAction && Number.isInteger(gameState.lastAction.roll)
-      ? gameState.lastAction.roll
-      : null;
-
-    const activeRollTypes = new Set(['DICE_ROLLED', 'NO_LEGAL_MOVES', 'PENALTY_THREE_SIXES']);
-    if (lastRoll && activeRollTypes.has(gameState.lastAction?.type) && (gameState.phase === 'ROLL' || gameState.phase === 'MOVE')) {
-      return lastRoll;
-    }
-
-    return null;
-  }
-
   const DICE_PIP_LAYOUT = {
     1: [4],
     2: [0, 8],
@@ -1009,46 +995,41 @@
   const DICE_ROLL_MS = 1180;
   const DICE_REVEAL_MS = 470;
 
+  // The die is driven by gameState.lastRoll.seq: every new roll animates exactly once and
+  // lands on that roll's value, regardless of later state changes (moves, other players).
   const diceRoll = {
     active: false,
-    settling: false,
     startedAt: 0,
+    shownSeq: 0,
     value: null,
-    pendingValue: null,
-    revealedValue: null,
-    queuedValue: null,
+    target: null,
+    awaitingOwnRoll: false,
+    queue: [],
     revealTimer: null,
     endTimer: null,
     animations: []
   };
 
-  function resetDiceState() {
+  function resetDiceState(gameState) {
     clearTimeout(diceRoll.revealTimer);
     clearTimeout(diceRoll.endTimer);
-    diceRoll.active = false;
-    diceRoll.settling = false;
-    diceRoll.startedAt = 0;
-    diceRoll.value = null;
-    diceRoll.pendingValue = null;
-    diceRoll.revealedValue = null;
-    diceRoll.queuedValue = null;
     diceRoll.animations.forEach(animation => {
       if (animation && typeof animation.cancel === 'function') animation.cancel();
     });
+    const lastRoll = gameState && gameState.lastRoll;
+    diceRoll.active = false;
+    diceRoll.startedAt = 0;
+    diceRoll.shownSeq = lastRoll ? lastRoll.seq : 0;
+    diceRoll.value = lastRoll ? lastRoll.value : null;
+    diceRoll.target = null;
+    diceRoll.awaitingOwnRoll = false;
+    diceRoll.queue = [];
     diceRoll.animations = [];
 
     const cube = document.getElementById('diceCube');
     if (cube) {
       cube.classList.remove('rolling');
-      const solid = cube.querySelector('.dice-solid');
-      if (solid) {
-        solid.style.transform = 'translate3d(0, 0, 0) rotateX(-10deg) rotateY(14deg)';
-      }
-      const shadow = document.getElementById('diceShadow');
-      if (shadow) {
-        shadow.style.transform = 'translateX(-50%) scale(1)';
-        shadow.style.opacity = '0.55';
-      }
+      showDiceValue(cube, diceRoll.value);
     }
   }
 
@@ -1100,41 +1081,45 @@
     });
   }
 
-  function renderDiceFace(diceCube, value) {
-    const solid = buildDiceCube(diceCube);
-    if (diceRoll.active) {
-      if (diceRoll.revealedValue) {
-        diceRoll.queuedValue = value;
-      } else {
-        diceRoll.pendingValue = value;
-        if (Date.now() - diceRoll.startedAt >= DICE_REVEAL_MS) revealDiceValue(diceCube);
-      }
-      return;
-    }
-    if (value && diceRoll.value && value !== diceRoll.value && !diceRoll.settling) {
-      animateDiceRoll(diceCube);
-      diceRoll.pendingValue = value;
-      return;
-    }
-    const shown = Number.isInteger(value) && value >= 1 && value <= 6 ? value : (Number.isInteger(diceRoll.value) ? diceRoll.value : 1);
-    paintDice(diceCube, shown);
-    if (Number.isInteger(value) && value >= 1 && value <= 6) {
-      diceRoll.value = value;
-      diceCube.setAttribute('aria-label', `Dice showing ${value}`);
-    } else {
-      diceCube.setAttribute('aria-label', 'Roll dice');
-    }
+  function isDieValue(value) {
+    return Number.isInteger(value) && value >= 1 && value <= 6;
   }
 
-  function revealDiceValue(diceCube) {
-    const value = diceRoll.pendingValue;
-    if (!value) return;
-    const solid = diceCube.querySelector('.dice-solid');
-    if (!solid) return;
-    paintDice(diceCube, value);
-    diceRoll.value = value;
-    diceRoll.revealedValue = value;
-    diceCube.setAttribute('aria-label', `Dice showing ${value}`);
+  function showDiceValue(diceCube, value) {
+    buildDiceCube(diceCube);
+    paintDice(diceCube, isDieValue(value) ? value : 1);
+    diceCube.setAttribute('aria-label', isDieValue(value) ? `Dice showing ${value}` : 'Roll dice');
+  }
+
+  function syncDice(diceCube, gameState) {
+    buildDiceCube(diceCube);
+    const lastRoll = gameState && gameState.lastRoll;
+    if (!lastRoll || !isDieValue(lastRoll.value) || lastRoll.seq <= diceRoll.shownSeq) {
+      if (!diceRoll.active) showDiceValue(diceCube, diceRoll.value);
+      return;
+    }
+    if (diceRoll.queue.some(entry => entry.seq === lastRoll.seq)) return;
+
+    if (diceRoll.active && diceRoll.awaitingOwnRoll && diceRoll.target === null) {
+      // Result for the throw the local player already started.
+      diceRoll.awaitingOwnRoll = false;
+      diceRoll.shownSeq = lastRoll.seq;
+      diceRoll.target = lastRoll.value;
+      if (Date.now() - diceRoll.startedAt >= DICE_REVEAL_MS) landDice(diceCube);
+      return;
+    }
+    if (diceRoll.active) {
+      diceRoll.queue.push({ seq: lastRoll.seq, value: lastRoll.value });
+      return;
+    }
+    diceRoll.shownSeq = lastRoll.seq;
+    animateDiceRoll(diceCube, lastRoll.value);
+  }
+
+  function landDice(diceCube) {
+    if (!isDieValue(diceRoll.target)) return;
+    diceRoll.value = diceRoll.target;
+    showDiceValue(diceCube, diceRoll.value);
   }
 
   // A rigid-body-style throw: one high arc followed by three rapidly decaying impacts.
@@ -1188,16 +1173,21 @@
     ];
   }
 
-  function animateDiceRoll(diceCube) {
+  function diceAnimationRemainingMs() {
+    if (!diceRoll.active) return 0;
+    return Math.max(0, DICE_ROLL_MS - (Date.now() - diceRoll.startedAt));
+  }
+
+  // target === null means the local player threw and the result has not arrived yet.
+  function animateDiceRoll(diceCube, target = null) {
     if (diceRoll.active) return;
     const solid = buildDiceCube(diceCube);
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const canAnimate = typeof solid.animate === 'function' && !reduceMotion;
 
     diceRoll.active = true;
-    diceRoll.pendingValue = null;
-    diceRoll.revealedValue = null;
-    diceRoll.queuedValue = null;
+    diceRoll.target = isDieValue(target) ? target : null;
+    diceRoll.awaitingOwnRoll = diceRoll.target === null;
     diceRoll.animations = [];
     diceRoll.startedAt = Date.now();
     diceCube.classList.add('rolling');
@@ -1216,25 +1206,21 @@
       }
     }
 
-    diceRoll.revealTimer = setTimeout(() => revealDiceValue(diceCube), canAnimate ? DICE_REVEAL_MS : 0);
+    diceRoll.revealTimer = setTimeout(() => landDice(diceCube), canAnimate ? DICE_REVEAL_MS : 0);
     diceRoll.endTimer = setTimeout(() => {
       diceRoll.animations.forEach(animation => animation.cancel());
       diceRoll.animations = [];
       diceRoll.active = false;
+      diceRoll.awaitingOwnRoll = false;
       diceCube.classList.remove('rolling');
-      const gameState = state.room && state.room.gameState;
-      const settled = diceRoll.revealedValue || diceRoll.pendingValue ||
-        (gameState ? getDisplayedDiceValue(gameState) : null);
-      const queued = diceRoll.queuedValue;
-      diceRoll.pendingValue = null;
-      diceRoll.queuedValue = null;
-      diceRoll.revealedValue = null;
-      diceRoll.settling = true;
-      renderDiceFace(diceCube, settled);
-      diceRoll.settling = false;
-      if (queued && queued !== diceRoll.value) {
-        animateDiceRoll(diceCube);
-        diceRoll.pendingValue = queued;
+      landDice(diceCube);
+      diceRoll.target = null;
+      showDiceValue(diceCube, diceRoll.value);
+
+      const next = diceRoll.queue.shift();
+      if (next && next.seq > diceRoll.shownSeq) {
+        diceRoll.shownSeq = next.seq;
+        animateDiceRoll(diceCube, next.value);
       }
     }, duration);
   }
@@ -2036,6 +2022,7 @@
     state.isSolo = false;
     state.currentGameId = null;
     state.lastActivityKey = null;
+    clearAITimer();
     switchView('landing');
   }
 

@@ -114,19 +114,29 @@ def run_e2e():
         print("  ✓ 3D Board Canvas and enlarged Dice controls rendered")
 
         # Roll Dice for Human Player
+        driver.execute_script("""
+            window.__rolls = [];
+            const original = window.LudoEngine.rollDice;
+            window.LudoEngine.rollDice = function (game, forced) {
+                const result = original.call(this, game, forced);
+                window.__rolls.push(result.roll);
+                return result;
+            };
+        """)
         dice_cube.click()
         time.sleep(0.4)
         rolling_transform = driver.execute_script(
             "return getComputedStyle(document.querySelector('#diceCube .dice-solid')).transform;"
         )
         assert rolling_transform.startswith("matrix3d"), f"Expected a 3D tumble mid-roll, got {rolling_transform}"
-        time.sleep(1.4)
+        time.sleep(0.4)  # past the mid-air reveal, before any AI turn can start
+        human_roll = driver.execute_script("return window.__rolls[0];")
         active_pips = driver.find_elements(
             By.CSS_SELECTOR, "#diceCube .dice-side[data-face='front'] .dice-pip.active"
         )
-        assert 1 <= len(active_pips) <= 6, f"Expected a pip-based dice face, found {len(active_pips)} pips"
-        assert dice_cube.get_attribute("aria-label") == f"Dice showing {len(active_pips)}", \
-            f"Dice label '{dice_cube.get_attribute('aria-label')}' disagrees with {len(active_pips)} pips"
+        assert len(active_pips) == human_roll, f"Die landed on {len(active_pips)} but engine rolled {human_roll}"
+        assert dice_cube.get_attribute("aria-label") == f"Dice showing {human_roll}", \
+            f"Dice label '{dice_cube.get_attribute('aria-label')}' disagrees with rolled {human_roll}"
         activity_items = driver.find_elements(By.CSS_SELECTOR, "#activityFeedList .feed-item")
         assert len(activity_items) > 0
         latest_act = activity_items[0].text

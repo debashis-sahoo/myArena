@@ -131,6 +131,9 @@
       currentTurnIndex: 0,
       phase: 'ROLL', // 'ROLL' | 'MOVE' | 'FINISHED'
       currentDice: null,
+      // Persists after the move resolves so clients can always show which roll happened.
+      lastRoll: null,
+      rollSeq: 0,
       consecutiveSixes: 0,
       legalMoves: [],
       winnerRankings: [], // Player IDs in order of finishing
@@ -214,6 +217,8 @@
     game.currentDice = roll;
 
     const currentPlayer = game.players[game.currentTurnIndex];
+    game.rollSeq = (game.rollSeq || 0) + 1;
+    game.lastRoll = { seq: game.rollSeq, value: roll, playerId: currentPlayer.id };
 
     // Check consecutive sixes
     if (roll === 6) {
