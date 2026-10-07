@@ -344,10 +344,6 @@ class RoomManager {
     room.players.splice(playerIdx, 1);
     room.lastActivity = Date.now();
 
-    if (room.gameState) {
-      this.removePlayerFromGame(room, playerId);
-    }
-
     if (room.players.length === 0) {
       // Clean up empty room
       this.rooms.delete(roomCode);
@@ -362,7 +358,8 @@ class RoomManager {
     }
 
     let hostMigrated = false;
-    // Host handoff
+    // Host handoff happens before game clean-up, so roles tied to the host (such as the
+    // Tambola caller) pass to the new host rather than back to the departing player.
     if (room.hostId === playerId) {
       // Deterministically assign host rights to next senior player
       room.hostId = room.players[0].id;
@@ -371,6 +368,10 @@ class RoomManager {
         room.players[0].isReady = true;
       }
       hostMigrated = true;
+    }
+
+    if (room.gameState) {
+      this.removePlayerFromGame(room, playerId);
     }
 
     this.broadcast(roomCode, {
@@ -574,6 +575,7 @@ class RoomManager {
       delete game.tickets[playerId];
       if (game.callerId === playerId && room.players.length > 0) {
         game.callerId = room.hostId;
+        game.hostId = room.hostId;
       }
       return;
     }

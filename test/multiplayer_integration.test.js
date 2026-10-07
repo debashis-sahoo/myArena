@@ -313,6 +313,16 @@ async function runMultiplayerTests() {
     assert.strictEqual(tambolaReconnect.data.room.gameState.ballPool, undefined);
     console.log('   ✓ Tickets and future ball order are private per player');
 
+    // 10b. When the Tambola host (caller) leaves mid-game, the new host can keep drawing
+    const hostLeaves = await post('/api/rooms/leave', { roomCode: tambolaCode }, tambolaHostToken);
+    assert.strictEqual(hostLeaves.data.room.hostId, tambolaGuest.id);
+    const newCallerDraw = await post('/api/rooms/action', {
+      roomCode: tambolaCode, action: { type: 'DRAW_BALL' }
+    }, tambolaGuestToken);
+    assert.strictEqual(newCallerDraw.status, 200, `New host could not draw: ${newCallerDraw.data && newCallerDraw.data.error}`);
+    assert.strictEqual(newCallerDraw.data.gameState.callerId, tambolaGuest.id);
+    console.log('   ✓ Caller role passes to the new host when the host leaves mid-game');
+
     // 11. Idle lobby seats are still released after the grace period
     console.log('11. Lobby player goes offline past the grace period...');
     const lobbyCreate = await post('/api/rooms/create', { hostName: 'Lobby Host', gameType: 'ludo', maxPlayers: 4 });

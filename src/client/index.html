@@ -1421,16 +1421,48 @@
     }
 
     .ticket-cell.marked {
-      background: #fee2e2;
-      color: #b91c1c;
+      background: #fff7ed;
+      color: #7f1d1d;
+    }
+
+    /* A translucent hand-drawn style cross: the number stays readable underneath. */
+    .ticket-cell.marked::before,
+    .ticket-cell.marked::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 88%;
+      height: 11%;
+      min-height: 3px;
+      border-radius: 999px;
+      background: rgba(220, 38, 38, 0.42);
+      box-shadow: 0 0 1px rgba(127, 29, 29, 0.35);
+      pointer-events: none;
+      animation: ticketCrossIn 0.18s ease-out both;
+    }
+
+    .ticket-cell.marked::before {
+      --cross-angle: 45deg;
+      transform: translate(-50%, -50%) rotate(45deg);
     }
 
     .ticket-cell.marked::after {
-      content: '👑';
-      position: absolute;
-      font-size: 1.4rem;
-      opacity: 0.85;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+      --cross-angle: -45deg;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      animation-delay: 0.06s;
+    }
+
+    @keyframes ticketCrossIn {
+      from { transform: translate(-50%, -50%) rotate(var(--cross-angle)) scaleX(0); }
+      to { transform: translate(-50%, -50%) rotate(var(--cross-angle)) scaleX(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ticket-cell.marked::before,
+      .ticket-cell.marked::after {
+        animation: none;
+      }
     }
 
     .patterns-claim-grid {
@@ -1662,6 +1694,92 @@
       margin-top: 8px;
     }
 
+    /* =========================================================================
+       PLAYER BRIEFING (lobby card + How to Play modal)
+       ========================================================================= */
+    .briefing-card {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.16), rgba(245, 158, 11, 0.08)), var(--bg-card);
+      border: 1.5px solid var(--border-gold);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-card);
+    }
+
+    .briefing-card:empty {
+      display: none;
+    }
+
+    .briefing-identity {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+      margin-bottom: 12px;
+    }
+
+    .briefing-identity h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--gold-bright);
+    }
+
+    .briefing-swatch {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      vertical-align: -2px;
+      margin-right: 4px;
+    }
+
+    .briefing-next {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.5);
+      color: #d1fae5;
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .briefing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .briefing-section {
+      background: rgba(0, 0, 0, 0.18);
+      border: 1px solid var(--border-royal);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+
+    .briefing-section h4 {
+      margin: 0 0 6px;
+      font-size: 0.85rem;
+      color: var(--text-gold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .briefing-section ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-main);
+    }
+
+    .briefing-section details summary {
+      cursor: pointer;
+      color: var(--text-gold);
+      font-size: 0.82rem;
+      margin-top: 4px;
+    }
+
     @media (max-width: 640px) {
       .tambola-setup-card {
         padding: 18px 14px;
@@ -1773,7 +1891,7 @@
       </svg>
       <div class="brand-text">
         <span class="brand-name">myArena Royalty</span>
-        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.1.1</span></span>
+        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.2.0</span></span>
       </div>
     </div>
 
@@ -2016,6 +2134,9 @@
           </div>
         </div>
 
+        <!-- Personalised briefing: role, seat, goal, this room's rules, next step -->
+        <div class="briefing-card" id="lobbyBriefing" aria-live="polite"></div>
+
         <!-- Participants List -->
         <h3 style="margin-bottom: 14px; color: var(--text-gold);">
           Participants (<span id="lobbyPlayerCount">1</span>/<span id="lobbyMaxPlayers">4</span>)
@@ -2045,6 +2166,9 @@
           </div>
 
           <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn btn-outline" id="btnHowToPlay" style="padding: 6px 14px; font-size: 0.85rem;" aria-haspopup="dialog">
+              ❓ How to Play
+            </button>
             <span class="room-code-badge" style="font-size: 1rem; padding: 4px 12px;" id="gameRoomCodeBadge">ROOM</span>
             <button class="btn btn-outline" id="btnReturnLobby" style="padding: 6px 14px; font-size: 0.85rem;">
               Leave Match
@@ -2322,6 +2446,18 @@
         <button class="btn btn-outline" data-close="modalTambolaSetup" style="flex: 1;">Cancel</button>
         <button class="btn btn-primary" id="btnSaveTambolaSetup" style="flex: 2;">Save Setup</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal: How to Play (personalised briefing during a match) -->
+  <div class="modal-overlay" id="modalHowToPlay">
+    <div class="modal-card" role="dialog" aria-labelledby="howToPlayTitle">
+      <div class="modal-header">
+        <h3 class="modal-title" id="howToPlayTitle">❓ How to Play</h3>
+        <button class="close-btn" data-close="modalHowToPlay" aria-label="Close modal">&times;</button>
+      </div>
+      <div id="howToPlayContent"></div>
+      <button class="btn btn-primary" data-close="modalHowToPlay" style="width: 100%; margin-top: 14px;">Got it — let's play!</button>
     </div>
   </div>
 

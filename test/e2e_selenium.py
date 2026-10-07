@@ -324,7 +324,25 @@ def run_e2e():
         active_cells[0].click()
         time.sleep(0.2)
         assert "marked" in active_cells[0].get_attribute("class")
-        print("  ✓ Tap-to-mark daubing verified on ticket cell")
+        assert active_cells[0].get_attribute("aria-pressed") == "true"
+        assert active_cells[0].text.strip().isdigit(), "A crossed number must stay readable"
+        cross = driver.execute_script(
+            "return getComputedStyle(arguments[0], '::before').backgroundColor;", active_cells[0]
+        )
+        assert cross.startswith("rgba") and not cross.endswith(", 1)"), f"Cross mark should be translucent, got {cross}"
+        print("  ✓ Tap-to-mark draws a translucent cross with the number still visible")
+
+        # How to Play briefing is available in every match
+        how_to_play = driver.find_element(By.ID, "btnHowToPlay")
+        driver.execute_script("window.scrollTo(0, 0);")
+        time.sleep(0.3)
+        how_to_play.click()
+        wait.until(EC.visibility_of_element_located((By.ID, "modalHowToPlay")))
+        briefing = driver.find_element(By.ID, "howToPlayContent").text
+        assert "GOAL" in briefing.upper() and "RULES IN THIS ROOM" in briefing.upper(), briefing[:200]
+        driver.find_element(By.CSS_SELECTOR, "#modalHowToPlay .btn-primary").click()
+        wait.until(EC.invisibility_of_element_located((By.ID, "modalHowToPlay")))
+        print("  ✓ How to Play briefing opens with goal and this room's rules")
 
         print("\n====================================================")
         print("ALL END-TO-END BROWSER TESTS COMPLETED SUCCESSFULLY! 👑")

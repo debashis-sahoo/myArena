@@ -179,6 +179,35 @@ runTest('Ludo: Captures send opponent token back to base and grant bonus turn', 
   assert.strictEqual(game.players[0].tokens[0], 10);
   assert.strictEqual(game.players[1].tokens[0], -1); // Bruce's token captured back to base!
   assert.strictEqual(moveRes.extraTurn, true); // Capture bonus
+  // Every client replays the move from lastMove, including where the captured token was.
+  assert.deepStrictEqual(game.lastMove, {
+    seq: 1,
+    playerId: 'u1',
+    tokenIndex: 0,
+    fromStep: 8,
+    toStep: 10,
+    captured: { opponentId: 'u2', opponentName: 'Bruce', opponentTokenIndex: 0, opponentFromStep: 49 },
+    captures: [{ opponentId: 'u2', opponentName: 'Bruce', opponentTokenIndex: 0, opponentFromStep: 49 }]
+  });
+});
+
+runTest('Ludo: landing on two opponent tokens captures and records both', () => {
+  const game = LudoEngine.createGame([
+    { id: 'u1', name: 'Tony', teamIndex: 0 },
+    { id: 'u2', name: 'Bruce', teamIndex: 1 },
+    { id: 'u3', name: 'Thor', teamIndex: 2 }
+  ]);
+  // Track index 10 (not a safe square): Bruce at step 49, Thor at step 36.
+  game.players[1].tokens[0] = 49;
+  game.players[2].tokens[2] = 36;
+  assert.strictEqual(LudoEngine.getAbsoluteTrackIndex(2, 36), 10);
+  game.players[0].tokens[0] = 8;
+  LudoEngine.rollDice(game, 2);
+  LudoEngine.moveToken(game, 0);
+  assert.strictEqual(game.players[1].tokens[0], -1);
+  assert.strictEqual(game.players[2].tokens[2], -1);
+  assert.deepStrictEqual(game.lastMove.captures.map(c => [c.opponentId, c.opponentTokenIndex, c.opponentFromStep]),
+    [['u2', 0, 49], ['u3', 2, 36]]);
 });
 
 runTest('Ludo: Safe square prevents captures', () => {

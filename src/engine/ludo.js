@@ -134,6 +134,10 @@
       // Persists after the move resolves so clients can always show which roll happened.
       lastRoll: null,
       rollSeq: 0,
+      // Like lastRoll, kept separate from lastAction (which "player finished" / "game over"
+      // overwrite) so every client can replay each token move exactly once.
+      lastMove: null,
+      moveSeq: 0,
       consecutiveSixes: 0,
       legalMoves: [],
       winnerRankings: [], // Player IDs in order of finishing
@@ -297,6 +301,7 @@
     currentPlayer.tokens[tokenIndex] = nextStep;
 
     let captured = null;
+    const captures = [];
     let extraTurnAwarded = false;
     let extraTurnReason = null;
 
@@ -339,8 +344,10 @@
                 captured = {
                   opponentId: opp.id,
                   opponentName: opp.name,
-                  opponentTokenIndex: oppTokenIdx
+                  opponentTokenIndex: oppTokenIdx,
+                  opponentFromStep: oppStep
                 };
+                captures.push(captured);
               }
             }
           });
@@ -358,6 +365,18 @@
       extraTurnAwarded = true;
       extraTurnReason = 'ROLLED_SIX_BONUS';
     }
+
+    game.moveSeq = (game.moveSeq || 0) + 1;
+    game.lastMove = {
+      seq: game.moveSeq,
+      playerId: currentPlayer.id,
+      tokenIndex: tokenIndex,
+      fromStep: prevStep,
+      toStep: nextStep,
+      captured: captured,
+      // Every token sent home by this move (a square can hold more than one).
+      captures: captures
+    };
 
     // Log the move
     game.lastAction = {

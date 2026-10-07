@@ -1017,6 +1017,204 @@
   // =========================================================================
   // 7. LOBBY RENDERING & CONTROLS
   // =========================================================================
+  // =========================================================================
+  // PLAYER BRIEFING
+  // Everything a player needs to play well, built from the live room: who they are,
+  // their seat or colour, the goal, how a turn works, this room's rules and the next step.
+  // =========================================================================
+  const LUDO_SEATS = [
+    { name: 'Red', color: '#dc2626' },
+    { name: 'Green', color: '#16a34a' },
+    { name: 'Yellow', color: '#ca8a04' },
+    { name: 'Blue', color: '#2563eb' }
+  ];
+  const SNAKES_SEAT_NAMES = ['Red', 'Blue', 'Green', 'Amber'];
+
+  function yesNo(value) {
+    return value ? 'On' : 'Off';
+  }
+
+  function briefingList(items) {
+    return `<ul>${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
+  }
+
+  function buildBriefing(room, context) {
+    const gs = room.gameState;
+    const inGame = context === 'game' && gs;
+    const rules = room.rules || {};
+    const meInRoom = (room.players || []).find(p => p.id === state.playerId);
+    const myName = (meInRoom && meInRoom.name) || state.user.name;
+    const isHost = room.hostId === state.playerId;
+    const roleLabel = state.isSolo ? 'Solo player' : (isHost ? 'Host (room admin)' : 'Player');
+    const seatIndex = Math.max(0, (room.players || []).findIndex(p => p.id === state.playerId));
+
+    let seat = '';
+    let goal = [];
+    let turn = [];
+    let roomRules = [];
+    let tips = [];
+    let adminNotes = [];
+
+    if (room.gameType === 'ludo') {
+      const me = inGame ? gs.players.find(p => p.id === state.playerId) : null;
+      const team = LUDO_SEATS[me ? me.teamIndex : seatIndex] || LUDO_SEATS[0];
+      seat = `<span><span class="briefing-swatch" style="background:${team.color}"></span>You play <strong>${team.name}</strong></span>`;
+      const entry = Array.isArray(rules.entryRoll) && rules.entryRoll.includes(1) ? 'a 1 or a 6' : 'a 6';
+      goal = [
+        'Race all 4 of your tokens once around the board and into the centre home triangle.',
+        'The first player with all four tokens home wins; the others keep playing for 2nd and 3rd place.'
+      ];
+      turn = [
+        'On your turn tap <strong>Roll Dice</strong> (or the die itself).',
+        'When the die stops, your movable tokens glow gold — tap one to move it.',
+        `You need ${entry} to bring a token out of your yard onto your start square.`,
+        'If no token can move, your turn passes automatically.'
+      ];
+      roomRules = [
+        `Leave the yard with: <strong>${entry}</strong>`,
+        `Extra roll after a 6: <strong>${yesNo(rules.bonusOnSix !== false)}</strong>`,
+        `Three 6s in a row forfeits the turn: <strong>${yesNo(rules.maxConsecutiveSixes !== 0)}</strong>`,
+        `Extra roll for a capture: <strong>${yesNo(rules.bonusOnCapture !== false)}</strong>`,
+        `Star squares are safe: <strong>${yesNo(rules.safeSquaresEnabled !== false)}</strong>`,
+        `Exact roll needed to reach home: <strong>${yesNo(rules.exactFinish !== false)}</strong>`
+      ];
+      tips = [
+        'Land exactly on an opponent to send their token back to their yard.',
+        'Tokens on a ★ square cannot be captured (when safe squares are on).',
+        'Bringing a token home also earns an extra roll.'
+      ];
+    } else if (room.gameType === 'snakes') {
+      const index = inGame ? Math.max(0, gs.players.findIndex(p => p.id === state.playerId)) : seatIndex;
+      const color = TOKEN_COLORS[index % TOKEN_COLORS.length];
+      seat = `<span><span class="briefing-swatch" style="background:${color}"></span>Your pawn is <strong>${SNAKES_SEAT_NAMES[index % 4]}</strong></span>`;
+      const finishText = {
+        exact_stay: 'You need the exact number to land on 100; overshoot and you stay put',
+        exact_bounce: 'You need the exact number for 100; overshoot and you bounce back',
+        overshoot_wins: 'Reaching or passing 100 wins'
+      }[rules.finishMode || 'exact_stay'];
+      goal = ['Be the first to reach square 100.'];
+      turn = [
+        'On your turn tap <strong>Roll Dice</strong> (or the die itself).',
+        'When the die stops, your pawn hops forward automatically.',
+        'Land at the foot of a ladder to climb it; land on a snake\'s head to slide down to its tail.',
+        'Everyone starts off the board — your first roll moves you onto that square.'
+      ];
+      roomRules = [
+        `Finish: <strong>${finishText}</strong>`,
+        `Extra roll after a 6: <strong>${yesNo(rules.bonusOnSix !== false)}</strong>`
+      ];
+      tips = ['The glowing pawn is the one whose turn it is (or who is moving).'];
+    } else if (room.gameType === 'tambola') {
+      const catalog = window.TambolaEngine.PATTERN_CATALOG;
+      const ids = inGame ? gs.patterns.map(p => p.id) : (rules.patternIds || window.TambolaEngine.DEFAULT_PATTERN_IDS);
+      const patterns = ids.map(id => catalog.find(p => p.id === id)).filter(Boolean);
+      const auto = (inGame ? gs.callerRole : rules.callerRole) === 'AUTO';
+      const interval = (inGame ? gs.autoIntervalSeconds : rules.autoIntervalSeconds) || 7;
+      seat = isHost
+        ? '<span>🎙️ You are the <strong>caller</strong> — you draw the numbers</span>'
+        : '<span>🎟️ You get <strong>one ticket</strong> of 15 numbers</span>';
+      goal = [
+        'Complete the winning patterns on your ticket before anyone else and claim them.',
+        'Each pattern has a single winner — the first valid claim takes it.'
+      ];
+      turn = isHost && !state.isSolo
+        ? [
+          auto ? `Press <strong>Auto-Call</strong> to draw a number every ${interval} seconds (you can pause it).`
+            : 'Press <strong>Draw Next Number</strong> to call each number.',
+          'Called numbers light up on the 1–90 board for everyone.',
+          'You also have a ticket and can claim patterns like everyone else.'
+        ]
+        : [
+          'Watch the current number and the 1–90 board.',
+          'Tap a called number on your ticket to cross it out (tap again to undo).',
+          'When a pattern is complete, press its <strong>Claim</strong> button straight away.'
+        ];
+      if (state.isSolo) {
+        turn = [
+          auto ? `Press <strong>Auto-Call</strong> to draw a number every ${interval} seconds.`
+            : 'Press <strong>Draw Next Number</strong> to call each number.',
+          'Tap called numbers on your ticket to cross them out, then claim completed patterns.'
+        ];
+      }
+      roomRules = [
+        `Caller: <strong>${auto ? `Automatic, every ${interval}s` : 'Manual draws by the host'}</strong>`,
+        `Winning patterns in play: <strong>${patterns.length}</strong>`
+      ];
+      const patternItems = patterns.map(p => `<strong>${escapeHTML(p.name)}</strong> — ${escapeHTML(p.description)}`);
+      const shown = patternItems.slice(0, 6);
+      const rest = patternItems.slice(6);
+      tips = [
+        'Claims are checked automatically against the numbers already called — your crosses are just for you.',
+        'A wrong ("bogey") claim is rejected and logged.',
+        'The game ends when the last Full House is claimed, every pattern is won, or all 90 numbers are called.'
+      ];
+      roomRules.push(`${briefingList(shown)}${rest.length ? `<details><summary>Show ${rest.length} more patterns</summary>${briefingList(rest)}</details>` : ''}`);
+      if (isHost && !state.isSolo) {
+        adminNotes.push('Use <strong>🎯 Game Setup</strong> to pick the winning patterns and the caller mode before you start.');
+      }
+    }
+
+    if (isHost && !state.isSolo) {
+      adminNotes.unshift('Share the room code or <strong>📋 Copy Invite Link</strong> with your friends.');
+      adminNotes.push('<strong>Start Game</strong> unlocks once every player is connected and ready.');
+      adminNotes.push('If you leave, host rights pass to the next player automatically.');
+    }
+
+    let next = '';
+    if (!inGame && !state.isSolo) {
+      if (isHost) {
+        const waiting = (room.players || []).filter(p => !(p.connected && p.isReady)).length;
+        next = waiting ? `Waiting for ${waiting} player${waiting === 1 ? '' : 's'} to get ready, then press <strong>Start Game</strong>.`
+          : 'Everyone is ready — press <strong>Start Game</strong> when you like.';
+      } else if (meInRoom && !meInRoom.isReady) {
+        next = 'Tap <strong>Mark Ready</strong> so the host can start the game.';
+      } else {
+        next = 'You\'re ready! Waiting for the host to start the game.';
+      }
+    } else if (inGame && gs.players && gs.phase !== 'FINISHED' && room.gameType !== 'tambola') {
+      const current = gs.players[gs.currentTurnIndex];
+      next = current && current.id === state.playerId ? 'It\'s <strong>your turn</strong> — roll the die!'
+        : `It's ${escapeHTML(current ? current.name : 'another player')}'s turn — yours is coming up.`;
+    }
+
+    const playerCount = (room.players || []).length;
+    const roomLine = state.isSolo ? 'Solo match vs AI bots'
+      : `Room <strong>${escapeHTML(room.code)}</strong> · ${playerCount}${room.maxPlayers ? `/${room.maxPlayers}` : ''} players`;
+
+    return `
+      <div class="briefing-identity">
+        <h3>👋 ${escapeHTML(myName)}, here's your briefing</h3>
+        <span class="meta-tag">${escapeHTML(roleLabel)}</span>
+        ${seat}
+        <span style="font-size:0.82rem; color:var(--text-muted);">${roomLine} · chat is on the right during play</span>
+      </div>
+      ${next ? `<div class="briefing-next">➡️ ${next}</div>` : ''}
+      <div class="briefing-grid">
+        <div class="briefing-section"><h4>🎯 Goal</h4>${briefingList(goal)}</div>
+        <div class="briefing-section"><h4>🎲 How to play</h4>${briefingList(turn)}</div>
+        <div class="briefing-section"><h4>📜 Rules in this room</h4>${briefingList(roomRules)}</div>
+        <div class="briefing-section"><h4>💡 Good to know</h4>${briefingList(tips)}</div>
+        ${adminNotes.length ? `<div class="briefing-section"><h4>👑 Host controls</h4>${briefingList(adminNotes)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  function openHowToPlay() {
+    if (!state.room) return;
+    document.getElementById('howToPlayContent').innerHTML = buildBriefing(state.room, 'game');
+    openModal('modalHowToPlay');
+  }
+
+  // Guests joining an online match see their briefing once, the first time they enter it.
+  function maybeShowJoinBriefing() {
+    const r = state.room;
+    if (!r || state.isSolo || !r.gameState || r.hostId === state.playerId) return;
+    const key = `myarena_brief_${r.code}_${r.gameState.id}`;
+    if (safeStorage.getItem(key)) return;
+    safeStorage.setItem(key, '1');
+    openHowToPlay();
+  }
+
   function renderLobby() {
     if (!state.room) return;
     const r = state.room;
@@ -1103,6 +1301,7 @@
       }
     }
     rulesBox.appendChild(badgeContainer);
+    document.getElementById('lobbyBriefing').innerHTML = buildBriefing(r, 'lobby');
 
     // Host start button visibility
     const startBtn = document.getElementById('btnStartGame');
@@ -1229,6 +1428,7 @@
       if (!isAIStillOnTurn(gs, aiId, 'ROLL')) return runAITurnIfApplicable();
       // ...and let the previous pawn finish walking before the bot throws again.
       if (state.room.gameType === 'snakes' && snakesMovementBusy()) return runAITurnIfApplicable();
+      if (state.room.gameType === 'ludo' && ludoMovementBusy()) return runAITurnIfApplicable();
       sound.playDiceRoll();
 
       if (state.room.gameType === 'ludo') {
@@ -1240,9 +1440,7 @@
           if (!isAIStillOnTurn(gs, aiId, 'MOVE')) return runAITurnIfApplicable();
           const bestToken = window.GameAI.pickLudoMove(gs);
           if (bestToken === null) return;
-          sound.playMove();
-          const moveRes = window.LudoEngine.moveToken(gs, bestToken);
-          if (moveRes.captured) sound.playCapture();
+          window.LudoEngine.moveToken(gs, bestToken);
           updateGameDisplay();
         });
       } else if (state.room.gameType === 'snakes') {
@@ -1291,6 +1489,7 @@
     }
 
     updateGameDisplay();
+    maybeShowJoinBriefing();
   }
 
   function updateGameDisplay(actionResult = null) {
@@ -1313,7 +1512,12 @@
         finishedDiceCube.setAttribute('aria-disabled', 'true');
         syncDice(finishedDiceCube, gs);
       }
-      if (r.gameType === 'ludo') renderLudoBoard();
+      if (r.gameType === 'ludo') {
+        syncLudoView(gs);
+        renderLudoBoard();
+        // Let the deciding token finish its hops before announcing the result.
+        if (ludoMovementBusy()) return;
+      }
       if (r.gameType === 'snakes') {
         syncSnakesView(gs);
         renderSnakesBoard();
@@ -1347,15 +1551,20 @@
 
     if (r.gameType === 'ludo') {
       const isMyTurn = currentP && currentP.id === state.playerId;
+      syncLudoView(gs);
+      const moving = ludoMovementBusy();
       if (gs.phase === 'ROLL') {
-        canRoll = isMyTurn && !currentP.isAI;
+        canRoll = isMyTurn && !currentP.isAI && !moving;
         diceBtn.disabled = !canRoll;
-        helper.textContent = isMyTurn ? 'Tap Roll Dice!' : `Waiting for ${currentP.name} to roll...`;
+        helper.textContent = moving ? 'Moving the token...'
+          : (isMyTurn ? 'Tap Roll Dice!' : `Waiting for ${currentP.name} to roll...`);
         syncDice(diceCube, gs);
       } else if (gs.phase === 'MOVE') {
         diceBtn.disabled = true;
         syncDice(diceCube, gs);
-        helper.textContent = isMyTurn ? 'Tap a glowing legal token to move!' : `${currentP.name} is selecting a token...`;
+        // Token choices appear only once the die is at rest (refreshed when it settles).
+        helper.textContent = diceRoll.active ? 'Rolling...'
+          : (isMyTurn ? 'Tap a glowing legal token to move!' : `${currentP.name} is selecting a token...`);
       }
       renderLudoBoard();
     } else if (r.gameType === 'snakes') {
@@ -1910,6 +2119,9 @@
       if (next && next.seq > diceRoll.shownSeq) {
         diceRoll.shownSeq = next.seq;
         animateDiceRoll(diceCube, next.value);
+      } else if (state.view === 'game' && state.room && state.room.gameType === 'ludo') {
+        // The die is at rest: reveal the movable tokens and start any queued token hops.
+        updateGameDisplay();
       }
     }, duration);
   }
@@ -2052,6 +2264,7 @@
     if (diceBtn.disabled || diceCube.classList.contains('rolling')) return;
     if (!state.room || !state.room.gameState || state.room.gameState.phase === 'FINISHED') return;
     if (state.room.gameType === 'snakes' && snakesMovementBusy()) return;
+    if (state.room.gameType === 'ludo' && ludoMovementBusy()) return;
     sound.playDiceRoll();
     animateDiceRoll(diceCube);
 
@@ -2076,12 +2289,10 @@
     }
   }
 
-  // Move Token Action Trigger (Ludo)
+  // Move Token Action Trigger (Ludo). Step and capture sounds play during the replay.
   async function triggerMoveToken(tokenIdx) {
-    sound.playMove();
     if (state.isSolo) {
-      const res = window.LudoEngine.moveToken(state.room.gameState, tokenIdx);
-      if (res.captured) sound.playCapture();
+      window.LudoEngine.moveToken(state.room.gameState, tokenIdx);
       updateGameDisplay();
     } else {
       try {
@@ -2143,8 +2354,8 @@
     if (!state.room || !state.room.gameState) return;
     const gs = state.room.gameState;
     if (state.room.gameType !== 'ludo' || gs.phase !== 'MOVE') return;
-    // Moves wait until the die has come to rest.
-    if (diceRoll.active) return;
+    // Moves wait until the die has come to rest and the previous token has landed.
+    if (diceRoll.active || ludoMovementBusy()) return;
 
     const currentP = gs.players[gs.currentTurnIndex];
     if (currentP.id !== state.playerId) return;
@@ -2154,6 +2365,8 @@
     const scaleY = canvas.height / rect.height;
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top) * scaleY;
+    // Hit area scales with the board so tokens are easy to tap at any size.
+    const hitRadius = Math.max(26, (canvas.width / 15) * 0.55);
 
     // Check which legal token was clicked
     for (const move of gs.legalMoves) {
@@ -2161,11 +2374,199 @@
       const step = currentP.tokens[tIdx];
       const pos = getLudoTokenCanvasPos(currentP.teamIndex, step, tIdx);
       const dist = Math.hypot(clickX - pos.x, clickY - pos.y);
-      if (dist <= 26) {
+      if (dist <= hitRadius) {
         triggerMoveToken(tIdx);
         break;
       }
     }
+  }
+
+  // =========================================================================
+  // LUDO MOVE PLAYBACK
+  // The engine moves a token in one step; the board replays it once the die is at
+  // rest: a hop per square (a single hop out of the yard), then any captured token
+  // flies back to its yard. Driven by gameState.lastMove, so opponents' and bots'
+  // moves replay the same way on every screen.
+  // =========================================================================
+  const LUDO_STEP_MS = 170;
+  const LUDO_CAPTURE_MS = 560;
+  const ludoView = { gameId: null, lastSeq: 0, tokens: {}, queue: [], current: null, raf: null };
+
+  function snapLudoView(gs) {
+    ludoView.tokens = {};
+    gs.players.forEach(player => { ludoView.tokens[player.id] = player.tokens.slice(); });
+    ludoView.queue = [];
+    ludoView.current = null;
+  }
+
+  // Queue newly made moves for playback. Returns true when one was queued.
+  function syncLudoView(gs) {
+    if (ludoView.gameId !== gs.id) {
+      ludoView.gameId = gs.id;
+      ludoView.lastSeq = gs.moveSeq || 0;
+      snapLudoView(gs);
+      return false;
+    }
+    const move = gs.lastMove;
+    if (!move || move.seq <= ludoView.lastSeq) return false;
+    const contiguous = move.seq === ludoView.lastSeq + 1;
+    ludoView.lastSeq = move.seq;
+    if (!contiguous || !ludoView.tokens[move.playerId]) {
+      // Missed updates (e.g. after reconnecting): jump straight to the server's positions.
+      snapLudoView(gs);
+      return false;
+    }
+    ludoView.queue.push(Object.assign({}, move));
+    return true;
+  }
+
+  function ludoMovementBusy() {
+    return !!ludoView.current || ludoView.queue.length > 0;
+  }
+
+  function ludoMoveCaptures(move) {
+    if (Array.isArray(move.captures)) return move.captures;
+    return move.captured ? [move.captured] : [];
+  }
+
+  function ludoShownSteps(player) {
+    return ludoView.tokens[player.id] || player.tokens;
+  }
+
+  function finishLudoMove() {
+    ludoView.current = null;
+    // Once nothing is left to replay, the board must match the server exactly.
+    const gs = state.room && state.room.gameState;
+    if (gs && ludoView.queue.length === 0) snapLudoView(gs);
+    // Refresh controls (roll button, next turn, bots, results) now that the token has arrived.
+    updateGameDisplay();
+  }
+
+  function advanceLudoMoves(now) {
+    const gs = state.room && state.room.gameState;
+    if (!gs) return;
+    if (!ludoView.current) {
+      const next = ludoView.queue[0];
+      if (!next || diceRoll.active) return;
+      ludoView.queue.shift();
+      const player = gs.players.find(p => p.id === next.playerId);
+      if (!player) return;
+      next.team = player.teamIndex;
+      // Leaving the yard is a single hop onto the start square; otherwise one hop per square.
+      next.path = [];
+      if (next.fromStep < 0) next.path.push(next.toStep);
+      else for (let s = next.fromStep + 1; s <= next.toStep; s++) next.path.push(s);
+      next.startedAt = now + 80;
+      next.stage = 'hops';
+      next.stepsSounded = 0;
+      ludoView.current = next;
+    }
+    const move = ludoView.current;
+    const elapsed = now - move.startedAt;
+    if (elapsed < 0) return;
+    const shown = ludoView.tokens[move.playerId];
+    const sendHome = () => ludoMoveCaptures(move).forEach(c => {
+      if (ludoView.tokens[c.opponentId]) ludoView.tokens[c.opponentId][c.opponentTokenIndex] = -1;
+    });
+
+    if (snakesMotionReduced()) {
+      if (shown) shown[move.tokenIndex] = move.toStep;
+      sendHome();
+      return finishLudoMove();
+    }
+
+    if (move.stage === 'hops') {
+      const landed = Math.min(move.path.length, Math.floor(elapsed / LUDO_STEP_MS));
+      while (move.stepsSounded < landed) {
+        move.stepsSounded += 1;
+        sound.playMove();
+      }
+      if (elapsed < move.path.length * LUDO_STEP_MS) return;
+      if (shown) shown[move.tokenIndex] = move.toStep;
+      if (ludoMoveCaptures(move).length) {
+        move.stage = 'capture';
+        move.captureStartedAt = now;
+        sound.playCapture();
+        return;
+      }
+      return finishLudoMove();
+    }
+
+    if (move.stage === 'capture' && now - move.captureStartedAt >= LUDO_CAPTURE_MS) {
+      sendHome();
+      finishLudoMove();
+    }
+  }
+
+  // Frame loop that runs only while a move is being replayed.
+  function ensureLudoAnimation() {
+    if (ludoView.raf || !ludoMovementBusy()) return;
+    const tick = now => {
+      const onBoard = state.view === 'game' && state.room && state.room.gameType === 'ludo' && canvas && ctx;
+      if (!onBoard) {
+        ludoView.raf = null;
+        return;
+      }
+      advanceLudoMoves(now);
+      renderLudoBoard();
+      ludoView.raf = ludoMovementBusy() ? requestAnimationFrame(tick) : null;
+    };
+    ludoView.raf = requestAnimationFrame(tick);
+  }
+
+  // Pose of a token that is mid-flight right now, or null if it is at rest.
+  function ludoMovingPose(player, tokenIndex, cellW, now) {
+    const move = ludoView.current;
+    if (!move || now < move.startedAt) return null;
+    if (move.stage === 'hops' && move.playerId === player.id && move.tokenIndex === tokenIndex) {
+      const elapsed = now - move.startedAt;
+      const i = Math.min(move.path.length - 1, Math.floor(elapsed / LUDO_STEP_MS));
+      const fromStep = i === 0 ? move.fromStep : move.path[i - 1];
+      const from = getLudoTokenCanvasPos(move.team, fromStep, tokenIndex);
+      const to = getLudoTokenCanvasPos(move.team, move.path[i], tokenIndex);
+      return hopPose(from, to, (elapsed - i * LUDO_STEP_MS) / LUDO_STEP_MS, cellW * 0.42);
+    }
+    const capture = move.stage === 'capture' &&
+      ludoMoveCaptures(move).find(c => c.opponentId === player.id && c.opponentTokenIndex === tokenIndex);
+    if (capture) {
+      const from = getLudoTokenCanvasPos(player.teamIndex, capture.opponentFromStep, tokenIndex);
+      const to = getLudoTokenCanvasPos(player.teamIndex, -1, tokenIndex);
+      const f = (now - move.captureStartedAt) / LUDO_CAPTURE_MS;
+      // One long, high arc home to the yard.
+      return hopPose(from, to, f, cellW * 1.6);
+    }
+    return null;
+  }
+
+  function drawLudoToken(context, x, y, cellW, color, emblem, isLegal) {
+    if (isLegal) {
+      context.beginPath();
+      context.arc(x, y, cellW * 0.55, 0, Math.PI * 2);
+      context.fillStyle = 'rgba(251, 191, 36, 0.45)';
+      context.fill();
+      context.strokeStyle = '#fbbf24';
+      context.lineWidth = 3;
+      context.stroke();
+    }
+
+    const grad = context.createRadialGradient(x - 3, y - 3, 2, x, y, cellW * 0.4);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, color);
+    grad.addColorStop(1, '#0f172a');
+
+    context.beginPath();
+    context.arc(x, y, cellW * 0.38, 0, Math.PI * 2);
+    context.fillStyle = grad;
+    context.fill();
+    context.strokeStyle = '#fef08a';
+    context.lineWidth = 2;
+    context.stroke();
+
+    context.fillStyle = '#ffffff';
+    context.font = `bold ${cellW * 0.42}px sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(emblem, x, y);
   }
 
   // Ludo Board Renderer
@@ -2297,66 +2698,46 @@
       ctx.fillText('★', (s.c + 0.5) * cellW, (s.r + 0.5) * cellH);
     });
 
-    // Draw Tokens for all players
+    // Draw Tokens for all players, at the squares the board has shown them reach;
+    // the token in flight is drawn last, on top, with its hop and ground shadow.
     const gs = state.room.gameState;
     const legalTokenIndices = new Set(
-      gs.phase === 'MOVE' && gs.players[gs.currentTurnIndex].id === state.playerId
+      gs.phase === 'MOVE' && !ludoMovementBusy() && !diceRoll.active && gs.players[gs.currentTurnIndex].id === state.playerId
         ? gs.legalMoves.map(m => m.tokenIndex)
         : []
     );
+    const now = performance.now();
+    const airborne = [];
 
     gs.players.forEach(p => {
       const pColor = teamColors[p.teamIndex];
       const heroEmblem = p.hero?.symbol || (p.teamIndex === 0 ? '⚛' : (p.teamIndex === 1 ? '✊' : (p.teamIndex === 2 ? '⚡' : '★')));
 
-      p.tokens.forEach((step, tIdx) => {
+      ludoShownSteps(p).forEach((step, tIdx) => {
+        const pose = ludoMovingPose(p, tIdx, cellW, now);
+        if (pose) {
+          airborne.push({ pose, pColor, heroEmblem });
+          return;
+        }
         const pos = getLudoTokenCanvasPos(p.teamIndex, step, tIdx);
         const isLegal = p.id === state.playerId && legalTokenIndices.has(tIdx);
 
-        // Tactile 3D Pawn
         ctx.save();
-
-        // Pulsing Gold Halo for Legal Moves
-        if (isLegal) {
-          ctx.beginPath();
-          ctx.arc(pos.x, pos.y, cellW * 0.55, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(251, 191, 36, 0.45)';
-          ctx.fill();
-          ctx.strokeStyle = '#fbbf24';
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        }
-
         // Drop shadow
         ctx.beginPath();
         ctx.arc(pos.x + 2, pos.y + 4, cellW * 0.38, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fill();
-
-        // Pawn base
-        const grad = ctx.createRadialGradient(pos.x - 3, pos.y - 3, 2, pos.x, pos.y, cellW * 0.4);
-        grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.3, pColor);
-        grad.addColorStop(1, '#0f172a');
-
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, cellW * 0.38, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-        ctx.strokeStyle = '#fef08a';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Hero Emblem Symbol
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `bold ${cellW * 0.42}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(heroEmblem, pos.x, pos.y);
-
+        drawLudoToken(ctx, pos.x, pos.y, cellW, pColor, heroEmblem, isLegal);
         ctx.restore();
       });
     });
+
+    airborne.forEach(({ pose, pColor, heroEmblem }) => {
+      drawHoppingPawn(ctx, pose, cellW * 0.38, (x, y) => drawLudoToken(ctx, x, y, cellW, pColor, heroEmblem, false));
+    });
+
+    ensureLudoAnimation();
   }
 
   // Precomputed Ludo Track Coordinates (52 squares)
@@ -2956,13 +3337,15 @@
     return layer;
   }
 
-  function drawSnakesToken(context, x, y, radius, color, symbol, isActive, fontFamily) {
+  function drawSnakesToken(context, x, y, radius, color, symbol, isActive, fontFamily, withShadow = true) {
     context.save();
-    // Contact shadow.
-    context.beginPath();
-    context.ellipse(x + radius * 0.12, y + radius * 0.82, radius * 0.95, radius * 0.38, 0, 0, Math.PI * 2);
-    context.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    context.fill();
+    // Contact shadow (a hopping pawn draws its own ground shadow instead).
+    if (withShadow) {
+      context.beginPath();
+      context.ellipse(x + radius * 0.12, y + radius * 0.82, radius * 0.95, radius * 0.38, 0, 0, Math.PI * 2);
+      context.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      context.fill();
+    }
 
     if (isActive) {
       context.shadowColor = 'rgba(251, 191, 36, 0.95)';
@@ -3101,6 +3484,11 @@
   function finishSnakesMove(move) {
     snakesView.positions[move.playerId] = move.final;
     snakesView.current = null;
+    // Once nothing is left to replay, the board must match the server exactly.
+    const gs = state.room && state.room.gameState;
+    if (gs && snakesView.queue.length === 0) {
+      gs.players.forEach(player => { snakesView.positions[player.id] = player.position || 0; });
+    }
     if (move.message) appendActivityFeed(move.message);
     // Refresh controls (roll button, next turn, AI, results) now that the pawn has arrived.
     updateGameDisplay();
@@ -3137,32 +3525,68 @@
 
   const easeInOut = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
-  // Where the moving pawn is drawn right now, plus how high it is in its hop (0..1).
+  // Shared pawn hop for every board: a parabolic arc between two squares, the ground
+  // point for the shadow, and a squash that peaks at take-off and landing.
+  function hopPose(from, to, f, height) {
+    const t = Math.min(1, Math.max(0, f));
+    const e = easeInOut(t);
+    const lift = Math.sin(Math.PI * t);
+    const groundX = from.x + (to.x - from.x) * e;
+    const groundY = from.y + (to.y - from.y) * e;
+    const squash = t < 0.14 ? 1 - t / 0.14 : (t > 0.86 ? (t - 0.86) / 0.14 : 0);
+    return { x: groundX, y: groundY - lift * height, groundX, groundY, lift, squash };
+  }
+
+  // Ground shadow + squash-and-stretch wrapper; `drawBody(x, y)` paints the pawn itself.
+  function drawHoppingPawn(context, pose, radius, drawBody) {
+    context.save();
+    context.beginPath();
+    const spread = 1 - 0.4 * pose.lift;
+    context.ellipse(pose.groundX + radius * 0.12, pose.groundY + radius * 0.82,
+      radius * 0.95 * spread, radius * 0.38 * spread, 0, 0, Math.PI * 2);
+    context.fillStyle = `rgba(0, 0, 0, ${0.42 - 0.22 * pose.lift})`;
+    context.fill();
+    context.restore();
+
+    context.save();
+    // Squash about the pawn's base: wider and flatter on contact, slightly taller mid-air.
+    const sx = 1 + 0.14 * pose.squash - 0.04 * pose.lift;
+    const sy = 1 - 0.16 * pose.squash + 0.06 * pose.lift;
+    context.translate(pose.x, pose.y + radius);
+    context.scale(sx, sy);
+    context.translate(-pose.x, -(pose.y + radius));
+    drawBody(pose.x, pose.y);
+    context.restore();
+  }
+
+  // Where the moving pawn is drawn right now, as a hop pose (see hopPose).
   function snakesMovingTokenPoint(move, now, cell, size, time) {
     const elapsed = Math.max(0, now - move.startedAt);
     const stepIndex = Math.floor(elapsed / SNAKES_STEP_MS);
     if (stepIndex < move.cells.length) {
       const from = snakesCellCenter(stepIndex === 0 ? move.startCell : move.cells[stepIndex - 1], cell);
       const to = snakesCellCenter(move.cells[stepIndex], cell);
-      const f = easeInOut((elapsed - stepIndex * SNAKES_STEP_MS) / SNAKES_STEP_MS);
-      const lift = Math.sin(Math.PI * f);
-      return { x: from.x + (to.x - from.x) * f, y: from.y + (to.y - from.y) * f - lift * cell * 0.3, lift };
+      return hopPose(from, to, (elapsed - stepIndex * SNAKES_STEP_MS) / SNAKES_STEP_MS, cell * 0.32);
     }
     const landing = snakesCellCenter(move.cells.length ? move.cells[move.cells.length - 1] : move.startCell, cell);
-    if (!move.shortcut) return { x: landing.x, y: landing.y, lift: 0 };
+    const still = { x: landing.x, y: landing.y, groundX: landing.x, groundY: landing.y, lift: 0, squash: 0 };
+    if (!move.shortcut) return still;
 
     const shortcutMs = snakesShortcutMs(move, cell) || 1;
     const f = easeInOut(Math.min(1, (elapsed - move.cells.length * SNAKES_STEP_MS) / shortcutMs));
     if (move.shortcut === 'LADDER') {
       const top = snakesCellCenter(move.final, cell);
-      return { x: landing.x + (top.x - landing.x) * f, y: landing.y + (top.y - landing.y) * f, lift: 0.25 };
+      const x = landing.x + (top.x - landing.x) * f;
+      const y = landing.y + (top.y - landing.y) * f;
+      // Raised a little off the board while climbing, so the shadow trails below it.
+      return { x, y: y - cell * 0.08, groundX: x, groundY: y, lift: 0.25, squash: 0 };
     }
     // Slide down the snake's own (wriggling) body from head to tail.
     const seed = Object.keys(window.SnakesEngine.SNAKES).indexOf(String(move.landing));
     const body = buildSnakeBody(landing, snakesCellCenter(move.final, cell), cell, size, Math.max(0, seed),
       time === null ? 0 : time);
     const point = snakePointAt(body, f, {});
-    return { x: point.x, y: point.y, lift: 0.15 };
+    return { x: point.x, y: point.y, groundX: point.x, groundY: point.y, lift: 0.15, squash: 0 };
   }
 
   const reducedMotionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -3259,10 +3683,11 @@
     if (moving) {
       const index = gs.players.findIndex(player => player.id === moving.playerId);
       const player = gs.players[index];
-      const point = snakesMovingTokenPoint(moving, performance.now(), cell, size, time);
-      drawSnakesToken(ctx, point.x, point.y, cell * (0.28 + 0.05 * point.lift),
+      const pose = snakesMovingTokenPoint(moving, performance.now(), cell, size, time);
+      const radius = cell * 0.28;
+      drawHoppingPawn(ctx, pose, radius, (x, y) => drawSnakesToken(ctx, x, y, radius,
         TOKEN_COLORS[index % TOKEN_COLORS.length], (player && player.hero && player.hero.symbol) || '♟',
-        true, fontFamily);
+        true, fontFamily, false));
     }
   }
 
@@ -3306,9 +3731,22 @@
           cell.className = `ticket-cell ${num === 0 ? 'blank' : ''}`;
           if (num > 0) {
             cell.textContent = num;
-            cell.addEventListener('click', () => {
-              cell.classList.toggle('marked');
+            cell.setAttribute('role', 'button');
+            cell.setAttribute('tabindex', '0');
+            cell.setAttribute('aria-pressed', 'false');
+            cell.setAttribute('aria-label', `Number ${num}`);
+            const toggleMark = () => {
+              const marked = cell.classList.toggle('marked');
+              cell.setAttribute('aria-pressed', String(marked));
+              cell.setAttribute('aria-label', marked ? `Number ${num}, crossed out` : `Number ${num}`);
               sound.playMove();
+            };
+            cell.addEventListener('click', toggleMark);
+            cell.addEventListener('keydown', event => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleMark();
+              }
             });
           }
           ticketGrid.appendChild(cell);
@@ -3350,6 +3788,11 @@
   function updateTambolaDisplay() {
     const gs = state.room.gameState;
     if (!gs) return;
+
+    // Caller controls follow the caller role, which moves to the new host if the host leaves.
+    const isCaller = gs.callerId === state.playerId && gs.phase !== 'FINISHED';
+    document.getElementById('btnDrawBall').style.display = isCaller && gs.callerRole !== 'AUTO' ? 'inline-flex' : 'none';
+    document.getElementById('btnAutoCallerToggle').style.display = isCaller && gs.callerRole === 'AUTO' ? 'inline-flex' : 'none';
 
     // Current ball
     document.getElementById('tambolaCurrentBall').textContent = gs.currentBall || '--';
@@ -3438,7 +3881,7 @@
     const podium = document.getElementById('resultsPodium');
     podium.innerHTML = '';
 
-    let rankings = gs.winnerRankings || [];
+    let rankings = (gs.winnerRankings || []).slice();
     const isTambola = state.room.gameType === 'tambola';
     if (isTambola) {
       const winnerIds = [];
@@ -3457,10 +3900,20 @@
       });
       rankings = winnerIds;
     }
-    const fallbackPlayers = isTambola ? [] : gs.players;
-    const p1 = gs.players.find(p => p.id === rankings[0]) || fallbackPlayers[0] || null;
-    const p2 = gs.players.find(p => p.id === rankings[1]) || fallbackPlayers[1] || null;
-    const p3 = gs.players.find(p => p.id === rankings[2]) || fallbackPlayers[2] || null;
+    if (!isTambola) {
+      // Players without a finishing rank follow, ordered by how far they got.
+      const progress = p => (state.room.gameType === 'snakes'
+        ? (p.position || 0)
+        : (p.tokens || []).reduce((sum, step) => sum + step + 1, 0));
+      const rest = gs.players
+        .filter(p => !rankings.includes(p.id))
+        .sort((a, b) => progress(b) - progress(a))
+        .map(p => p.id);
+      rankings = [...rankings, ...rest];
+    }
+    const p1 = gs.players.find(p => p.id === rankings[0]) || null;
+    const p2 = gs.players.find(p => p.id === rankings[1]) || null;
+    const p3 = gs.players.find(p => p.id === rankings[2]) || null;
     document.getElementById('resultsSubtitle').textContent =
       isTambola && rankings.length === 0
         ? 'All balls were called without a winning claim.'
@@ -3659,6 +4112,7 @@
 
     document.getElementById('btnLeaveLobby').addEventListener('click', leaveCurrentRoom);
     document.getElementById('btnReturnLobby').addEventListener('click', leaveCurrentRoom);
+    document.getElementById('btnHowToPlay').addEventListener('click', openHowToPlay);
 
     // In-Game Buttons
     document.getElementById('btnRollDice').addEventListener('click', triggerRollDice);
