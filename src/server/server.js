@@ -188,6 +188,17 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { room: roomManager.getRoomSummary(room, auth.player.id) });
     }
 
+    if (pathname === '/api/rooms/chat' && method === 'POST') {
+      const body = await parseJsonBody(req);
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      const message = roomManager.addChatMessage(body.roomCode, auth.player.id, body.message);
+      const room = roomManager.rooms.get(roomManager.normalizeRoomCode(body.roomCode));
+      return sendJson(res, 200, {
+        chat: room ? room.chat.slice(-50) : [],
+        message: message
+      });
+    }
+
     const roomGetMatch = pathname.match(/^\/api\/rooms\/([A-Z0-9-]+)$/);
     if (roomGetMatch && method === 'GET') {
       const roomCode = roomGetMatch[1];

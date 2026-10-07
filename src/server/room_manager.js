@@ -500,6 +500,33 @@ class RoomManager {
     return clientResult;
   }
 
+  addChatMessage(roomCode, playerId, message) {
+    const room = this.rooms.get(this.normalizeRoomCode(roomCode));
+    if (!room) throw new Error('Room not found');
+
+    const player = room.players.find(candidate => candidate.id === playerId);
+    if (!player) throw new Error('Player not in room');
+
+    const cleanMessage = String(message || '').trim();
+    if (!cleanMessage) throw new Error('Message cannot be empty');
+    if (cleanMessage.length > 200) throw new Error('Message is too long');
+
+    const chatEntry = {
+      id: `chat_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`,
+      playerId: player.id,
+      name: player.name,
+      message: cleanMessage,
+      createdAt: Date.now()
+    };
+
+    room.chat.push(chatEntry);
+    room.chat = room.chat.slice(-50);
+    room.lastActivity = Date.now();
+
+    this.broadcast(roomCode, { type: 'CHAT_MESSAGE', chat: room.chat.slice(-50) });
+    return chatEntry;
+  }
+
   getRoomSummary(room, playerId = null) {
     return {
       code: room.code,
@@ -508,6 +535,7 @@ class RoomManager {
       hostId: room.hostId,
       maxPlayers: room.maxPlayers,
       rules: room.rules,
+      chat: room.chat ? room.chat.slice(-50) : [],
       players: room.players.map(p => ({
         id: p.id,
         name: p.name,

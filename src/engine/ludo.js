@@ -19,6 +19,19 @@
   const START_SQUARES = [0, 13, 26, 39]; // Red, Green, Yellow, Blue
   const DEFAULT_SAFE_SQUARES = [0, 8, 13, 21, 26, 34, 39, 47];
 
+  function randomDieRoll() {
+    const cryptoApi = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
+    if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
+      const sample = new Uint32Array(1);
+      const unbiasedLimit = Math.floor(0x100000000 / 6) * 6;
+      do {
+        cryptoApi.getRandomValues(sample);
+      } while (sample[0] >= unbiasedLimit);
+      return (sample[0] % 6) + 1;
+    }
+    return Math.floor(Math.random() * 6) + 1;
+  }
+
   const HEROES = [
     {
       id: 'iron_man',
@@ -196,7 +209,7 @@
 
     const roll = (typeof forcedRoll === 'number' && forcedRoll >= 1 && forcedRoll <= 6)
       ? forcedRoll
-      : Math.floor(Math.random() * 6) + 1;
+      : randomDieRoll();
 
     game.currentDice = roll;
 

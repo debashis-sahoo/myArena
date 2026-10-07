@@ -97,6 +97,29 @@ async function runMultiplayerTests() {
     assert.strictEqual(guestPlayer.role, 'PLAYER');
     console.log('   ✓ Guest joined successfully');
 
+    const chatRes = await post('/api/rooms/chat', {
+      roomCode: roomCode,
+      message: 'Ready when you are!'
+    }, guestToken);
+    assert.strictEqual(chatRes.status, 200);
+    assert.strictEqual(chatRes.data.message.playerId, guestPlayer.id);
+    assert.strictEqual(chatRes.data.message.name, guestPlayer.name);
+    assert.strictEqual(chatRes.data.message.message, 'Ready when you are!');
+    assert.strictEqual(chatRes.data.chat.length, 1);
+
+    const blankChatRes = await post('/api/rooms/chat', {
+      roomCode: roomCode,
+      message: '   '
+    }, guestToken);
+    assert.strictEqual(blankChatRes.status, 400);
+
+    const unauthenticatedChatRes = await post('/api/rooms/chat', {
+      roomCode: roomCode,
+      message: 'Impersonated message'
+    });
+    assert.strictEqual(unauthenticatedChatRes.status, 400);
+    console.log('   ✓ Authenticated room chat accepts valid messages and rejects abuse');
+
     // 3. Prevent duplicate display name
     console.log('3. Attempting to join with duplicate name...');
     const dupRes = await post('/api/rooms/join', {

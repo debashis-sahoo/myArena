@@ -1,8 +1,10 @@
 # 👑 myArena Royalty — "Your friends. Your arena."
 
-Current version: **1.0.3**
+Current version: **1.0.4**
 
 A browser-based social board-game arcade designed for friends to play instantly across desktop, iPhone, and Android without account creation.
+
+Version 1.0.4 adds a seamless physics-style 3D die, cryptographically backed unbiased dice rolls when the platform supports Web Crypto, a board that resizes its CSS and high-DPI canvas surfaces with the browser, and authenticated real-time room chat.
 
 ---
 
@@ -65,6 +67,7 @@ All roadmap cards are clearly labeled "Coming soon" with disabled action buttons
    - Authoritative Game State Engine (`src/engine/ludo.js`, `src/engine/snakes.js`, `src/engine/tambola.js`).
    - Server-Sent Events (SSE) stream (`GET /api/rooms/:code/stream`) for real-time room and turn broadcasts.
    - REST endpoints for room creation, joining, ready states, hero selection, turn execution, and rematching.
+   - Authenticated room chat with the most recent 50 messages synchronized over SSE.
 2. **Session & Identity Management**:
    - Guest participation: Display name validation preventing duplicate names in the same room.
    - Short room codes (`ROYAL-XXXX`) and direct invite URLs (`?room=ROYAL-XXXX`).

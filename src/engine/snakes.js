@@ -144,9 +144,20 @@
     }
 
     const currentPlayer = game.players[game.currentTurnIndex];
-    const roll = (typeof forcedRoll === 'number' && forcedRoll >= 1 && forcedRoll <= 6)
-      ? forcedRoll
-      : Math.floor(Math.random() * 6) + 1;
+    let roll = forcedRoll;
+    if (typeof roll !== 'number' || roll < 1 || roll > 6) {
+      const cryptoApi = typeof globalThis !== 'undefined' ? globalThis.crypto : null;
+      if (cryptoApi && typeof cryptoApi.getRandomValues === 'function') {
+        const sample = new Uint32Array(1);
+        const unbiasedLimit = Math.floor(0x100000000 / 6) * 6;
+        do {
+          cryptoApi.getRandomValues(sample);
+        } while (sample[0] >= unbiasedLimit);
+        roll = (sample[0] % 6) + 1;
+      } else {
+        roll = Math.floor(Math.random() * 6) + 1;
+      }
+    }
 
     game.currentDice = roll;
 

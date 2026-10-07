@@ -108,6 +108,9 @@ def run_e2e():
         assert dice_cube.size["width"] >= 120, f"Expected enlarged Ludo die, got {dice_cube.size['width']}px"
         sides = driver.find_elements(By.CSS_SELECTOR, "#diceCube .dice-side")
         assert len(sides) == 6, f"Expected a six-sided 3D die, found {len(sides)} sides"
+        core_sides = driver.find_elements(By.CSS_SELECTOR, "#diceCube .dice-core-side")
+        assert len(core_sides) == 6, f"Expected six seam-closing core sides, found {len(core_sides)}"
+        desktop_board_width = driver.find_element(By.ID, "boardCanvasWrapper").size["width"]
         print("  ✓ 3D Board Canvas and enlarged Dice controls rendered")
 
         # Roll Dice for Human Player
@@ -135,6 +138,18 @@ def run_e2e():
         print("\n--- Test 3: Mobile Viewport & Touch Target Auditing ---")
         driver.set_window_size(390, 844) # iPhone 12/13/14 size
         time.sleep(0.5)
+
+        mobile_board = driver.find_element(By.ID, "boardCanvasWrapper")
+        assert mobile_board.size["width"] < desktop_board_width, \
+            f"Board did not shrink responsively: desktop={desktop_board_width}, mobile={mobile_board.size['width']}"
+        canvas_backing_width = driver.execute_script(
+            "return document.getElementById('boardCanvas').width;"
+        )
+        expected_backing_width = round(
+            mobile_board.size["width"] * min(driver.execute_script("return window.devicePixelRatio;"), 2)
+        )
+        assert abs(canvas_backing_width - expected_backing_width) <= 2, \
+            f"Canvas backing surface is stale: expected {expected_backing_width}, got {canvas_backing_width}"
 
         # Check horizontal scroll / overflow
         scroll_width = driver.execute_script("return document.documentElement.scrollWidth;")

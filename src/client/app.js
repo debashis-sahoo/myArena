@@ -588,6 +588,11 @@
       state.room = event.room;
       renderLobby();
       switchView('lobby');
+    } else if (event.type === 'CHAT_MESSAGE') {
+      if (state.room) {
+        state.room.chat = Array.isArray(event.chat) ? event.chat : state.room.chat || [];
+      }
+      if (state.view === 'game') renderChatMessages(state.room ? state.room.chat : []);
     } else if (event.type === 'PLAYER_READY_CHANGED') {
       const player = state.room.players.find(p => p.id === event.playerId);
       if (player) player.isReady = event.isReady;
@@ -858,18 +863,24 @@
       state.resultsGameId = null;
       const activityList = document.getElementById('activityFeedList');
       if (activityList) activityList.innerHTML = '';
+      resetDiceState();
     }
     document.getElementById('gameRoomCodeBadge').textContent = r.code;
 
     const canvasWrapper = document.getElementById('boardCanvasWrapper');
     const tambolaWrapper = document.getElementById('tambolaWrapper');
     const sidePanel = document.getElementById('gameSidePanel');
-    document.getElementById('diceActionBox').classList.toggle('is-ludo', r.gameType === 'ludo');
+    const diceActionBox = document.getElementById('diceActionBox');
+    const chatPanel = document.querySelector('.chat-panel');
+    diceActionBox.classList.toggle('is-ludo', r.gameType === 'ludo');
+    diceActionBox.style.display = r.gameType === 'tambola' ? 'none' : 'flex';
+    chatPanel.style.display = state.isSolo ? 'none' : 'flex';
+    renderChatMessages(r.chat || []);
 
     if (r.gameType === 'tambola') {
       canvasWrapper.style.display = 'none';
       tambolaWrapper.style.display = 'flex';
-      sidePanel.style.display = 'none';
+      sidePanel.style.display = state.isSolo ? 'none' : 'flex';
       setupTambolaView();
     } else {
       canvasWrapper.style.display = 'block';
@@ -952,7 +963,10 @@
         state.lastActivityKey = activityKey;
         appendActivityFeed(gs.lastAction.message);
       }
+    }
 
+    if (r.chat && r.chat.length) {
+      renderChatMessages(r.chat);
     }
 
     // Trigger AI if needed
@@ -962,8 +976,22 @@
   }
 
   function getDisplayedDiceValue(gameState) {
-    const value = gameState.currentDice || gameState.lastAction?.roll;
-    return Number.isInteger(value) && value >= 1 && value <= 6 ? value : null;
+    if (!gameState) return null;
+
+    if (Number.isInteger(gameState.currentDice) && gameState.currentDice >= 1 && gameState.currentDice <= 6) {
+      return gameState.currentDice;
+    }
+
+    const lastRoll = gameState.lastAction && Number.isInteger(gameState.lastAction.roll)
+      ? gameState.lastAction.roll
+      : null;
+
+    const activeRollTypes = new Set(['DICE_ROLLED', 'NO_LEGAL_MOVES', 'PENALTY_THREE_SIXES']);
+    if (lastRoll && activeRollTypes.has(gameState.lastAction?.type) && (gameState.phase === 'ROLL' || gameState.phase === 'MOVE')) {
+      return lastRoll;
+    }
+
+    return null;
   }
 
   const DICE_PIP_LAYOUT = {
@@ -994,18 +1022,53 @@
     animations: []
   };
 
+  function resetDiceState() {
+    clearTimeout(diceRoll.revealTimer);
+    clearTimeout(diceRoll.endTimer);
+    diceRoll.active = false;
+    diceRoll.settling = false;
+    diceRoll.startedAt = 0;
+    diceRoll.value = null;
+    diceRoll.pendingValue = null;
+    diceRoll.revealedValue = null;
+    diceRoll.queuedValue = null;
+    diceRoll.animations.forEach(animation => {
+      if (animation && typeof animation.cancel === 'function') animation.cancel();
+    });
+    diceRoll.animations = [];
+
+    const cube = document.getElementById('diceCube');
+    if (cube) {
+      cube.classList.remove('rolling');
+      const solid = cube.querySelector('.dice-solid');
+      if (solid) {
+        solid.style.transform = 'translate3d(0, 0, 0) rotateX(-10deg) rotateY(14deg)';
+      }
+      const shadow = document.getElementById('diceShadow');
+      if (shadow) {
+        shadow.style.transform = 'translateX(-50%) scale(1)';
+        shadow.style.opacity = '0.55';
+      }
+    }
+  }
+
   function buildDiceCube(diceCube) {
     let solid = diceCube.querySelector('.dice-solid');
     if (solid) return solid;
     solid = document.createElement('div');
     solid.className = 'dice-solid';
     solid.setAttribute('aria-hidden', 'true');
-    solid.innerHTML = Object.keys(DICE_SIDE_VALUES).map(side => {
+    const sides = Object.keys(DICE_SIDE_VALUES);
+    const core = sides.map(side =>
+      `<div class="dice-core-side" data-face="${side}"></div>`
+    ).join('');
+    const faces = sides.map(side => {
       const pips = Array.from({ length: 9 }, (_, index) =>
         `<span class="dice-pip${DICE_PIP_LAYOUT[DICE_SIDE_VALUES[side]].includes(index) ? ' active' : ''}"></span>`
       ).join('');
       return `<div class="dice-side" data-face="${side}">${pips}</div>`;
     }).join('');
+    solid.innerHTML = core + faces;
     diceCube.appendChild(solid);
     return solid;
   }
@@ -1016,10 +1079,30 @@
     pips.forEach((pip, index) => pip.classList.toggle('active', layout.includes(index)));
   }
 
+  function paintDice(diceCube, frontValue) {
+    const oppositeValue = 7 - frontValue;
+    const remaining = [1, 2, 3, 4, 5, 6].filter(value =>
+      value !== frontValue && value !== oppositeValue
+    );
+    const topValue = remaining[0];
+    const bottomValue = 7 - topValue;
+    const rightValue = remaining.find(value => value !== topValue && value !== bottomValue);
+    const values = {
+      front: frontValue,
+      back: oppositeValue,
+      top: topValue,
+      bottom: bottomValue,
+      right: rightValue,
+      left: 7 - rightValue
+    };
+    Object.entries(values).forEach(([sideName, value]) => {
+      paintDiceSide(diceCube.querySelector(`.dice-side[data-face="${sideName}"]`), value);
+    });
+  }
+
   function renderDiceFace(diceCube, value) {
     const solid = buildDiceCube(diceCube);
     if (diceRoll.active) {
-      // Once this throw has shown its number, a newer roll waits its turn instead of stealing it.
       if (diceRoll.revealedValue) {
         diceRoll.queuedValue = value;
       } else {
@@ -1028,16 +1111,19 @@
       }
       return;
     }
-    // A value that changes outside our own roll belongs to an opponent or AI: throw it too.
     if (value && diceRoll.value && value !== diceRoll.value && !diceRoll.settling) {
       animateDiceRoll(diceCube);
       diceRoll.pendingValue = value;
       return;
     }
-    const shown = value || diceRoll.value || 1;
-    paintDiceSide(solid.querySelector('.dice-side[data-face="front"]'), shown);
-    diceRoll.value = value || diceRoll.value;
-    diceCube.setAttribute('aria-label', value ? `Dice showing ${value}` : 'Roll dice');
+    const shown = Number.isInteger(value) && value >= 1 && value <= 6 ? value : (Number.isInteger(diceRoll.value) ? diceRoll.value : 1);
+    paintDice(diceCube, shown);
+    if (Number.isInteger(value) && value >= 1 && value <= 6) {
+      diceRoll.value = value;
+      diceCube.setAttribute('aria-label', `Dice showing ${value}`);
+    } else {
+      diceCube.setAttribute('aria-label', 'Roll dice');
+    }
   }
 
   function revealDiceValue(diceCube) {
@@ -1045,35 +1131,38 @@
     if (!value) return;
     const solid = diceCube.querySelector('.dice-solid');
     if (!solid) return;
-    paintDiceSide(solid.querySelector('.dice-side[data-face="front"]'), value);
+    paintDice(diceCube, value);
     diceRoll.value = value;
     diceRoll.revealedValue = value;
     diceCube.setAttribute('aria-label', `Dice showing ${value}`);
   }
 
-  // Throw arc + decaying tumble + three shrinking bounces, landing flat on the front side.
+  // A rigid-body-style throw: one high arc followed by three rapidly decaying impacts.
   const DICE_REST_X = -10;
   const DICE_REST_Y = 14;
 
   function diceThrowKeyframes(size, dir) {
     const up = 'cubic-bezier(0.17, 0.84, 0.44, 1)';
     const down = 'cubic-bezier(0.55, 0.06, 0.68, 0.19)';
-    const hop = (offset, x, y, rx, ry, rz, easing) => ({
+    const spinX = (Math.random() < 0.5 ? -1 : 1) * (Math.random() < 0.3 ? 1080 : 720);
+    const spinY = (Math.random() < 0.5 ? -1 : 1) * (Math.random() < 0.3 ? 1080 : 720);
+    const twist = (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 8);
+    const hop = (offset, x, y, progress, rz, easing) => ({
       offset,
-      transform: `translate3d(${(x * size * dir).toFixed(2)}px, ${(y * size).toFixed(2)}px, 0) rotateX(${rx + DICE_REST_X}deg) rotateY(${ry + DICE_REST_Y}deg) rotateZ(${rz}deg)`,
+      transform: `translate3d(${(x * size * dir).toFixed(2)}px, ${(y * size).toFixed(2)}px, 0) rotateX(${spinX * progress + DICE_REST_X}deg) rotateY(${spinY * progress + DICE_REST_Y}deg) rotateZ(${rz}deg)`,
       easing
     });
     return [
-      hop(0, -0.32, 0.04, 0, 0, 0, up),
-      hop(0.14, -0.10, -0.46, 250, 165, -14, down),
-      hop(0.3, 0.06, 0.02, 560, 360, 8, up),
-      hop(0.44, 0.17, -0.25, 760, 520, -6, down),
-      hop(0.58, 0.23, 0.02, 930, 625, 4, up),
-      hop(0.7, 0.2, -0.11, 1012, 684, -2, down),
-      hop(0.8, 0.14, 0.01, 1058, 708, 1, up),
-      hop(0.88, 0.08, -0.04, 1072, 716, 0, down),
-      hop(0.95, 0.02, 0, 1086, 723, 0, 'ease-out'),
-      hop(1, 0, 0, 1080, 720, 0)
+      hop(0, -0.34, 0.03, 0, 0, up),
+      hop(0.18, -0.13, -0.58, 0.26, twist, down),
+      hop(0.36, 0.08, 0.02, 0.55, -twist * 0.65, up),
+      hop(0.49, 0.19, -0.25, 0.72, twist * 0.38, down),
+      hop(0.62, 0.24, 0.015, 0.86, -twist * 0.2, up),
+      hop(0.72, 0.21, -0.10, 0.92, twist * 0.1, down),
+      hop(0.82, 0.14, 0.008, 0.97, -twist * 0.05, up),
+      hop(0.9, 0.07, -0.035, 0.992, twist * 0.02, down),
+      hop(0.96, 0.025, 0.004, 1.004, 0, 'ease-out'),
+      hop(1, 0, 0, 1, 0)
     ];
   }
 
@@ -1088,13 +1177,13 @@
     });
     return [
       step(0, 0.9, 0.5, up),
-      step(0.14, 0.56, 0.2, down),
-      step(0.3, 1.06, 0.58, up),
-      step(0.44, 0.76, 0.33, down),
-      step(0.58, 1.03, 0.56, up),
-      step(0.7, 0.88, 0.44, down),
-      step(0.8, 1.01, 0.55, up),
-      step(0.88, 0.95, 0.5, down),
+      step(0.18, 0.5, 0.16, down),
+      step(0.36, 1.08, 0.62, up),
+      step(0.49, 0.73, 0.3, down),
+      step(0.62, 1.04, 0.58, up),
+      step(0.72, 0.87, 0.42, down),
+      step(0.82, 1.02, 0.56, up),
+      step(0.9, 0.95, 0.5, down),
       step(1, 1, 0.55)
     ];
   }
@@ -1160,6 +1249,50 @@
     if (list.children.length > 20) list.lastChild.remove();
   }
 
+  function renderChatMessages(messages = []) {
+    const list = document.getElementById('chatList');
+    if (!list) return;
+    list.innerHTML = '';
+    if (!messages.length) {
+      const empty = document.createElement('li');
+      empty.className = 'chat-item';
+      empty.textContent = 'No messages yet. Start the conversation.';
+      list.appendChild(empty);
+      return;
+    }
+
+    messages.slice(-20).forEach(entry => {
+      const item = document.createElement('li');
+      item.className = 'chat-item';
+      const name = document.createElement('strong');
+      name.textContent = `${entry.name}: `;
+      const text = document.createTextNode(entry.message);
+      item.appendChild(name);
+      item.appendChild(text);
+      list.appendChild(item);
+    });
+    list.scrollTop = list.scrollHeight;
+  }
+
+  async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const value = (input ? input.value : '').trim();
+    if (!value || !state.room || !state.playerId) return;
+    try {
+      const res = await apiPost('/api/rooms/chat', {
+        roomCode: state.room.code,
+        message: value
+      });
+      if (state.room) {
+        state.room.chat = res.chat || [];
+      }
+      renderChatMessages(state.room ? state.room.chat : []);
+      if (input) input.value = '';
+    } catch (err) {
+      showToast(err.message);
+    }
+  }
+
   // Roll Dice Action Trigger
   async function triggerRollDice() {
     const diceBtn = document.getElementById('btnRollDice');
@@ -1215,15 +1348,42 @@
   // =========================================================================
   let canvas = null;
   let ctx = null;
+  let boardResizeObserver = null;
+  let boardResizeFrame = null;
 
   function initBoardCanvas() {
     canvas = document.getElementById('boardCanvas');
     if (!canvas) return;
     ctx = canvas.getContext('2d');
 
+    const wrapper = document.getElementById('boardCanvasWrapper');
+    if (!boardResizeObserver && wrapper && typeof ResizeObserver === 'function') {
+      boardResizeObserver = new ResizeObserver(() => {
+        cancelAnimationFrame(boardResizeFrame);
+        boardResizeFrame = requestAnimationFrame(resizeBoardCanvas);
+      });
+      boardResizeObserver.observe(wrapper);
+    }
+    resizeBoardCanvas();
+
     // Canvas click detection for token selection
     canvas.removeEventListener('click', handleCanvasClick);
     canvas.addEventListener('click', handleCanvasClick);
+  }
+
+  function resizeBoardCanvas() {
+    if (!canvas || !state.room || state.room.gameType === 'tambola') return;
+    const wrapper = document.getElementById('boardCanvasWrapper');
+    if (!wrapper) return;
+    const size = Math.round(wrapper.getBoundingClientRect().width);
+    if (size <= 0) return;
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+    const backingSize = Math.max(1, Math.round(size * pixelRatio));
+    if (canvas.width === backingSize && canvas.height === backingSize) return;
+    canvas.width = backingSize;
+    canvas.height = backingSize;
+    if (state.room.gameType === 'ludo') renderLudoBoard();
+    if (state.room.gameType === 'snakes') renderSnakesBoard();
   }
 
   function handleCanvasClick(e) {
@@ -2015,6 +2175,10 @@
         event.preventDefault();
         triggerRollDice();
       }
+    });
+    document.getElementById('chatForm').addEventListener('submit', async event => {
+      event.preventDefault();
+      await sendChatMessage();
     });
     document.getElementById('btnDrawBall').addEventListener('click', triggerDrawBall);
 
