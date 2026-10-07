@@ -1227,6 +1227,8 @@
     const delay = Math.max(800, diceAnimationRemainingMs() + 300);
     scheduleAIStep(delay, () => {
       if (!isAIStillOnTurn(gs, aiId, 'ROLL')) return runAITurnIfApplicable();
+      // ...and let the previous pawn finish walking before the bot throws again.
+      if (state.room.gameType === 'snakes' && snakesMovementBusy()) return runAITurnIfApplicable();
       sound.playDiceRoll();
 
       if (state.room.gameType === 'ludo') {
@@ -1245,9 +1247,6 @@
         });
       } else if (state.room.gameType === 'snakes') {
         const res = window.SnakesEngine.playTurn(gs);
-        if (res.shortcutType === 'LADDER') sound.playLadder();
-        else if (res.shortcutType === 'SNAKE') sound.playSnake();
-        else sound.playMove();
         updateGameDisplay(res);
       }
     });
@@ -1305,8 +1304,22 @@
         clearInterval(state.tambolaAutoTimer);
         state.tambolaAutoTimer = null;
       }
+      if (r.gameType === 'ludo' || r.gameType === 'snakes') {
+        // The deciding throw still has to land on the die, and nobody rolls again.
+        const finishedDiceBtn = document.getElementById('btnRollDice');
+        const finishedDiceCube = document.getElementById('diceCube');
+        finishedDiceBtn.disabled = true;
+        finishedDiceCube.classList.add('disabled');
+        finishedDiceCube.setAttribute('aria-disabled', 'true');
+        syncDice(finishedDiceCube, gs);
+      }
       if (r.gameType === 'ludo') renderLudoBoard();
-      if (r.gameType === 'snakes') renderSnakesBoard();
+      if (r.gameType === 'snakes') {
+        syncSnakesView(gs);
+        renderSnakesBoard();
+        // Let the winning pawn finish its walk before announcing the result.
+        if (snakesMovementBusy()) return;
+      }
       if (r.gameType === 'tambola') updateTambolaDisplay();
       if (state.resultsGameId !== gs.id) {
         state.resultsGameId = gs.id;
@@ -1347,10 +1360,13 @@
       renderLudoBoard();
     } else if (r.gameType === 'snakes') {
       const isMyTurn = currentP && currentP.id === state.playerId;
-      canRoll = isMyTurn && !currentP.isAI;
+      syncSnakesView(gs);
+      const moving = snakesMovementBusy();
+      canRoll = isMyTurn && !currentP.isAI && !moving;
       diceBtn.disabled = !canRoll;
       syncDice(diceCube, gs);
-      helper.textContent = isMyTurn ? 'Tap Roll Dice to advance!' : `Waiting for ${currentP.name}...`;
+      helper.textContent = moving ? 'Moving the pawn...'
+        : (isMyTurn ? 'Tap Roll Dice to advance!' : `Waiting for ${currentP.name}...`);
       renderSnakesBoard();
     } else if (r.gameType === 'tambola') {
       updateTambolaDisplay();
@@ -2034,6 +2050,8 @@
     const diceBtn = document.getElementById('btnRollDice');
     const diceCube = document.getElementById('diceCube');
     if (diceBtn.disabled || diceCube.classList.contains('rolling')) return;
+    if (!state.room || !state.room.gameState || state.room.gameState.phase === 'FINISHED') return;
+    if (state.room.gameType === 'snakes' && snakesMovementBusy()) return;
     sound.playDiceRoll();
     animateDiceRoll(diceCube);
 
@@ -2042,10 +2060,8 @@
         window.LudoEngine.rollDice(state.room.gameState);
         updateGameDisplay();
       } else if (state.room.gameType === 'snakes') {
+        // Movement sounds play during the replay, once the die has landed.
         const res = window.SnakesEngine.playTurn(state.room.gameState);
-        if (res.shortcutType === 'LADDER') sound.playLadder();
-        else if (res.shortcutType === 'SNAKE') sound.playSnake();
-        else sound.playMove();
         updateGameDisplay(res);
       }
     } else {
@@ -2127,6 +2143,8 @@
     if (!state.room || !state.room.gameState) return;
     const gs = state.room.gameState;
     if (state.room.gameType !== 'ludo' || gs.phase !== 'MOVE') return;
+    // Moves wait until the die has come to rest.
+    if (diceRoll.active) return;
 
     const currentP = gs.players[gs.currentTurnIndex];
     if (currentP.id !== state.playerId) return;
@@ -2987,6 +3005,166 @@
 
   // Snakes slither in place while the board is on screen; the loop stops itself when the
   // player leaves, the tab is hidden (rAF pauses), effects are off or motion is reduced.
+  // =========================================================================
+  // SNAKES & LADDERS MOVE PLAYBACK
+  // The engine resolves a turn in one step; the board replays it only after the die
+  // has landed: a short beat, a hop per square, then the ladder climb or snake slide.
+  // Driven by gameState.lastRoll, so remote players' moves replay the same way.
+  // =========================================================================
+  const SNAKES_STEP_MS = 190;
+  const SNAKES_SETTLE_MS = 160;
+  const snakesView = { gameId: null, lastSeq: 0, positions: {}, queue: [], current: null };
+
+  function snakesMotionReduced() {
+    return !!(reducedMotionQuery && reducedMotionQuery.matches);
+  }
+
+  function snakesActivityKey(gs) {
+    return `${gs.history ? gs.history.length : 0}:${gs.lastAction.type}:${gs.lastAction.message}`;
+  }
+
+  function snapSnakesView(gs) {
+    snakesView.positions = {};
+    gs.players.forEach(player => { snakesView.positions[player.id] = player.position || 0; });
+    snakesView.queue = [];
+    snakesView.current = null;
+  }
+
+  function buildSnakesMovePath(action) {
+    const from = action.fromPos || 0;
+    const landing = action.intermediatePos !== undefined ? action.intermediatePos : action.toPos;
+    const startCell = Math.max(from, 1);
+    const cells = [];
+    const push = c => {
+      const previous = cells.length ? cells[cells.length - 1] : startCell;
+      if (c >= 1 && c !== previous) cells.push(c);
+    };
+    if (action.bounce > 0) {
+      for (let c = from + 1; c <= 100; c++) push(c);
+      for (let c = 99; c >= landing; c--) push(c);
+    } else {
+      for (let c = from + 1; c <= landing; c++) push(c);
+    }
+    return { startCell, cells, landing, final: action.toPos, shortcut: action.shortcutType || null };
+  }
+
+  // Queue newly resolved turns for playback. Returns true when this update was deferred.
+  function syncSnakesView(gs) {
+    if (snakesView.gameId !== gs.id) {
+      snakesView.gameId = gs.id;
+      snakesView.lastSeq = gs.lastRoll ? gs.lastRoll.seq : 0;
+      snapSnakesView(gs);
+      return false;
+    }
+    const roll = gs.lastRoll;
+    if (!roll || roll.seq <= snakesView.lastSeq) return false;
+    const contiguous = roll.seq === snakesView.lastSeq + 1;
+    snakesView.lastSeq = roll.seq;
+    const action = gs.lastAction;
+    const mover = gs.players.find(player => player.id === roll.playerId);
+    if (!contiguous || !mover || !action || (action.type !== 'MOVE' && action.type !== 'PLAYER_WON')) {
+      // Missed updates (e.g. after reconnecting): jump straight to the server's positions.
+      snapSnakesView(gs);
+      return false;
+    }
+    snakesView.queue.push(Object.assign({
+      seq: roll.seq,
+      playerId: mover.id,
+      message: action.message,
+      activityKey: snakesActivityKey(gs)
+    }, buildSnakesMovePath(action)));
+    // The feed entry is posted when the pawn arrives, not when the server answers.
+    state.lastActivityKey = snakesActivityKey(gs);
+    return true;
+  }
+
+  function snakesMovementBusy() {
+    return !!snakesView.current || snakesView.queue.length > 0;
+  }
+
+  function snakesShortcutMs(move, cell) {
+    if (!move.shortcut || snakesMotionReduced()) return 0;
+    const a = snakesCellCenter(move.landing, cell);
+    const b = snakesCellCenter(move.final, cell);
+    return Math.min(1500, Math.max(600, (Math.hypot(b.x - a.x, b.y - a.y) / cell) * 150));
+  }
+
+  function snakesMoveDurationMs(move, cell) {
+    if (snakesMotionReduced()) return 0;
+    return move.cells.length * SNAKES_STEP_MS + snakesShortcutMs(move, cell);
+  }
+
+  function snakesDieHasLanded(seq) {
+    return diceRoll.shownSeq > seq || (diceRoll.shownSeq === seq && !diceRoll.active);
+  }
+
+  function finishSnakesMove(move) {
+    snakesView.positions[move.playerId] = move.final;
+    snakesView.current = null;
+    if (move.message) appendActivityFeed(move.message);
+    // Refresh controls (roll button, next turn, AI, results) now that the pawn has arrived.
+    updateGameDisplay();
+  }
+
+  // Advance the playback state machine; called every animation frame.
+  function advanceSnakesMoves(now, cell) {
+    if (!snakesView.current) {
+      const next = snakesView.queue[0];
+      if (!next || !snakesDieHasLanded(next.seq)) return;
+      snakesView.queue.shift();
+      next.startedAt = now + SNAKES_SETTLE_MS;
+      next.stepsSounded = 0;
+      next.shortcutSounded = false;
+      snakesView.current = next;
+    }
+    const move = snakesView.current;
+    const elapsed = now - move.startedAt;
+    if (elapsed < 0) return;
+    if (snakesMotionReduced()) return finishSnakesMove(move);
+
+    const landedSteps = Math.min(move.cells.length, Math.floor(elapsed / SNAKES_STEP_MS));
+    while (move.stepsSounded < landedSteps) {
+      move.stepsSounded += 1;
+      sound.playMove();
+    }
+    const stepsMs = move.cells.length * SNAKES_STEP_MS;
+    if (move.shortcut && !move.shortcutSounded && elapsed >= stepsMs) {
+      move.shortcutSounded = true;
+      if (move.shortcut === 'LADDER') sound.playLadder(); else sound.playSnake();
+    }
+    if (elapsed >= snakesMoveDurationMs(move, cell)) finishSnakesMove(move);
+  }
+
+  const easeInOut = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+  // Where the moving pawn is drawn right now, plus how high it is in its hop (0..1).
+  function snakesMovingTokenPoint(move, now, cell, size, time) {
+    const elapsed = Math.max(0, now - move.startedAt);
+    const stepIndex = Math.floor(elapsed / SNAKES_STEP_MS);
+    if (stepIndex < move.cells.length) {
+      const from = snakesCellCenter(stepIndex === 0 ? move.startCell : move.cells[stepIndex - 1], cell);
+      const to = snakesCellCenter(move.cells[stepIndex], cell);
+      const f = easeInOut((elapsed - stepIndex * SNAKES_STEP_MS) / SNAKES_STEP_MS);
+      const lift = Math.sin(Math.PI * f);
+      return { x: from.x + (to.x - from.x) * f, y: from.y + (to.y - from.y) * f - lift * cell * 0.3, lift };
+    }
+    const landing = snakesCellCenter(move.cells.length ? move.cells[move.cells.length - 1] : move.startCell, cell);
+    if (!move.shortcut) return { x: landing.x, y: landing.y, lift: 0 };
+
+    const shortcutMs = snakesShortcutMs(move, cell) || 1;
+    const f = easeInOut(Math.min(1, (elapsed - move.cells.length * SNAKES_STEP_MS) / shortcutMs));
+    if (move.shortcut === 'LADDER') {
+      const top = snakesCellCenter(move.final, cell);
+      return { x: landing.x + (top.x - landing.x) * f, y: landing.y + (top.y - landing.y) * f, lift: 0.25 };
+    }
+    // Slide down the snake's own (wriggling) body from head to tail.
+    const seed = Object.keys(window.SnakesEngine.SNAKES).indexOf(String(move.landing));
+    const body = buildSnakeBody(landing, snakesCellCenter(move.final, cell), cell, size, Math.max(0, seed),
+      time === null ? 0 : time);
+    const point = snakePointAt(body, f, {});
+    return { x: point.x, y: point.y, lift: 0.15 };
+  }
+
   const reducedMotionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   const snakesAnimation = { raf: null, lastFrame: 0, interval: 33, costMs: 0 };
 
@@ -2995,17 +3173,21 @@
   }
 
   function ensureSnakesAnimation() {
-    if (snakesAnimation.raf || !snakesAnimationEnabled()) return;
+    if (snakesAnimation.raf || !(snakesAnimationEnabled() || snakesMovementBusy())) return;
     const tick = now => {
       const onBoard = state.view === 'game' && state.room && state.room.gameType === 'snakes' && canvas && ctx;
-      if (!onBoard || !snakesAnimationEnabled()) {
+      const moving = onBoard && snakesMovementBusy();
+      if (!onBoard || !(snakesAnimationEnabled() || moving)) {
         snakesAnimation.raf = null;
         return;
       }
-      if (now - snakesAnimation.lastFrame >= snakesAnimation.interval) {
+      if (moving) advanceSnakesMoves(now, canvas.width / 10);
+      // Hops need every frame; idle slithering can run slower.
+      const interval = snakesView.current ? 16 : snakesAnimation.interval;
+      if (now - snakesAnimation.lastFrame >= interval) {
         snakesAnimation.lastFrame = now;
         const started = performance.now();
-        drawSnakesFrame(now / 1000);
+        drawSnakesFrame(snakesAnimationEnabled() ? now / 1000 : null);
         // Back off the frame rate on slower devices so the page stays responsive.
         snakesAnimation.costMs = snakesAnimation.costMs * 0.9 + (performance.now() - started) * 0.1;
         snakesAnimation.interval = Math.min(100, Math.max(33, snakesAnimation.costMs * 4));
@@ -3038,11 +3220,16 @@
         index, time === null ? 0 : time, time !== null);
     });
 
-    // Spread tokens that share a square so each stays visible.
+    // Tokens sit where the board has shown them arrive, not where the server already
+    // put them; the pawn being replayed is drawn separately on top. Tokens that share
+    // a square are spread out so each stays visible.
     const fontFamily = getComputedStyle(document.body).fontFamily || 'sans-serif';
+    const moving = snakesView.current && performance.now() >= snakesView.current.startedAt ? snakesView.current : null;
     const byCell = new Map();
     gs.players.forEach((player, index) => {
-      const cellNumber = player.position || 1;
+      if (moving && player.id === moving.playerId) return;
+      const shown = snakesView.positions[player.id];
+      const cellNumber = Math.max(1, shown !== undefined ? shown : (player.position || 0));
       if (!byCell.has(cellNumber)) byCell.set(cellNumber, []);
       byCell.get(cellNumber).push({ player, index });
     });
@@ -3052,7 +3239,11 @@
       3: [[-0.2, 0.14], [0.2, 0.14], [0, -0.18]],
       4: [[-0.2, -0.18], [0.2, -0.18], [-0.2, 0.18], [0.2, 0.18]]
     };
-    const currentId = gs.players[gs.currentTurnIndex] && gs.players[gs.currentTurnIndex].id;
+    // The glow follows the pawn being replayed, then the player whose turn it is.
+    const pending = snakesView.current || snakesView.queue[0];
+    const currentId = pending ? pending.playerId
+      : (gs.players[gs.currentTurnIndex] && gs.players[gs.currentTurnIndex].id);
+    const showGlow = gs.phase !== 'FINISHED' || !!pending;
     byCell.forEach((occupants, cellNumber) => {
       const center = snakesCellCenter(cellNumber, cell);
       const layout = layouts[Math.min(occupants.length, 4)];
@@ -3061,9 +3252,18 @@
         const [ox, oy] = layout[slot % layout.length];
         drawSnakesToken(ctx, center.x + ox * cell, center.y + oy * cell, radius,
           TOKEN_COLORS[index % TOKEN_COLORS.length], (player.hero && player.hero.symbol) || '♟',
-          gs.phase !== 'FINISHED' && player.id === currentId, fontFamily);
+          showGlow && player.id === currentId, fontFamily);
       });
     });
+
+    if (moving) {
+      const index = gs.players.findIndex(player => player.id === moving.playerId);
+      const player = gs.players[index];
+      const point = snakesMovingTokenPoint(moving, performance.now(), cell, size, time);
+      drawSnakesToken(ctx, point.x, point.y, cell * (0.28 + 0.05 * point.lift),
+        TOKEN_COLORS[index % TOKEN_COLORS.length], (player && player.hero && player.hero.symbol) || '♟',
+        true, fontFamily);
+    }
   }
 
   // =========================================================================

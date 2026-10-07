@@ -246,10 +246,29 @@ def run_e2e():
         time.sleep(1)
 
         assert "active" in driver.find_element(By.ID, "viewGame").get_attribute("class")
+        # Record when the die stops and when the move's activity entry appears.
+        driver.execute_script("""
+            window.__moveTimeline = [];
+            const cube = document.getElementById('diceCube');
+            let wasRolling = false;
+            new MutationObserver(() => {
+                const rolling = cube.classList.contains('rolling');
+                if (wasRolling && !rolling) window.__moveTimeline.push(['die', performance.now()]);
+                wasRolling = rolling;
+            }).observe(cube, { attributes: true, attributeFilter: ['class'] });
+            new MutationObserver(() => window.__moveTimeline.push(['feed', performance.now()]))
+                .observe(document.getElementById('activityFeedList'), { childList: true });
+        """)
         dice_btn = driver.find_element(By.ID, "btnRollDice")
         dice_btn.click()
-        time.sleep(1.2)
-        print("  ✓ Snakes & Ladders roll and advancement executed")
+        WebDriverWait(driver, 10).until(
+            lambda d: any(kind == "feed" for kind, _ in d.execute_script("return window.__moveTimeline;"))
+        )
+        timeline = driver.execute_script("return window.__moveTimeline;")
+        die_landed = next(t for kind, t in timeline if kind == "die")
+        move_logged = next(t for kind, t in timeline if kind == "feed")
+        assert move_logged >= die_landed, "The pawn moved before the die came to rest"
+        print(f"  ✓ Snakes & Ladders pawn moved {round(move_logged - die_landed)}ms after the die came to rest")
 
         # ---------------------------------------------------------------------
         # TEST 5: HOUSIE / TAMBOLA FLOW & CLAIM

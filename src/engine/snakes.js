@@ -219,7 +219,10 @@
         player: currentPlayer.name,
         roll: roll,
         fromPos: startPos,
+        intermediatePos: targetPos,
         toPos: finalPos,
+        shortcutType: shortcutType,
+        bounce: bounceAmount,
         rank: rank,
         message: `👑 ${currentPlayer.name} rolled a ${roll} and reached square 100 to win the championship!`
       };
@@ -248,6 +251,7 @@
       intermediatePos: targetPos,
       toPos: finalPos,
       shortcutType: shortcutType,
+      bounce: bounceAmount,
       extraTurn: extraTurn,
       message: message
     };
