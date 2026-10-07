@@ -1,6 +1,6 @@
 {
   "name": "myarena-royalty",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "myArena Royalty - Social Board-Game Arcade for Friends",
   "main": "src/server/server.js",
   "scripts": {

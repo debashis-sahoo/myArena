@@ -142,6 +142,50 @@ def run_e2e():
         latest_act = activity_items[0].text
         print(f"  ✓ Move recorded in activity feed: '{latest_act}'")
 
+        # Chat is shown by default and identifies players by their sign-in names
+        chat_panel = driver.find_element(By.CSS_SELECTOR, ".chat-panel")
+        assert chat_panel.is_displayed(), "Chat panel should be visible by default"
+        identity = driver.find_element(By.ID, "chatIdentity").text
+        assert identity.startswith("Chatting as "), f"Unexpected chat identity: '{identity}'"
+        my_name = identity[len("Chatting as "):]
+        roster = [chip.text for chip in driver.find_elements(By.CSS_SELECTOR, "#chatRoster .chat-chip")]
+        assert my_name in roster and len(roster) == 4, f"Roster should list all 4 players, got {roster}"
+        chat_input = driver.find_element(By.ID, "chatInput")
+        chat_input.send_keys("Good luck!")
+        driver.find_element(By.CSS_SELECTOR, "#chatForm button[type='submit']").click()
+        message = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#chatList .chat-item")))
+        assert message.find_element(By.CLASS_NAME, "chat-author").text == my_name
+        assert message.find_element(By.CLASS_NAME, "chat-text").text == "Good luck!"
+        print(f"  ✓ Chat visible by default; message posted as '{my_name}'")
+
+        # Match activity shows only the newest two entries, older ones scroll.
+        # A rolled 6 waits for the human to move a token, so play one if needed.
+        move_any_legal_token = """
+            const c = document.getElementById('boardCanvas');
+            const r = c.getBoundingClientRect(); const cell = r.width / 15;
+            for (let i = 0; i <= 30; i++) for (let j = 0; j <= 30; j++) {
+                if (!document.getElementById('diceHelperText').textContent.includes('glowing')) return;
+                c.dispatchEvent(new MouseEvent('click', { clientX: r.left + j / 2 * cell, clientY: r.top + i / 2 * cell, bubbles: true }));
+            }
+        """
+        def feed_has_history(d):
+            if "glowing" in d.find_element(By.ID, "diceHelperText").text:
+                d.execute_script(move_any_legal_token)
+            return len(d.find_elements(By.CSS_SELECTOR, "#activityFeedList .feed-item")) >= 3
+        WebDriverWait(driver, 25).until(feed_has_history)
+        feed_state = driver.execute_script("""
+            const feed = document.getElementById('activityFeedList');
+            const box = feed.getBoundingClientRect();
+            const visible = [...feed.children].filter(item => {
+                const r = item.getBoundingClientRect();
+                return r.top >= box.top - 1 && r.bottom <= box.bottom + 1;
+            }).length;
+            return { visible, scrollable: feed.scrollHeight > feed.clientHeight };
+        """)
+        assert feed_state["visible"] == 2, f"Expected 2 visible activity entries, got {feed_state['visible']}"
+        assert feed_state["scrollable"], "Older activity entries should be reachable by scrolling"
+        print("  ✓ Match activity shows the latest 2 entries with scroll")
+
         # ---------------------------------------------------------------------
         # TEST 3: MOBILE VIEWPORT & TOUCH RESPONSIVENESS
         # ---------------------------------------------------------------------

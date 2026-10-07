@@ -958,7 +958,7 @@
 
     .dice-cube {
       --dice-half: 48px;
-      --dice-radius: 11px;
+      --dice-radius: 21px;
       position: relative;
       width: 96px;
       height: 96px;
@@ -972,7 +972,7 @@
 
     .dice-action-box.is-ludo .dice-cube {
       --dice-half: 62px;
-      --dice-radius: 14px;
+      --dice-radius: 27px;
       width: 124px;
       height: 124px;
     }
@@ -981,19 +981,19 @@
       position: absolute;
       inset: 0;
       transform-style: preserve-3d;
-      transform: translate3d(0, 0, 0) rotateX(-10deg) rotateY(14deg);
+      transform: translate3d(0, 0, 0) rotateX(-22deg) rotateY(26deg);
       transform-origin: 50% 50%;
       will-change: transform;
     }
 
-    /* Square inner planes sit just behind the rounded faces, closing the
-       transparent corner seams that otherwise appear while the cube tumbles. */
+    /* Inner planes, pulled in from each face, fill the vertices that the rounded
+       face corners leave open, so the die reads as one solid rounded body. */
     .dice-core-side {
+      --dice-core-inset: calc(var(--dice-radius) * 0.34);
       position: absolute;
-      inset: -1px;
-      border-radius: calc(var(--dice-radius) * 0.35);
-      background: #e8edf5;
-      box-shadow: inset 0 0 12px rgba(71, 85, 105, 0.18);
+      inset: var(--dice-core-inset);
+      border-radius: calc(var(--dice-radius) * 0.72);
+      background: radial-gradient(circle at 40% 35%, #ffffff 0%, #eef2f8 55%, #d3dbe7 100%);
       backface-visibility: hidden;
     }
 
@@ -1002,12 +1002,13 @@
       inset: 0;
       box-sizing: border-box;
       border-radius: var(--dice-radius);
-      background: linear-gradient(145deg, #ffffff 0%, #f4f7fb 44%, #ccd7e6 100%);
-      border: 2px solid rgba(255, 255, 255, 0.92);
+      background: radial-gradient(circle at 38% 30%, #ffffff 0%, #f6f8fc 46%, #dde4ee 100%);
+      /* Soft falloff toward every edge reads as a rounded bevel rather than a sharp crease. */
       box-shadow:
-        inset 0 3px 6px rgba(255, 255, 255, 0.95),
-        inset 0 -7px 14px rgba(100, 116, 139, 0.26),
-        0 0 0 1px rgba(100, 116, 139, 0.35);
+        inset 0 0 0 1px rgba(255, 255, 255, 0.75),
+        inset 0 calc(var(--dice-radius) * 0.22) calc(var(--dice-radius) * 0.45) rgba(255, 255, 255, 0.9),
+        inset 0 calc(var(--dice-radius) * -0.28) calc(var(--dice-radius) * 0.55) rgba(100, 116, 139, 0.3),
+        inset 0 0 calc(var(--dice-radius) * 0.7) rgba(100, 116, 139, 0.24);
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       grid-template-rows: repeat(3, 1fr);
@@ -1023,12 +1024,12 @@
     .dice-side[data-face="top"] { transform: rotateX(90deg) translateZ(var(--dice-half)); filter: brightness(1.05); }
     .dice-side[data-face="bottom"] { transform: rotateX(-90deg) translateZ(var(--dice-half)); filter: brightness(0.7); }
 
-    .dice-core-side[data-face="front"] { transform: translateZ(calc(var(--dice-half) - 2px)); }
-    .dice-core-side[data-face="back"] { transform: rotateY(180deg) translateZ(calc(var(--dice-half) - 2px)); filter: brightness(0.78); }
-    .dice-core-side[data-face="right"] { transform: rotateY(90deg) translateZ(calc(var(--dice-half) - 2px)); filter: brightness(0.84); }
-    .dice-core-side[data-face="left"] { transform: rotateY(-90deg) translateZ(calc(var(--dice-half) - 2px)); filter: brightness(0.88); }
-    .dice-core-side[data-face="top"] { transform: rotateX(90deg) translateZ(calc(var(--dice-half) - 2px)); filter: brightness(1.05); }
-    .dice-core-side[data-face="bottom"] { transform: rotateX(-90deg) translateZ(calc(var(--dice-half) - 2px)); filter: brightness(0.7); }
+    .dice-core-side[data-face="front"] { transform: translateZ(calc(var(--dice-half) - var(--dice-core-inset))); }
+    .dice-core-side[data-face="back"] { transform: rotateY(180deg) translateZ(calc(var(--dice-half) - var(--dice-core-inset))); filter: brightness(0.78); }
+    .dice-core-side[data-face="right"] { transform: rotateY(90deg) translateZ(calc(var(--dice-half) - var(--dice-core-inset))); filter: brightness(0.84); }
+    .dice-core-side[data-face="left"] { transform: rotateY(-90deg) translateZ(calc(var(--dice-half) - var(--dice-core-inset))); filter: brightness(0.88); }
+    .dice-core-side[data-face="top"] { transform: rotateX(90deg) translateZ(calc(var(--dice-half) - var(--dice-core-inset))); filter: brightness(1.05); }
+    .dice-core-side[data-face="bottom"] { transform: rotateX(-90deg) translateZ(calc(var(--dice-half) - var(--dice-core-inset))); filter: brightness(0.7); }
 
     .dice-cube:hover:not(.disabled):not(.rolling) {
       transform: translateY(-4px) scale(1.035);
@@ -1090,7 +1091,7 @@
 
       .dice-action-box.is-ludo .dice-cube {
         --dice-half: 54px;
-        --dice-radius: 13px;
+        --dice-radius: 24px;
         width: 108px;
         height: 108px;
       }
@@ -1121,7 +1122,87 @@
     }
 
     .chat-panel {
-      min-height: 220px;
+      min-height: 300px;
+    }
+
+    .chat-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chat-identity {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+    }
+
+    .chat-roster {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chat-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-royal);
+      font-size: 0.74rem;
+      color: var(--text-main);
+    }
+
+    .chat-chip.is-me {
+      border-color: var(--gold-primary);
+      color: var(--gold-bright);
+    }
+
+    .chat-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+    }
+
+    .chat-chip.is-offline {
+      opacity: 0.55;
+    }
+
+    .chat-chip.is-offline .chat-chip-dot {
+      background: #64748b;
+      box-shadow: none;
+    }
+
+    .chat-list {
+      min-height: 140px;
+      max-height: 260px;
+    }
+
+    .chat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .chat-item.is-me {
+      border-left-color: var(--gold-bright);
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    .chat-author {
+      font-size: 0.74rem;
+      color: var(--text-gold);
+    }
+
+    .chat-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 6px 2px;
     }
 
     .feed-title {
@@ -1175,8 +1256,16 @@
       min-width: 84px;
     }
 
+    /* Height is fitted to the newest two entries by fitActivityFeed(); older ones scroll. */
     .feed-list {
-      max-height: 180px;
+      flex: none;
+      max-height: 84px;
+      overscroll-behavior: contain;
+      scroll-snap-type: y proximity;
+    }
+
+    .feed-list .feed-item {
+      scroll-snap-align: start;
     }
 
     .feed-item {
@@ -1446,7 +1535,7 @@
       </svg>
       <div class="brand-text">
         <span class="brand-name">myArena Royalty</span>
-        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.0.5</span></span>
+        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.0.6</span></span>
       </div>
     </div>
 
@@ -1793,7 +1882,11 @@
 
             <!-- Room Chat -->
             <div class="chat-panel">
-              <div class="feed-title">💬 Room Chat</div>
+              <div class="chat-header">
+                <div class="feed-title">💬 Room Chat</div>
+                <span class="chat-identity" id="chatIdentity"></span>
+              </div>
+              <div class="chat-roster" id="chatRoster" aria-label="Players at this table"></div>
               <ul class="chat-list" id="chatList" aria-live="polite"></ul>
               <form class="chat-form" id="chatForm">
                 <input id="chatInput" type="text" maxlength="200" placeholder="Send a quick message..." aria-label="Chat message" />
@@ -1804,9 +1897,7 @@
             <!-- Activity & History Feed -->
             <div class="activity-feed-box">
               <div class="feed-title">⚔️ Match Activity</div>
-              <ul class="feed-list" id="activityFeedList">
-                <li class="feed-item">Game loaded and ready for action.</li>
-              </ul>
+              <ul class="feed-list" id="activityFeedList" tabindex="0" aria-label="Match activity, newest first"></ul>
             </div>
           </div>
         </div>

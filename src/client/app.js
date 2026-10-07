@@ -609,10 +609,12 @@
       const player = state.room.players.find(p => p.id === event.player.id);
       if (player) Object.assign(player, event.player);
       if (state.view === 'lobby') renderLobby();
+      if (state.view === 'game') renderChatRoster();
     } else if (event.type === 'PLAYER_CONNECTION_CHANGED') {
       const player = state.room.players.find(p => p.id === event.playerId);
       if (player) player.connected = event.connected;
       if (state.view === 'lobby') renderLobby();
+      if (state.view === 'game') renderChatRoster();
     } else if (event.type === 'PLAYER_JOINED') {
       showToast(`${event.player.name} entered the lobby`);
       if (state.view === 'lobby') {
@@ -879,13 +881,13 @@
     const chatPanel = document.querySelector('.chat-panel');
     diceActionBox.classList.toggle('is-ludo', r.gameType === 'ludo');
     diceActionBox.style.display = r.gameType === 'tambola' ? 'none' : 'flex';
-    chatPanel.style.display = state.isSolo ? 'none' : 'flex';
+    chatPanel.style.display = 'flex';
     renderChatMessages(r.chat || []);
 
     if (r.gameType === 'tambola') {
       canvasWrapper.style.display = 'none';
       tambolaWrapper.style.display = 'flex';
-      sidePanel.style.display = state.isSolo ? 'none' : 'flex';
+      sidePanel.style.display = 'flex';
       setupTambolaView();
     } else {
       canvasWrapper.style.display = 'block';
@@ -970,9 +972,7 @@
       }
     }
 
-    if (r.chat && r.chat.length) {
-      renderChatMessages(r.chat);
-    }
+    renderChatMessages(r.chat || []);
 
     // Trigger AI if needed
     if (state.isSolo) {
@@ -1123,8 +1123,8 @@
   }
 
   // A rigid-body-style throw: one high arc followed by three rapidly decaying impacts.
-  const DICE_REST_X = -10;
-  const DICE_REST_Y = 14;
+  const DICE_REST_X = -22;
+  const DICE_REST_Y = 26;
 
   function diceThrowKeyframes(size, dir) {
     const up = 'cubic-bezier(0.17, 0.84, 0.44, 1)';
@@ -1225,6 +1225,8 @@
     }, duration);
   }
 
+  const ACTIVITY_VISIBLE_ITEMS = 2;
+
   function appendActivityFeed(msg) {
     const list = document.getElementById('activityFeedList');
     if (!list) return;
@@ -1232,27 +1234,85 @@
     item.className = 'feed-item';
     item.textContent = msg;
     list.prepend(item);
-    if (list.children.length > 20) list.lastChild.remove();
+    if (list.children.length > 50) list.lastChild.remove();
+    list.scrollTop = 0;
+    fitActivityFeed();
+  }
+
+  // Size the feed to exactly the newest two entries (they can wrap); older ones scroll.
+  function fitActivityFeed() {
+    const list = document.getElementById('activityFeedList');
+    if (!list || !list.offsetParent) return;
+    const items = Array.from(list.children).slice(0, ACTIVITY_VISIBLE_ITEMS);
+    if (!items.length) return;
+    const gap = parseFloat(getComputedStyle(list).rowGap) || 0;
+    const height = items.reduce((total, item) => total + item.getBoundingClientRect().height, 0) +
+      gap * (items.length - 1);
+    list.style.maxHeight = `${Math.ceil(height)}px`;
+  }
+
+  function getChatParticipants() {
+    const r = state.room;
+    if (!r) return [];
+    const roster = (r.players && r.players.length) ? r.players : (r.gameState ? r.gameState.players : []);
+    return roster.map(player => ({
+      id: player.id,
+      name: player.name,
+      isAI: !!player.isAI,
+      connected: state.isSolo || player.isAI || player.connected !== false
+    }));
+  }
+
+  function renderChatRoster() {
+    const identity = document.getElementById('chatIdentity');
+    const roster = document.getElementById('chatRoster');
+    const participants = getChatParticipants();
+    const me = participants.find(player => player.id === state.playerId);
+    if (identity) identity.textContent = me ? `Chatting as ${me.name}` : '';
+    if (!roster) return;
+    roster.innerHTML = '';
+    participants.forEach(player => {
+      const chip = document.createElement('span');
+      chip.className = 'chat-chip' + (player.id === state.playerId ? ' is-me' : '') +
+        (player.connected ? '' : ' is-offline');
+      chip.title = player.connected ? 'Online' : 'Offline';
+      const dot = document.createElement('span');
+      dot.className = 'chat-chip-dot';
+      dot.setAttribute('aria-hidden', 'true');
+      chip.appendChild(dot);
+      chip.appendChild(document.createTextNode(player.isAI ? `${player.name} 🤖` : player.name));
+      roster.appendChild(chip);
+    });
   }
 
   function renderChatMessages(messages = []) {
+    renderChatRoster();
     const list = document.getElementById('chatList');
     if (!list) return;
+    // Re-rendering on every game update would yank the user back while scrolling history.
+    const last = messages[messages.length - 1];
+    const renderKey = `${state.room ? state.room.code : ''}:${messages.length}:${last ? last.id : ''}`;
+    if (list.dataset.renderKey === renderKey) return;
+    list.dataset.renderKey = renderKey;
+
     list.innerHTML = '';
     if (!messages.length) {
       const empty = document.createElement('li');
-      empty.className = 'chat-item';
-      empty.textContent = 'No messages yet. Start the conversation.';
+      empty.className = 'chat-empty';
+      empty.textContent = 'No messages yet. Say hello to the table!';
       list.appendChild(empty);
       return;
     }
 
-    messages.slice(-20).forEach(entry => {
+    messages.slice(-50).forEach(entry => {
       const item = document.createElement('li');
-      item.className = 'chat-item';
+      item.className = 'chat-item' + (entry.playerId === state.playerId ? ' is-me' : '');
       const name = document.createElement('strong');
-      name.textContent = `${entry.name}: `;
-      const text = document.createTextNode(entry.message);
+      name.className = 'chat-author';
+      name.textContent = entry.name;
+      const text = document.createElement('span');
+      text.className = 'chat-text';
+      text.textContent = entry.message;
       item.appendChild(name);
       item.appendChild(text);
       list.appendChild(item);
@@ -1264,6 +1324,23 @@
     const input = document.getElementById('chatInput');
     const value = (input ? input.value : '').trim();
     if (!value || !state.room || !state.playerId) return;
+    if (value.length > 200) return showToast('Message is too long');
+
+    if (state.isSolo) {
+      // Solo tables have no server; keep the conversation locally under the signed-in name.
+      const me = getChatParticipants().find(player => player.id === state.playerId);
+      state.room.chat = (state.room.chat || []).concat({
+        id: `chat_local_${Date.now()}`,
+        playerId: state.playerId,
+        name: me ? me.name : state.user.name,
+        message: value,
+        createdAt: Date.now()
+      }).slice(-50);
+      renderChatMessages(state.room.chat);
+      if (input) input.value = '';
+      return;
+    }
+
     try {
       const res = await apiPost('/api/rooms/chat', {
         roomCode: state.room.code,
@@ -2029,6 +2106,11 @@
   function initApp() {
     updateNavProfile();
     setupHeroPickers();
+
+    const activityBox = document.querySelector('.activity-feed-box');
+    if (activityBox && typeof ResizeObserver === 'function') {
+      new ResizeObserver(() => fitActivityFeed()).observe(activityBox);
+    }
 
     // Mute toggle
     const muteBtn = document.getElementById('btnToggleSound');

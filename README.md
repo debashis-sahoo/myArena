@@ -1,10 +1,10 @@
 # 👑 myArena Royalty — "Your friends. Your arena."
 
-Current version: **1.0.5**
+Current version: **1.0.6**
 
 A browser-based social board-game arcade designed for friends to play instantly across desktop, iPhone, and Android without account creation.
 
-Version 1.0.5 fixes the Ludo die showing the wrong number (often 1) and AI turns occasionally rolling for a human player. Version 1.0.4 adds a seamless physics-style 3D die, cryptographically backed unbiased dice rolls when the platform supports Web Crypto, a board that resizes its CSS and high-DPI canvas surfaces with the browser, and authenticated real-time room chat.
+Version 1.0.6 rounds the die edges, shows room chat by default with each player's sign-in name and an online roster, and trims match activity to the latest two entries with scroll. Version 1.0.5 fixes the Ludo die showing the wrong number (often 1) and AI turns occasionally rolling for a human player. Version 1.0.4 adds a seamless physics-style 3D die, cryptographically backed unbiased dice rolls when the platform supports Web Crypto, a board that resizes its CSS and high-DPI canvas surfaces with the browser, and authenticated real-time room chat.
 
 ---
 
