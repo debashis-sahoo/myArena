@@ -1,0 +1,13 @@
+{
+  "name": "myarena-royalty",
+  "version": "1.0.0",
+  "description": "myArena Royalty - Social Board-Game Arcade for Friends",
+  "main": "src/server/server.js",
+  "scripts": {
+    "start": "node src/server/server.js",
+    "test": "node test/unit_tests.js && node test/multiplayer_integration.test.js",
+    "test:e2e": "python3 test/e2e_selenium.py"
+  },
+  "author": "myArena Royalty Engineering",
+  "license": "MIT"
+}
