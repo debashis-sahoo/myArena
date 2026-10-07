@@ -406,6 +406,99 @@ runTest('Tambola: Bogey claim with uncalled numbers is rejected', () => {
   assert(claimRes.reason.includes('Bogey Claim'));
 });
 
+runTest('Tambola: catalog offers 40+ uniquely identified patterns rated 1-5 for popularity', () => {
+  const catalog = TambolaEngine.PATTERN_CATALOG;
+  assert(catalog.length >= 40, `Only ${catalog.length} patterns`);
+  assert.strictEqual(new Set(catalog.map(p => p.id)).size, catalog.length, 'Pattern ids must be unique');
+  catalog.forEach(p => {
+    assert(p.popularity >= 1 && p.popularity <= 5, `${p.id} popularity out of range`);
+    assert(p.name && p.description && p.category && p.rule, `${p.id} is missing metadata`);
+  });
+  const classic = catalog.filter(p => p.popularity === 5).map(p => p.id).sort();
+  assert.deepStrictEqual(classic, TambolaEngine.DEFAULT_PATTERN_IDS.slice().sort());
+});
+
+runTest('Tambola: every catalog pattern is winnable once its numbers are called, and rejected before', () => {
+  for (let round = 0; round < 40; round++) {
+    TambolaEngine.PATTERN_CATALOG.forEach(definition => {
+      // Full house tiers need earlier tiers won first; they are covered separately.
+      if (definition.rule.type === 'full_house' && definition.rule.tier > 1) return;
+      const game = TambolaEngine.createGame({ hostId: 'h1' }, [{ id: 'p1', name: 'Solo' }], [definition.id]);
+      const ticket = game.tickets.p1;
+      const req = TambolaEngine.getRequiredNumbersForPattern(ticket, { id: definition.id });
+      assert(req, `${definition.id} did not resolve`);
+
+      let needed;
+      if (req.type === 'COUNT_ANY') needed = ticket.allNumbers.slice(0, req.count);
+      else if (req.type === 'ANY_ROWS') needed = req.rows.slice(0, req.count).flat();
+      else needed = req.numbers;
+
+      if (req.type === 'EXACT_LIST' && needed.length === 0) {
+        // e.g. no number containing an 8: the ticket simply cannot win this dividend.
+        const empty = TambolaEngine.claimWin(game, 'p1', definition.id);
+        assert.strictEqual(empty.success, false);
+        return;
+      }
+
+      const early = TambolaEngine.claimWin(game, 'p1', definition.id);
+      assert.strictEqual(early.success, false, `${definition.id} accepted before any number was called`);
+      needed.forEach(n => game.drawnBalls.push(n));
+      game.currentBall = needed[needed.length - 1];
+      const claim = TambolaEngine.claimWin(game, 'p1', definition.id);
+      assert.strictEqual(claim.success, true, `${definition.id} rejected a valid ticket: ${claim.reason}`);
+    });
+  }
+});
+
+runTest('Tambola: shape patterns pick the documented positions on every line', () => {
+  const ticket = {
+    grid: [
+      [1, 13, 24, 0, 0, 0, 66, 71, 0],
+      [6, 0, 0, 36, 46, 0, 69, 0, 81],
+      [0, 0, 26, 39, 0, 51, 0, 78, 83]
+    ],
+    allNumbers: [1, 6, 13, 24, 26, 36, 39, 46, 51, 66, 69, 71, 78, 81, 83]
+  };
+  const numbers = id => TambolaEngine.getRequiredNumbersForPattern(ticket, { id }).numbers.slice().sort((a, b) => a - b);
+  assert.deepStrictEqual(numbers('four_corners'), [1, 26, 71, 83]);
+  assert.deepStrictEqual(numbers('pyramid'), [24, 26, 36, 51, 69, 83]);
+  assert.deepStrictEqual(numbers('star'), [1, 26, 46, 71, 83]);
+  assert.deepStrictEqual(numbers('temperature'), [1, 83]);
+  assert.deepStrictEqual(numbers('breakfast'), [1, 6, 13, 24, 26]);
+  assert.deepStrictEqual(numbers('fat_ladies'), [78, 81, 83]);
+  assert.deepStrictEqual(numbers('kings_corners'), [1, 6, 26]);
+  assert.deepStrictEqual(numbers('first_half'), [1, 6, 13, 24, 26, 36, 39]);
+});
+
+runTest('Tambola: only known pattern ids are accepted, with full houses last', () => {
+  assert.deepStrictEqual(
+    TambolaEngine.sanitizePatternIds(['full_house', 'hacked', { id: 'evil' }, 'pyramid', 'pyramid', 'early_five']),
+    ['early_five', 'pyramid', 'full_house']
+  );
+  assert.deepStrictEqual(TambolaEngine.sanitizePatternIds([]), TambolaEngine.DEFAULT_PATTERN_IDS);
+  const game = TambolaEngine.createGame({ hostId: 'h1' }, [{ id: 'p1', name: 'A' }],
+    [{ id: 'custom', customCells: [[0, 0]] }, 'star']);
+  assert.deepStrictEqual(game.patterns.map(p => p.id), ['star']);
+});
+
+runTest('Tambola: second and third Full House go in order to different players, then the game ends', () => {
+  const players = [{ id: 'p1', name: 'Asha' }, { id: 'p2', name: 'Bilal' }, { id: 'p3', name: 'Chen' }];
+  const game = TambolaEngine.createGame({ hostId: 'p1' }, players,
+    ['full_house', 'second_full_house', 'third_full_house']);
+  for (let n = 1; n <= 90; n++) game.drawnBalls.push(n);
+  game.currentBall = 90;
+
+  assert.strictEqual(TambolaEngine.claimWin(game, 'p2', 'second_full_house').success, false);
+  assert.strictEqual(TambolaEngine.claimWin(game, 'p1', 'full_house').success, true);
+  assert.strictEqual(game.phase, 'IN_PROGRESS');
+  const repeat = TambolaEngine.claimWin(game, 'p1', 'second_full_house');
+  assert.strictEqual(repeat.success, false);
+  assert(repeat.reason.includes('another player'));
+  assert.strictEqual(TambolaEngine.claimWin(game, 'p2', 'second_full_house').success, true);
+  assert.strictEqual(TambolaEngine.claimWin(game, 'p3', 'third_full_house').success, true);
+  assert.strictEqual(game.phase, 'FINISHED');
+});
+
 // -----------------------------------------------------------------------------
 // AI TESTS
 // -----------------------------------------------------------------------------

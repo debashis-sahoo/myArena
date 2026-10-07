@@ -15,6 +15,7 @@ const TambolaEngine = require('../engine/tambola');
 const CHECKPOINT_FORMAT = 1;
 const CHECKPOINT_TTL_MS = 12 * 60 * 60 * 1000;
 const LOBBY_DISCONNECT_GRACE_MS = 5 * 60 * 1000;
+const TAMBOLA_MAX_PLAYERS = 50;
 
 function roomError(message, statusCode) {
   const err = new Error(message);
@@ -86,7 +87,21 @@ class RoomManager {
   }
 
   getMaxPlayersForGame(gameType) {
-    return gameType === 'tambola' ? 8 : 4;
+    return gameType === 'tambola' ? TAMBOLA_MAX_PLAYERS : 4;
+  }
+
+  // Only whitelisted, well-typed rule values reach the engines. For Tambola the host
+  // picks catalog pattern ids; client-supplied pattern objects are never trusted.
+  sanitizeRules(gameType, rules) {
+    const clean = Object.assign({}, rules || {});
+    if (gameType === 'tambola') {
+      delete clean.activePatterns;
+      clean.patternIds = TambolaEngine.sanitizePatternIds(clean.patternIds);
+      clean.callerRole = clean.callerRole === 'AUTO' ? 'AUTO' : 'HOST';
+      const interval = parseInt(clean.autoIntervalSeconds, 10);
+      clean.autoIntervalSeconds = Number.isFinite(interval) ? Math.min(30, Math.max(3, interval)) : 7;
+    }
+    return clean;
   }
 
   authenticate(roomCode, reconnectToken) {
@@ -244,7 +259,7 @@ class RoomManager {
         Math.max(parseInt(maxPlayers, 10) || 4, 1),
         this.getMaxPlayersForGame(gameType)
       ),
-      rules: rules || {},
+      rules: this.sanitizeRules(gameType, rules),
       players: [host],
       gameState: null,
       chat: [],
@@ -392,8 +407,8 @@ class RoomManager {
     } else if (room.maxPlayers > gamePlayerLimit) {
       room.maxPlayers = gamePlayerLimit;
     }
-    if (rules) room.rules = Object.assign(room.rules, rules);
     if (gameType) room.gameType = gameType;
+    if (rules || gameType) room.rules = this.sanitizeRules(room.gameType, Object.assign({}, room.rules, rules || {}));
     room.lastActivity = Date.now();
 
     this.broadcast(roomCode, { type: 'SETTINGS_UPDATED', room: this.getRoomSummary(room) });
@@ -465,9 +480,13 @@ class RoomManager {
         role: p.id === room.hostId ? 'HOST' : 'PLAYER'
       }));
       room.gameState = TambolaEngine.createGame(
-        { hostId: room.hostId, callerRole: room.rules.callerRole || 'HOST' },
+        {
+          hostId: room.hostId,
+          callerRole: room.rules.callerRole || 'HOST',
+          autoIntervalSeconds: room.rules.autoIntervalSeconds
+        },
         tambolaPlayers,
-        room.rules.activePatterns || null
+        room.rules.patternIds
       );
     }
 
@@ -591,19 +610,21 @@ class RoomManager {
 
   getClientGameState(room, playerId) {
     if (!room.gameState) return null;
-    const gameState = JSON.parse(JSON.stringify(room.gameState));
     if (room.gameType === 'tambola') {
-      const ownTicket = gameState.tickets && gameState.tickets[playerId];
-      gameState.tickets = ownTicket ? { [playerId]: ownTicket } : {};
-      delete gameState.ballPool;
-      delete gameState.auditLog;
+      // With up to 50 players this runs once per subscriber per update, so copy only what
+      // this player may see instead of cloning every ticket, the ball pool and the audit log.
+      const { tickets, ballPool, auditLog, ...shared } = room.gameState;
+      const gameState = JSON.parse(JSON.stringify(shared));
+      const ownTicket = tickets && tickets[playerId];
+      gameState.tickets = ownTicket ? { [playerId]: JSON.parse(JSON.stringify(ownTicket)) } : {};
       gameState.patterns.forEach(pattern => {
         pattern.winners.forEach(winner => {
           delete winner.matchedNumbers;
         });
       });
+      return gameState;
     }
-    return gameState;
+    return JSON.parse(JSON.stringify(room.gameState));
   }
 
   getClientActionResult(actionResult) {

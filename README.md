@@ -1,10 +1,10 @@
 # 👑 myArena Royalty — "Your friends. Your arena."
 
-Current version: **1.0.10**
+Current version: **1.1.0**
 
 A browser-based social board-game arcade designed for friends to play instantly across desktop, iPhone, and Android without account creation.
 
-Version 1.0.10 brings the snakes to life: they slither in place on their squares and flick their tongues (paused with the effects toggle or reduced-motion settings). Version 1.0.9 redraws Snakes & Ladders with realistic patterned snakes, wooden ladders, bevelled theme-aware tiles and glossy tokens. Version 1.0.8 renders the die with WebGL as a single solid, seamlessly rounded body (falling back to CSS where WebGL is unavailable). Version 1.0.7 keeps online games alive on hosts like Render: rooms are restored automatically after server restarts, deploys and spin-downs, disconnected players keep their seat, and clients reconnect on their own. Version 1.0.6 rounds the die edges, shows room chat by default with each player's sign-in name and an online roster, and trims match activity to the latest two entries with scroll. Version 1.0.5 fixes the Ludo die showing the wrong number (often 1) and AI turns occasionally rolling for a human player. Version 1.0.4 adds a seamless physics-style 3D die, cryptographically backed unbiased dice rolls when the platform supports Web Crypto, a board that resizes its CSS and high-DPI canvas surfaces with the browser, and authenticated real-time room chat.
+Version 1.1.0 adds a Tambola admin game setup with 52 popularity-rated winning patterns and rooms of up to 50 players. Version 1.0.10 brings the snakes to life: they slither in place on their squares and flick their tongues (paused with the effects toggle or reduced-motion settings). Version 1.0.9 redraws Snakes & Ladders with realistic patterned snakes, wooden ladders, bevelled theme-aware tiles and glossy tokens. Version 1.0.8 renders the die with WebGL as a single solid, seamlessly rounded body (falling back to CSS where WebGL is unavailable). Version 1.0.7 keeps online games alive on hosts like Render: rooms are restored automatically after server restarts, deploys and spin-downs, disconnected players keep their seat, and clients reconnect on their own. Version 1.0.6 rounds the die edges, shows room chat by default with each player's sign-in name and an online roster, and trims match activity to the latest two entries with scroll. Version 1.0.5 fixes the Ludo die showing the wrong number (often 1) and AI turns occasionally rolling for a human player. Version 1.0.4 adds a seamless physics-style 3D die, cryptographically backed unbiased dice rolls when the platform supports Web Crypto, a board that resizes its CSS and high-DPI canvas surfaces with the browser, and authenticated real-time room chat.
 
 ---
 
@@ -37,15 +37,18 @@ Version 1.0.10 brings the snakes to life: they slither in place on their squares
   - `overshoot_wins`: Any roll meeting or exceeding 100 wins immediately.
 - **Themes**: *Royal Arena Gold*, *Mystic Palace Emerald*, *Cyber Sapphire*.
 
-### 3. Housie / Tambola 90 (2–8 Players)
+### 3. Housie / Tambola 90 (2–50 Players)
 - **Authentic 90-Ball Tickets**: 3 rows by 9 columns (27 cells total). Exactly 15 numbers (5 per row, 4 blanks per row). Each column covers its standard range (Col 1: 1–9, Col 2: 10–19, ..., Col 9: 80–90) sorted ascending top-to-bottom.
 - **Drawing System**: Shuffled 1–90 pool drawn without replacement.
-- **Roles**: Host Caller, Assigned Participant Caller, or Automatic Caller (configurable interval e.g. 7s).
-- **Winning Combinations & Claims**:
-  - *Early Five*: First to mark any 5 called numbers.
-  - *Top Line / Middle Line / Bottom Line*: All 5 numbers of row 1, 2, or 3.
-  - *Four Corners*: 1st and last numbers of top and bottom rows.
-  - *Full House*: All 15 numbers on the ticket.
+- **Large Rooms**: Up to 50 players per room. Each player only ever receives their own ticket, and a draw is broadcast to 40 players in a few milliseconds.
+- **Admin Game Setup**: The host (who draws the numbers) opens **🎯 Game Setup** before creating the room or from the lobby to choose the caller mode (manual, or automatic every 5–20 seconds) and the winning patterns. The picker offers presets (Classic 6, Popular ★4+, Party Mix ★3+, All), search, category filters and a mini ticket diagram for each pattern. The server accepts only known pattern ids.
+- **52 Winning Patterns**, rated by popularity from how widely they appear across popular Tambola/Housie guides (★★★★★ = the classic six played almost everywhere, ★★ = regional and niche variations):
+  - ★★★★★ Early Five (Jaldi 5), Top Line, Middle Line, Bottom Line, Four Corners, Full House
+  - ★★★★ Second Full House, Star, Pyramid, Temperature, Bamboo, Six Corners, Breakfast, Lunch, Dinner, Odd Numbers, Even Numbers, Any Two Lines, Early Seven
+  - ★★★ Third Full House, Early Three, King's Corners, Queen's Corners, First Half (1–45), Second Half (46–90), Laddu, Fat Ladies, Smallest Five, Biggest Five, Letter H, Letter T, Letter L, Border, Red Cross
+  - ★★ Anda, Danda, Ugly Ducklings, Pandavas, Hockey Sticks, Double Temperature, Ladder, Reverse Pyramid, Railway Track, First Twins, Last Twins, Hum Tum, I Love You (143), Drum, Safe, Odd Positions, Diamond, Ab Tak Chappan
+  - Shape patterns refer to the 1st–5th printed number of each line, so every definition is exact on any ticket (for example, Pyramid = 3rd of the top line, 2nd & 4th of the middle, 1st, 3rd & 5th of the bottom).
+  - *Second / Third Full House* open only after the previous Full House is won and must go to a different player; the game ends when its final Full House is claimed or every pattern is closed.
   - *Automated Claim Verification*: Server validates ticket authenticity, verifies every required number was called on or before the current ball, and records auditable win logs or rejects bogey claims.
 
 ---

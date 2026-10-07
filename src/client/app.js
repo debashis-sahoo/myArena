@@ -212,7 +212,8 @@
     aiTimer: null,
     checkpoint: null,
     recovering: null,
-    keepaliveTimer: null
+    keepaliveTimer: null,
+    tambolaSetup: null
   };
 
   // Announce to Screen Reader
@@ -361,32 +362,199 @@
     } else if (gameType === 'tambola') {
       container.innerHTML = `
         <div class="rule-row">
-          <span>Caller Role</span>
-          <select id="ruleTambolaCaller" class="input-select" style="min-height:36px; padding:4px 8px;">
-            <option value="HOST" selected>Host Controlled Manual Draw</option>
-            <option value="AUTO">Automatic Caller (Timer)</option>
-          </select>
+          <span>Caller &amp; Winning Patterns</span>
+          <button type="button" class="btn btn-royal" id="btnCreateTambolaSetup" style="min-height:36px; padding:6px 14px;">🎯 Game Setup</button>
         </div>
-        <div class="rule-row">
-          <span>Active Winning Combinations</span>
-          <div style="font-size:0.8rem; color:var(--text-gold); text-align:right;">
-            Early 5, Top Line, Middle Line, Bottom Line, Corners, Full House
-          </div>
-        </div>
+        <div id="createTambolaSummary" style="padding-top:6px;">${tambolaSetupSummaryHTML(getTambolaSetup())}</div>
       `;
+      document.getElementById('btnCreateTambolaSetup').addEventListener('click', () => {
+        openTambolaSetup(getTambolaSetup(), setup => {
+          state.tambolaSetup = setup;
+          document.getElementById('createTambolaSummary').innerHTML = tambolaSetupSummaryHTML(setup);
+        });
+      });
     }
 
   }
 
   function updatePlayerCapacityOptions(gameType) {
     const select = document.getElementById('selectMaxPlayers');
-    const maxPlayers = gameType === 'tambola' ? 8 : 4;
+    const maxPlayers = gameType === 'tambola' ? 50 : 4;
     Array.from(select.options).forEach(option => {
       option.disabled = Number(option.value) > maxPlayers;
     });
     if (Number(select.value) > maxPlayers) {
       select.value = String(maxPlayers);
     }
+  }
+
+  // =========================================================================
+  // TAMBOLA GAME SETUP (host / caller)
+  // One modal serves both "before creating a room" and "in the lobby"; the caller of
+  // openTambolaSetup decides what saving means.
+  // =========================================================================
+  const TAMBOLA_CATEGORY_ORDER = ['All', 'Quick', 'Lines', 'Corners', 'Shapes', 'Letters', 'Columns', 'Values', 'Digits', 'Full House'];
+  const tambolaSetupDraft = { selected: new Set(), category: 'All', query: '', onSave: null };
+
+  function tambolaCatalog() {
+    return window.TambolaEngine.PATTERN_CATALOG;
+  }
+
+  function defaultTambolaSetup() {
+    return {
+      patternIds: window.TambolaEngine.DEFAULT_PATTERN_IDS.slice(),
+      callerRole: 'HOST',
+      autoIntervalSeconds: 7
+    };
+  }
+
+  function getTambolaSetup() {
+    if (!state.tambolaSetup) state.tambolaSetup = defaultTambolaSetup();
+    return state.tambolaSetup;
+  }
+
+  const TAMBOLA_PRESETS = {
+    classic: () => window.TambolaEngine.DEFAULT_PATTERN_IDS,
+    popular: () => tambolaCatalog().filter(p => p.popularity >= 4).map(p => p.id),
+    party: () => tambolaCatalog().filter(p => p.popularity >= 3).map(p => p.id),
+    all: () => tambolaCatalog().map(p => p.id),
+    none: () => []
+  };
+
+  function patternStarsHTML(popularity) {
+    const filled = '★'.repeat(popularity);
+    const empty = '★'.repeat(5 - popularity);
+    return `<span class="pattern-stars" title="Popularity ${popularity} of 5" aria-label="Popularity ${popularity} of 5">${filled}<span class="dim">${empty}</span></span>`;
+  }
+
+  // A tiny ticket diagram for shape patterns, or a short badge for value-based ones.
+  function patternPreviewHTML(patternId) {
+    const definition = tambolaCatalog().find(p => p.id === patternId);
+    if (!definition) return '';
+    const rule = definition.rule;
+    const grid = (cols, isOn) => {
+      let cells = '';
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < cols; c++) cells += `<span class="${isOn(r, c) ? 'on' : ''}"></span>`;
+      }
+      return `<div class="pattern-preview ${cols === 9 ? 'cols-9' : ''}" style="grid-template-columns: repeat(${cols}, auto);" aria-hidden="true">${cells}</div>`;
+    };
+    switch (rule.type) {
+      case 'lines': return grid(5, (r, c) => rule.lines[r].includes(c));
+      case 'full_house': return grid(5, () => true);
+      case 'any_lines': return grid(5, r => r < rule.count);
+      case 'columns': return grid(9, (r, c) => rule.columns.includes(c));
+      case 'count': return `<span class="pattern-badge">Any ${rule.count}</span>`;
+      case 'extremes':
+        if (rule.low && rule.high) return `<span class="pattern-badge">${rule.low} low + ${rule.high} high</span>`;
+        return `<span class="pattern-badge">${rule.low ? `${rule.low} lowest` : `${rule.high} highest`}</span>`;
+      case 'values':
+        if (rule.test === 'odd') return '<span class="pattern-badge">Odd #s</span>';
+        if (rule.test === 'even') return '<span class="pattern-badge">Even #s</span>';
+        if (rule.test === 'digit') return `<span class="pattern-badge">Has ${rule.digit}</span>`;
+        return `<span class="pattern-badge">${rule.min}–${rule.max}</span>`;
+      default: return '';
+    }
+  }
+
+  function tambolaSetupSummaryHTML(setup, maxChips = 8) {
+    const byId = new Map(tambolaCatalog().map(p => [p.id, p]));
+    const names = setup.patternIds.map(id => byId.get(id)).filter(Boolean).map(p => p.name);
+    const caller = setup.callerRole === 'AUTO' ? `Auto caller · every ${setup.autoIntervalSeconds}s` : 'Manual caller';
+    const chips = names.slice(0, maxChips).map(name => `<span class="meta-tag">${escapeHTML(name)}</span>`).join('');
+    const more = names.length > maxChips ? `<span class="meta-tag">+${names.length - maxChips} more</span>` : '';
+    return `
+      <div style="font-size:0.85rem; color:var(--text-main);">
+        <strong>${names.length}</strong> winning pattern${names.length === 1 ? '' : 's'} · ${escapeHTML(caller)}
+      </div>
+      <div class="setup-summary-chips">${chips}${more}</div>
+    `;
+  }
+
+  function openTambolaSetup(setup, onSave) {
+    tambolaSetupDraft.selected = new Set(setup.patternIds);
+    tambolaSetupDraft.category = 'All';
+    tambolaSetupDraft.query = '';
+    tambolaSetupDraft.onSave = onSave;
+    document.getElementById('setupCallerRole').value = setup.callerRole === 'AUTO' ? 'AUTO' : 'HOST';
+    document.getElementById('setupAutoInterval').value = String(setup.autoIntervalSeconds || 7);
+    document.getElementById('setupPatternSearch').value = '';
+    renderTambolaSetup();
+    openModal('modalTambolaSetup');
+  }
+
+  function renderTambolaSetup() {
+    const draft = tambolaSetupDraft;
+    document.getElementById('setupAutoInterval').disabled = document.getElementById('setupCallerRole').value !== 'AUTO';
+    document.getElementById('setupPatternCount').textContent = `${draft.selected.size} of ${tambolaCatalog().length} selected`;
+
+    const filters = document.getElementById('setupCategoryFilters');
+    filters.innerHTML = TAMBOLA_CATEGORY_ORDER.map(category => `
+      <button type="button" role="tab" class="setup-category ${draft.category === category ? 'active' : ''}"
+        aria-selected="${draft.category === category}" data-category="${category}">${category}</button>
+    `).join('');
+
+    const query = draft.query.trim().toLowerCase();
+    const visible = tambolaCatalog().filter(p =>
+      (draft.category === 'All' || p.category === draft.category) &&
+      (!query || `${p.name} ${p.aka} ${p.description} ${p.category}`.toLowerCase().includes(query))
+    );
+    const grid = document.getElementById('setupPatternGrid');
+    grid.innerHTML = visible.length ? visible.map(p => `
+      <label class="setup-pattern ${draft.selected.has(p.id) ? 'selected' : ''}" data-pattern="${p.id}">
+        <input type="checkbox" value="${p.id}" ${draft.selected.has(p.id) ? 'checked' : ''} aria-label="${escapeHTML(p.name)}">
+        <span>
+          <span class="setup-pattern-name">${escapeHTML(p.name)}</span>
+          <span class="setup-pattern-aka"> · ${escapeHTML(p.aka)}</span><br>
+          ${patternStarsHTML(p.popularity)}
+          <span class="setup-pattern-desc" style="display:block;">${escapeHTML(p.description)}</span>
+        </span>
+        ${patternPreviewHTML(p.id)}
+      </label>
+    `).join('') : '<div style="color:var(--text-muted); padding:12px;">No patterns match your search.</div>';
+  }
+
+  function wireTambolaSetup() {
+    document.getElementById('setupPatternGrid').addEventListener('change', event => {
+      const box = event.target;
+      if (box.type !== 'checkbox') return;
+      if (box.checked) tambolaSetupDraft.selected.add(box.value); else tambolaSetupDraft.selected.delete(box.value);
+      renderTambolaSetup();
+    });
+    document.getElementById('setupCategoryFilters').addEventListener('click', event => {
+      const button = event.target.closest('[data-category]');
+      if (!button) return;
+      tambolaSetupDraft.category = button.getAttribute('data-category');
+      renderTambolaSetup();
+    });
+    document.getElementById('setupPatternSearch').addEventListener('input', event => {
+      tambolaSetupDraft.query = event.target.value;
+      renderTambolaSetup();
+    });
+    document.querySelectorAll('.setup-preset').forEach(button => {
+      button.addEventListener('click', () => {
+        tambolaSetupDraft.selected = new Set(TAMBOLA_PRESETS[button.getAttribute('data-preset')]());
+        renderTambolaSetup();
+      });
+    });
+    document.getElementById('setupCallerRole').addEventListener('change', renderTambolaSetup);
+    document.getElementById('btnSaveTambolaSetup').addEventListener('click', async () => {
+      if (tambolaSetupDraft.selected.size === 0) {
+        showToast('Pick at least one winning pattern');
+        return;
+      }
+      const setup = {
+        patternIds: window.TambolaEngine.sanitizePatternIds(Array.from(tambolaSetupDraft.selected)),
+        callerRole: document.getElementById('setupCallerRole').value,
+        autoIntervalSeconds: Number(document.getElementById('setupAutoInterval').value)
+      };
+      try {
+        if (tambolaSetupDraft.onSave) await tambolaSetupDraft.onSave(setup);
+        closeModal('modalTambolaSetup');
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
   }
 
   function getSelectedRules(gameType) {
@@ -406,10 +574,7 @@
         bonusOnSix: document.getElementById('ruleSnakesBonusSix')?.checked ?? true
       };
     } else if (gameType === 'tambola') {
-      return {
-        callerRole: document.getElementById('ruleTambolaCaller')?.value || 'HOST',
-        autoIntervalSeconds: 7
-      };
+      return Object.assign({}, getTambolaSetup());
     }
     return {};
   }
@@ -912,11 +1077,30 @@
         <span class="meta-tag">Bonus on 6: ${r.rules.bonusOnSix ? 'Yes' : 'No'}</span>
       `;
     } else if (r.gameType === 'tambola') {
-      badgeContainer.innerHTML = `
-        <span class="meta-tag">90-Ball Tambola</span>
-        <span class="meta-tag">Caller: ${escapeHTML(r.rules.callerRole || 'HOST')}</span>
-        <span class="meta-tag">Auto-Claim Verification: Enabled</span>
-      `;
+      const setup = {
+        patternIds: r.rules.patternIds || window.TambolaEngine.DEFAULT_PATTERN_IDS,
+        callerRole: r.rules.callerRole || 'HOST',
+        autoIntervalSeconds: r.rules.autoIntervalSeconds || 7
+      };
+      badgeContainer.style.display = 'block';
+      badgeContainer.innerHTML = tambolaSetupSummaryHTML(setup, 60);
+      if (state.isHost && r.status === 'LOBBY') {
+        const setupButton = document.createElement('button');
+        setupButton.type = 'button';
+        setupButton.className = 'btn btn-royal';
+        setupButton.id = 'btnLobbyTambolaSetup';
+        setupButton.style.marginTop = '12px';
+        setupButton.textContent = '🎯 Game Setup: Patterns & Caller';
+        setupButton.addEventListener('click', () => {
+          openTambolaSetup(setup, async next => {
+            const res = await apiPost('/api/rooms/settings', { roomCode: r.code, rules: next });
+            state.room = res.room;
+            renderLobby();
+            showToast(`Game setup saved: ${next.patternIds.length} winning patterns`);
+          });
+        });
+        badgeContainer.appendChild(setupButton);
+      }
     }
     rulesBox.appendChild(badgeContainer);
 
@@ -942,7 +1126,7 @@
   // =========================================================================
   // 8. SOLO MODE & LOCAL AI EXECUTION
   // =========================================================================
-  function startSoloGame(gameType, rules) {
+  function startSoloGame(gameType, rules = {}) {
     state.isSolo = true;
     state.isHost = true;
     state.playerId = 'player_human';
@@ -984,8 +1168,13 @@
         { id: 'player_human', name: state.user.name, role: 'HOST' }
       ];
       const gameState = window.TambolaEngine.createGame(
-        { hostId: 'player_human', callerRole: rules.callerRole || 'HOST' },
-        players
+        {
+          hostId: 'player_human',
+          callerRole: rules.callerRole || 'HOST',
+          autoIntervalSeconds: rules.autoIntervalSeconds || 7
+        },
+        players,
+        rules.patternIds
       );
       state.room = {
         code: 'SOLO-TAMBOLA',
@@ -996,6 +1185,8 @@
         gameState: gameState
       };
     }
+    // Kept so "Play Again" can restart a solo match with the same rules.
+    state.room.rules = rules;
 
     setupGameView();
     switchView('game');
@@ -2933,9 +3124,15 @@
       card.className = `claim-card ${pat.winners.length >= pat.maxWinners ? 'won' : ''}`;
       card.id = `claim_${pat.id}`;
       card.innerHTML = `
-        <div style="font-weight:700; font-size:0.95rem; color:var(--text-gold);">${escapeHTML(pat.name)}</div>
+        <div class="claim-card-head">
+          <div>
+            <div style="font-weight:700; font-size:0.95rem; color:var(--text-gold);">${escapeHTML(pat.name)}</div>
+            ${pat.popularity ? patternStarsHTML(pat.popularity) : ''}
+          </div>
+          ${patternPreviewHTML(pat.id)}
+        </div>
         <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHTML(pat.description)}</div>
-        <div style="font-size:0.78rem; color:#10b981; margin-top:2px;">
+        <div class="claim-status" style="font-size:0.78rem; color:#10b981; margin-top:2px;">
           ${pat.winners.length > 0 ? `Won by: ${pat.winners.map(w => escapeHTML(w.playerName)).join(', ')}` : 'Available'}
         </div>
         <button class="btn btn-primary" style="margin-top:6px; padding:6px 12px; font-size:0.8rem;" ${pat.winners.length >= pat.maxWinners ? 'disabled' : ''}>
@@ -2945,6 +3142,9 @@
       card.querySelector('button').addEventListener('click', () => window.claimPattern(pat.id));
       patternsList.appendChild(card);
     });
+
+    const autoButton = document.getElementById('btnAutoCallerToggle');
+    if (!state.tambolaAutoTimer) autoButton.textContent = `▶ Auto-Call (${gs.autoIntervalSeconds || 7}s)`;
   }
 
   function updateTambolaDisplay() {
@@ -2970,7 +3170,12 @@
     // Update patterns status
     gs.patterns.forEach(pat => {
       const card = document.getElementById(`claim_${pat.id}`);
-      if (card && pat.winners.length >= pat.maxWinners) {
+      if (!card) return;
+      const status = card.querySelector('.claim-status');
+      if (status && pat.winners.length > 0) {
+        status.textContent = `Won by: ${pat.winners.map(w => w.playerName).join(', ')}`;
+      }
+      if (pat.winners.length >= pat.maxWinners) {
         card.classList.add('won');
         const btn = card.querySelector('button');
         if (btn) btn.disabled = true;
@@ -3037,12 +3242,13 @@
     const isTambola = state.room.gameType === 'tambola';
     if (isTambola) {
       const winnerIds = [];
-      const fullHouse = gs.patterns.find(pattern => pattern.id === 'full_house');
-      const fullHouseWins = (fullHouse ? fullHouse.winners : [])
-        .slice()
-        .sort((a, b) => a.timestamp - b.timestamp);
+      const tierIds = ['full_house', 'second_full_house', 'third_full_house'];
+      const fullHouseWins = tierIds
+        .map(id => gs.patterns.find(pattern => pattern.id === id))
+        .filter(Boolean)
+        .flatMap(pattern => pattern.winners);
       const otherWins = gs.patterns
-        .filter(pattern => pattern.id !== 'full_house')
+        .filter(pattern => !tierIds.includes(pattern.id))
         .flatMap(pattern => pattern.winners)
         .sort((a, b) => a.timestamp - b.timestamp);
       const orderedWins = [...fullHouseWins, ...otherWins];
@@ -3271,17 +3477,21 @@
 
     // Auto-caller toggle for Tambola
     document.getElementById('btnAutoCallerToggle').addEventListener('click', () => {
+      const gs = state.room && state.room.gameState;
+      const seconds = (gs && gs.autoIntervalSeconds) || 7;
       if (state.tambolaAutoTimer) {
         clearInterval(state.tambolaAutoTimer);
         state.tambolaAutoTimer = null;
-        document.getElementById('btnAutoCallerToggle').textContent = '▶ Auto-Call (7s)';
+        document.getElementById('btnAutoCallerToggle').textContent = `▶ Auto-Call (${seconds}s)`;
         showToast('Auto-Caller Paused');
       } else {
-        state.tambolaAutoTimer = setInterval(triggerDrawBall, 7000);
+        state.tambolaAutoTimer = setInterval(triggerDrawBall, seconds * 1000);
         document.getElementById('btnAutoCallerToggle').textContent = '⏸ Pause Auto-Call';
-        showToast('Auto-Caller Started (7s interval)');
+        showToast(`Auto-Caller Started (${seconds}s interval)`);
       }
     });
+
+    wireTambolaSetup();
 
     // Rematch Button
     document.getElementById('btnPlayAgain').addEventListener('click', async () => {

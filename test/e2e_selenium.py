@@ -262,10 +262,25 @@ def run_e2e():
         tambola_card_btn.click()
         wait.until(EC.visibility_of_element_located((By.ID, "modalCreateRoom")))
 
+        # Admin game setup: choose winning patterns before starting
+        driver.find_element(By.ID, "btnCreateTambolaSetup").click()
+        wait.until(EC.visibility_of_element_located((By.ID, "modalTambolaSetup")))
+        catalog_cards = driver.find_elements(By.CSS_SELECTOR, "#setupPatternGrid .setup-pattern")
+        assert len(catalog_cards) >= 40, f"Expected 40+ winning patterns to choose from, found {len(catalog_cards)}"
+        driver.find_element(By.CSS_SELECTOR, ".setup-preset[data-preset='party']").click()
+        party_count = len(driver.find_elements(By.CSS_SELECTOR, "#setupPatternGrid .setup-pattern input:checked"))
+        Select(driver.find_element(By.ID, "setupCallerRole")).select_by_value("HOST")
+        driver.find_element(By.ID, "btnSaveTambolaSetup").click()
+        wait.until(EC.invisibility_of_element_located((By.ID, "modalTambolaSetup")))
+        print(f"  ✓ Game setup offers {len(catalog_cards)} patterns; chose {party_count} (Party Mix ★3+)")
+
         mode_select = driver.find_element(By.ID, "selectGameMode")
         Select(mode_select).select_by_value("solo")
         driver.find_element(By.ID, "btnSubmitCreateRoom").click()
         time.sleep(1)
+
+        claim_cards = driver.find_elements(By.CSS_SELECTOR, "#tambolaPatternsList .claim-card")
+        assert len(claim_cards) == party_count, f"Expected {party_count} claimable patterns, found {len(claim_cards)}"
 
         # Verify Tambola 90-ball stage and ticket
         tambola_stage = driver.find_element(By.ID, "tambolaWrapper")

@@ -1154,6 +1154,8 @@
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
+      max-height: 96px;
+      overflow-y: auto;
     }
 
     .chat-chip {
@@ -1453,6 +1455,230 @@
       background: rgba(16, 185, 129, 0.1);
     }
 
+    .claim-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    /* =========================================================================
+       TAMBOLA GAME SETUP
+       ========================================================================= */
+    .tambola-setup-card {
+      max-width: 980px;
+    }
+
+    .setup-section {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-royal);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+
+    .setup-section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 700;
+      color: var(--text-gold);
+      margin-bottom: 10px;
+    }
+
+    .setup-count {
+      font-size: 0.8rem;
+      color: var(--text-main);
+      background: rgba(245, 158, 11, 0.16);
+      border: 1px solid var(--border-gold);
+      border-radius: var(--radius-full);
+      padding: 2px 10px;
+    }
+
+    .setup-caller-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .setup-caller-row .input-label {
+      margin: 0;
+    }
+
+    .setup-caller-row .input-select,
+    .setup-search {
+      width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+    }
+
+    .setup-presets,
+    .setup-categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .setup-preset {
+      min-height: 36px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+    }
+
+    .setup-search {
+      margin-bottom: 10px;
+    }
+
+    .setup-category {
+      min-height: 32px;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-royal);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+
+    .setup-category.active {
+      border-color: var(--gold-bright);
+      color: var(--gold-bright);
+      background: rgba(245, 158, 11, 0.12);
+    }
+
+    .setup-pattern-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+      max-height: 46vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .setup-pattern {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 10px;
+      align-items: start;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1.5px solid var(--border-royal);
+      background: rgba(255, 255, 255, 0.03);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .setup-pattern:hover {
+      border-color: var(--gold-primary);
+    }
+
+    .setup-pattern.selected {
+      border-color: var(--gold-bright);
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .setup-pattern input {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      accent-color: #f59e0b;
+    }
+
+    .setup-pattern-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-main);
+    }
+
+    .setup-pattern-aka {
+      font-size: 0.72rem;
+      color: var(--text-gold);
+    }
+
+    .setup-pattern-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+      line-height: 1.35;
+    }
+
+    .pattern-stars {
+      color: #fbbf24;
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    .pattern-stars .dim {
+      color: rgba(251, 191, 36, 0.25);
+    }
+
+    /* Mini ticket diagram: 3 lines x 5 numbers, or 3 x 9 for column patterns */
+    .pattern-preview {
+      display: grid;
+      gap: 2px;
+      padding: 4px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .pattern-preview span {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .pattern-preview.cols-9 span {
+      width: 6px;
+    }
+
+    .pattern-preview span.on {
+      background: #fbbf24;
+      box-shadow: 0 0 4px rgba(251, 191, 36, 0.7);
+    }
+
+    .pattern-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 46px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.25);
+      color: #fbbf24;
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .setup-summary-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 640px) {
+      .tambola-setup-card {
+        padding: 18px 14px;
+      }
+
+      .setup-caller-row {
+        grid-template-columns: 1fr;
+      }
+
+      /* One scroll area on phones: the modal itself, not a box inside it. */
+      .setup-pattern-grid {
+        grid-template-columns: 1fr;
+        max-height: none;
+        overflow: visible;
+      }
+    }
+
     /* =========================================================================
        10. RESULTS OVERLAY
        ========================================================================= */
@@ -1547,7 +1773,7 @@
       </svg>
       <div class="brand-text">
         <span class="brand-name">myArena Royalty</span>
-        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.0.10</span></span>
+        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.1.0</span></span>
       </div>
     </div>
 
@@ -1666,7 +1892,7 @@
                 Authentic 90-ball Indian Tambola! 3x9 verified tickets, host caller or auto-caller, categorized patterns (Early 5, Lines, Full House), and instant claim verification.
               </p>
               <div class="game-meta-tags">
-                <span class="meta-tag">👥 2–8 Players</span>
+                <span class="meta-tag">👥 2–50 Players</span>
                 <span class="meta-tag">⏱ 15–25 Min</span>
                 <span class="meta-tag">👑 Caller & Tickets</span>
               </div>
@@ -1935,7 +2161,7 @@
         <select class="input-select" id="selectGameType">
           <option value="ludo">Ludo Royalty (2–4 Players)</option>
           <option value="snakes">Snakes & Ladders (1–4 Players)</option>
-          <option value="tambola">Housie / Tambola 90 (2–8 Players)</option>
+          <option value="tambola">Housie / Tambola 90 (2–50 Players)</option>
         </select>
       </div>
 
@@ -1955,6 +2181,11 @@
           <option value="4" selected>4 Players</option>
           <option value="6">6 Players (Tambola only)</option>
           <option value="8">8 Players (Tambola only)</option>
+          <option value="10">10 Players (Tambola only)</option>
+          <option value="20">20 Players (Tambola only)</option>
+          <option value="30">30 Players (Tambola only)</option>
+          <option value="40">40 Players (Tambola only)</option>
+          <option value="50">50 Players (Tambola only)</option>
         </select>
       </div>
 
@@ -2039,6 +2270,57 @@
       <div style="display: flex; gap: 12px; margin-top: 14px;">
         <button class="btn btn-outline" data-close="modalJoinRoom" style="flex: 1;">Cancel</button>
         <button class="btn btn-primary" id="btnSubmitJoinRoom" style="flex: 2;">Join Arena</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Tambola Game Setup (host / caller only) -->
+  <div class="modal-overlay" id="modalTambolaSetup">
+    <div class="modal-card tambola-setup-card" role="dialog" aria-labelledby="tambolaSetupTitle">
+      <div class="modal-header">
+        <h3 class="modal-title" id="tambolaSetupTitle">🎯 Tambola Game Setup</h3>
+        <button class="close-btn" data-close="modalTambolaSetup" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="setup-section">
+        <div class="setup-section-title">Number Caller</div>
+        <div class="setup-caller-row">
+          <label class="input-label" for="setupCallerRole">Draw mode</label>
+          <select class="input-select" id="setupCallerRole">
+            <option value="HOST">Manual — I draw each number</option>
+            <option value="AUTO">Automatic — timed draws</option>
+          </select>
+          <label class="input-label" for="setupAutoInterval">Auto interval</label>
+          <select class="input-select" id="setupAutoInterval">
+            <option value="5">Every 5 seconds</option>
+            <option value="7">Every 7 seconds</option>
+            <option value="10">Every 10 seconds</option>
+            <option value="15">Every 15 seconds</option>
+            <option value="20">Every 20 seconds</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="setup-section">
+        <div class="setup-section-title">
+          Winning Patterns
+          <span class="setup-count" id="setupPatternCount">0 selected</span>
+        </div>
+        <div class="setup-presets" role="group" aria-label="Pattern presets">
+          <button type="button" class="btn btn-outline setup-preset" data-preset="classic">Classic 6</button>
+          <button type="button" class="btn btn-outline setup-preset" data-preset="popular">Popular ★4+</button>
+          <button type="button" class="btn btn-outline setup-preset" data-preset="party">Party Mix ★3+</button>
+          <button type="button" class="btn btn-outline setup-preset" data-preset="all">All</button>
+          <button type="button" class="btn btn-outline setup-preset" data-preset="none">Clear</button>
+        </div>
+        <input type="search" class="input-text setup-search" id="setupPatternSearch" placeholder="Search patterns (e.g. pyramid, corners, jaldi)" aria-label="Search patterns">
+        <div class="setup-categories" id="setupCategoryFilters" role="tablist" aria-label="Pattern categories"></div>
+        <div class="setup-pattern-grid" id="setupPatternGrid"></div>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 14px;">
+        <button class="btn btn-outline" data-close="modalTambolaSetup" style="flex: 1;">Cancel</button>
+        <button class="btn btn-primary" id="btnSaveTambolaSetup" style="flex: 2;">Save Setup</button>
       </div>
     </div>
   </div>

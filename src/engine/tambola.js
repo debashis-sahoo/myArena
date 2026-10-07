@@ -24,64 +24,101 @@
     { min: 80, max: 90 }  // Col 8
   ];
 
-  const STANDARD_PATTERNS = [
-    {
-      id: 'early_five',
-      name: 'Early Five',
-      category: 'Speed',
-      description: 'First player to mark any 5 called numbers on their ticket',
-      rewardLabel: 'Royal Vanguard Crown',
-      maxWinners: 1
-    },
-    {
-      id: 'top_line',
-      name: 'Top Line',
-      category: 'Lines',
-      description: 'All 5 numbers in the first (top) row of the ticket',
-      rewardLabel: 'Silver Banner',
-      maxWinners: 1
-    },
-    {
-      id: 'middle_line',
-      name: 'Middle Line',
-      category: 'Lines',
-      description: 'All 5 numbers in the second (middle) row of the ticket',
-      rewardLabel: 'Golden Scepter',
-      maxWinners: 1
-    },
-    {
-      id: 'bottom_line',
-      name: 'Bottom Line',
-      category: 'Lines',
-      description: 'All 5 numbers in the third (bottom) row of the ticket',
-      rewardLabel: 'Ruby Chalice',
-      maxWinners: 1
-    },
-    {
-      id: 'four_corners',
-      name: 'Four Corners',
-      category: 'Special',
-      description: 'The first and last numbers of the top and bottom rows (4 numbers)',
-      rewardLabel: 'Diamond Bastion',
-      maxWinners: 1
-    },
-    {
-      id: 'any_two_lines',
-      name: 'Any Two Lines',
-      category: 'Lines',
-      description: 'Any two completed rows (10 numbers total)',
-      rewardLabel: 'Emerald Diadem',
-      maxWinners: 1
-    },
-    {
-      id: 'full_house',
-      name: 'Full House',
-      category: 'Grand',
-      description: 'All 15 numbers on the ticket',
-      rewardLabel: 'Imperial Sovereign Trophy',
-      maxWinners: 1
-    }
+  // ---------------------------------------------------------------------------
+  // WINNING PATTERN CATALOG
+  // Positions in a "lines" rule are the 1st..5th printed number of each line
+  // (every line holds exactly five numbers), so shapes are unambiguous on any ticket.
+  // Popularity (1-5) reflects how widely each dividend appears across popular Tambola
+  // and Housie guides: 5 = the classic six played almost everywhere, 4 = standard extras
+  // in most guides, 3 = common party patterns, 2 = regional and niche variations.
+  // ---------------------------------------------------------------------------
+  const ALL = [0, 1, 2, 3, 4];
+  const lines = (top, middle, bottom) => ({ type: 'lines', lines: [top, middle, bottom] });
+  const columns = (...cols) => ({ type: 'columns', columns: cols });
+  const digit = d => ({ type: 'values', test: 'digit', digit: d });
+  const range = (min, max) => ({ type: 'values', test: 'range', min, max });
+
+  const PATTERN_CATALOG = [
+    // Classic six
+    { id: 'early_five', name: 'Early Five', aka: 'Jaldi 5', category: 'Quick', popularity: 5, description: 'Any 5 numbers on the ticket', rule: { type: 'count', count: 5 } },
+    { id: 'top_line', name: 'Top Line', aka: 'First Line', category: 'Lines', popularity: 5, description: 'All 5 numbers of the top line', rule: lines(ALL, [], []) },
+    { id: 'middle_line', name: 'Middle Line', aka: 'Second Line', category: 'Lines', popularity: 5, description: 'All 5 numbers of the middle line', rule: lines([], ALL, []) },
+    { id: 'bottom_line', name: 'Bottom Line', aka: 'Third Line', category: 'Lines', popularity: 5, description: 'All 5 numbers of the bottom line', rule: lines([], [], ALL) },
+    { id: 'four_corners', name: 'Four Corners', aka: 'Corners', category: 'Corners', popularity: 5, description: 'First and last numbers of the top and bottom lines', rule: lines([0, 4], [], [0, 4]) },
+    { id: 'full_house', name: 'Full House', aka: 'Housie / Tambola', category: 'Full House', popularity: 5, description: 'All 15 numbers on the ticket', rule: { type: 'full_house', tier: 1 } },
+
+    // Standard extras
+    { id: 'second_full_house', name: 'Second Full House', aka: '2nd Housie', category: 'Full House', popularity: 4, description: 'All 15 numbers, after the first Full House, by a different winner', rule: { type: 'full_house', tier: 2 } },
+    { id: 'star', name: 'Star', aka: 'Cross Rule / Corners with Star', category: 'Shapes', popularity: 4, description: 'Four corners plus the middle number of the middle line', rule: lines([0, 4], [2], [0, 4]) },
+    { id: 'pyramid', name: 'Pyramid', aka: 'Triangle', category: 'Shapes', popularity: 4, description: '3rd number of the top line; 2nd and 4th of the middle; 1st, 3rd and 5th of the bottom', rule: lines([2], [1, 3], [0, 2, 4]) },
+    { id: 'temperature', name: 'Temperature', aka: 'BP Rule', category: 'Values', popularity: 4, description: 'The lowest and the highest number on the ticket', rule: { type: 'extremes', low: 1, high: 1 } },
+    { id: 'bamboo', name: 'Bamboo', aka: 'Middle Column', category: 'Shapes', popularity: 4, description: 'The 3rd (middle) number of every line', rule: lines([2], [2], [2]) },
+    { id: 'six_corners', name: 'Six Corners', aka: 'All Corners', category: 'Corners', popularity: 4, description: 'First and last numbers of every line', rule: lines([0, 4], [0, 4], [0, 4]) },
+    { id: 'breakfast', name: 'Breakfast', aka: 'Columns 1-3', category: 'Columns', popularity: 4, description: 'Every number in the first three columns (1-29)', rule: columns(0, 1, 2) },
+    { id: 'lunch', name: 'Lunch', aka: 'Columns 4-6', category: 'Columns', popularity: 4, description: 'Every number in the middle three columns (30-59)', rule: columns(3, 4, 5) },
+    { id: 'dinner', name: 'Dinner', aka: 'Columns 7-9', category: 'Columns', popularity: 4, description: 'Every number in the last three columns (60-90)', rule: columns(6, 7, 8) },
+    { id: 'odd_numbers', name: 'Odd Numbers', aka: 'Odd Rule', category: 'Values', popularity: 4, description: 'Every odd number on the ticket', rule: { type: 'values', test: 'odd' } },
+    { id: 'even_numbers', name: 'Even Numbers', aka: 'Even Rule', category: 'Values', popularity: 4, description: 'Every even number on the ticket', rule: { type: 'values', test: 'even' } },
+    { id: 'any_two_lines', name: 'Any Two Lines', aka: 'Double Line', category: 'Lines', popularity: 4, description: 'Any two complete lines (10 numbers)', rule: { type: 'any_lines', count: 2 } },
+    { id: 'early_seven', name: 'Early Seven', aka: 'Jaldi 7', category: 'Quick', popularity: 4, description: 'Any 7 numbers on the ticket', rule: { type: 'count', count: 7 } },
+
+    // Popular party patterns
+    { id: 'third_full_house', name: 'Third Full House', aka: '3rd Housie', category: 'Full House', popularity: 3, description: 'All 15 numbers, after the second Full House, by a different winner', rule: { type: 'full_house', tier: 3 } },
+    { id: 'early_three', name: 'Early Three', aka: 'Jaldi 3', category: 'Quick', popularity: 3, description: 'Any 3 numbers on the ticket', rule: { type: 'count', count: 3 } },
+    { id: 'kings_corners', name: "King's Corners", aka: 'First of Every Line', category: 'Corners', popularity: 3, description: 'The first number of every line', rule: lines([0], [0], [0]) },
+    { id: 'queens_corners', name: "Queen's Corners", aka: 'Last of Every Line', category: 'Corners', popularity: 3, description: 'The last number of every line', rule: lines([4], [4], [4]) },
+    { id: 'first_half', name: 'First Half (1-45)', aka: 'Day Rule', category: 'Values', popularity: 3, description: 'Every number from 1 to 45 on the ticket', rule: range(1, 45) },
+    { id: 'second_half', name: 'Second Half (46-90)', aka: 'Night Rule', category: 'Values', popularity: 3, description: 'Every number from 46 to 90 on the ticket', rule: range(46, 90) },
+    { id: 'laddu', name: 'Laddu', aka: "Bull's Eye", category: 'Quick', popularity: 3, description: 'The middle number of the middle line', rule: lines([], [2], []) },
+    { id: 'fat_ladies', name: 'Fat Ladies', aka: 'All 8s', category: 'Digits', popularity: 3, description: 'Every number containing the digit 8', rule: digit(8) },
+    { id: 'smallest_five', name: 'Smallest Five', aka: 'Small Five', category: 'Values', popularity: 3, description: 'The five lowest numbers on the ticket', rule: { type: 'extremes', low: 5, high: 0 } },
+    { id: 'biggest_five', name: 'Biggest Five', aka: 'High Five', category: 'Values', popularity: 3, description: 'The five highest numbers on the ticket', rule: { type: 'extremes', low: 0, high: 5 } },
+    { id: 'letter_h', name: 'Letter H', aka: 'H Rule', category: 'Letters', popularity: 3, description: 'The whole middle line plus the first and last numbers of the top and bottom lines', rule: lines([0, 4], ALL, [0, 4]) },
+    { id: 'letter_t', name: 'Letter T', aka: 'T Rule', category: 'Letters', popularity: 3, description: 'The whole top line plus the 3rd number of the middle and bottom lines', rule: lines(ALL, [2], [2]) },
+    { id: 'letter_l', name: 'Letter L', aka: "Lovers' Lane", category: 'Letters', popularity: 3, description: 'The first number of every line plus the whole bottom line', rule: lines([0], [0], ALL) },
+    { id: 'border', name: 'Border', aka: 'Lockdown', category: 'Shapes', popularity: 3, description: 'The whole top and bottom lines plus the first and last numbers of the middle line', rule: lines(ALL, [0, 4], ALL) },
+    { id: 'red_cross', name: 'Red Cross', aka: 'Plus', category: 'Shapes', popularity: 3, description: 'The whole middle line plus the 3rd number of the top and bottom lines', rule: lines([2], ALL, [2]) },
+
+    // Regional and niche variations
+    { id: 'anda', name: 'Anda', aka: 'All 0s', category: 'Digits', popularity: 2, description: 'Every number containing the digit 0', rule: digit(0) },
+    { id: 'danda', name: 'Danda', aka: 'All 1s', category: 'Digits', popularity: 2, description: 'Every number containing the digit 1', rule: digit(1) },
+    { id: 'ugly_ducklings', name: 'Ugly Ducklings', aka: 'All 2s', category: 'Digits', popularity: 2, description: 'Every number containing the digit 2', rule: digit(2) },
+    { id: 'pandavas', name: 'Pandavas', aka: 'All 5s', category: 'Digits', popularity: 2, description: 'Every number containing the digit 5', rule: digit(5) },
+    { id: 'hockey_sticks', name: 'Hockey Sticks', aka: 'All 7s', category: 'Digits', popularity: 2, description: 'Every number containing the digit 7', rule: digit(7) },
+    { id: 'double_temperature', name: 'Double Temperature', aka: 'Double BP', category: 'Values', popularity: 2, description: 'The two lowest and the two highest numbers on the ticket', rule: { type: 'extremes', low: 2, high: 2 } },
+    { id: 'ladder', name: 'Ladder', aka: '1-2-3', category: 'Shapes', popularity: 2, description: '1st number of the top line, 2nd of the middle line, 3rd of the bottom line', rule: lines([0], [1], [2]) },
+    { id: 'reverse_pyramid', name: 'Reverse Pyramid', aka: 'Inverted Triangle', category: 'Shapes', popularity: 2, description: '1st, 3rd and 5th of the top line; 2nd and 4th of the middle; 3rd of the bottom', rule: lines([0, 2, 4], [1, 3], [2]) },
+    { id: 'railway_track', name: 'Railway Track', aka: 'Top & Bottom', category: 'Lines', popularity: 2, description: 'The whole top line and the whole bottom line', rule: lines(ALL, [], ALL) },
+    { id: 'first_twins', name: 'First Twins', aka: 'Left Pairs', category: 'Shapes', popularity: 2, description: 'The first two numbers of every line', rule: lines([0, 1], [0, 1], [0, 1]) },
+    { id: 'last_twins', name: 'Last Twins', aka: 'Right Pairs', category: 'Shapes', popularity: 2, description: 'The last two numbers of every line', rule: lines([3, 4], [3, 4], [3, 4]) },
+    { id: 'hum_tum', name: 'Hum Tum', aka: 'You & Me', category: 'Shapes', popularity: 2, description: 'First two numbers of the top line and last two numbers of the bottom line', rule: lines([0, 1], [], [3, 4]) },
+    { id: 'i_love_you', name: 'I Love You (143)', aka: '1-4-3', category: 'Shapes', popularity: 2, description: 'First number of the top line, first four of the middle, first three of the bottom', rule: lines([0], [0, 1, 2, 3], [0, 1, 2]) },
+    { id: 'drum', name: 'Drum', aka: 'Inner Columns', category: 'Shapes', popularity: 2, description: 'The 2nd, 3rd and 4th numbers of every line', rule: lines([1, 2, 3], [1, 2, 3], [1, 2, 3]) },
+    { id: 'safe', name: 'Safe', aka: 'Inner Three', category: 'Shapes', popularity: 2, description: 'The 2nd, 3rd and 4th numbers of the middle line (everything off the border)', rule: lines([], [1, 2, 3], []) },
+    { id: 'odd_positions', name: 'Odd Positions', aka: 'Odd Columns', category: 'Shapes', popularity: 2, description: 'The 1st, 3rd and 5th numbers of every line', rule: lines([0, 2, 4], [0, 2, 4], [0, 2, 4]) },
+    { id: 'diamond', name: 'Diamond', aka: 'Kite', category: 'Shapes', popularity: 2, description: '3rd number of the top line, first and last of the middle line, 3rd of the bottom line', rule: lines([2], [0, 4], [2]) },
+    { id: 'ab_tak_chappan', name: 'Ab Tak Chappan', aka: 'Up to 56', category: 'Values', popularity: 2, description: 'Every number from 1 to 56 on the ticket', rule: range(1, 56) }
   ];
+
+  const PATTERN_BY_ID = PATTERN_CATALOG.reduce((map, pattern) => {
+    map[pattern.id] = pattern;
+    return map;
+  }, {});
+
+  // The classic six: the default whenever a host has not chosen patterns.
+  const DEFAULT_PATTERN_IDS = ['early_five', 'top_line', 'middle_line', 'bottom_line', 'four_corners', 'full_house'];
+
+  // Keep only known pattern ids (deduplicated, catalog order, full houses last) so a
+  // client can never inject its own pattern definitions.
+  function sanitizePatternIds(ids) {
+    const wanted = new Set(Array.isArray(ids) ? ids.filter(id => typeof id === 'string') : []);
+    const chosen = PATTERN_CATALOG.filter(pattern => wanted.has(pattern.id));
+    if (chosen.length === 0) return DEFAULT_PATTERN_IDS.slice();
+    const isFullHouse = pattern => pattern.rule.type === 'full_house';
+    return [...chosen.filter(p => !isFullHouse(p)), ...chosen.filter(isFullHouse)].map(p => p.id);
+  }
+
+  const STANDARD_PATTERNS = DEFAULT_PATTERN_IDS.map(id => PATTERN_BY_ID[id]);
 
   /**
    * Helper: Shuffle array in place (Fisher-Yates)
@@ -235,16 +272,24 @@
     for (let i = 1; i <= 90; i++) pool.push(i);
     shuffle(pool);
 
-    const patterns = (activePatterns || STANDARD_PATTERNS).map(p => ({
-      id: p.id,
-      name: p.name,
-      category: p.category || 'Standard',
-      description: p.description,
-      rewardLabel: p.rewardLabel || 'Honor',
-      maxWinners: p.maxWinners || 1,
-      winners: [], // [{ playerId, playerName, ballNumber, timestamp }]
-      customCells: p.customCells || null // For custom patterns: list of [r, c]
-    }));
+    // Accepts catalog ids or pattern objects; anything unknown to the catalog is dropped.
+    const requestedIds = activePatterns
+      ? activePatterns.map(p => (typeof p === 'string' ? p : p && p.id))
+      : DEFAULT_PATTERN_IDS;
+    const patterns = sanitizePatternIds(requestedIds).map(id => {
+      const p = PATTERN_BY_ID[id];
+      return {
+        id: p.id,
+        name: p.name,
+        aka: p.aka,
+        category: p.category,
+        popularity: p.popularity,
+        description: p.description,
+        rewardLabel: p.name,
+        maxWinners: 1,
+        winners: [] // [{ playerId, playerName, ballNumber, timestamp }]
+      };
+    });
 
     const playerTickets = {};
     players.forEach(p => {
@@ -315,63 +360,84 @@
     };
   }
 
+  function numberHasDigit(n, d) {
+    return String(n).includes(String(d));
+  }
+
   /**
-   * Extract required numbers from ticket for a pattern
+   * Work out what a ticket must have called to win a pattern:
+   *   EXACT_LIST - every listed number must be called
+   *   COUNT_ANY  - any `count` numbers on the ticket must be called
+   *   ANY_ROWS   - any `count` complete lines
+   * Returns null for unknown patterns.
    */
   function getRequiredNumbersForPattern(ticket, pattern) {
-    const grid = ticket.grid;
-    const drawnSet = new Set();
+    const definition = PATTERN_BY_ID[pattern && pattern.id];
+    if (!definition) return null;
+    const rule = definition.rule;
+    const rows = ticket.grid.map(row => row.filter(n => n > 0));
+    const sorted = ticket.allNumbers.slice().sort((a, b) => a - b);
 
-    if (pattern.id === 'early_five') {
-      // Early five requires any 5 numbers from ticket
-      // In verification, we check if at least 5 numbers on ticket have been drawn
-      return { type: 'COUNT_ANY', count: 5 };
+    switch (rule.type) {
+      case 'count':
+        return { type: 'COUNT_ANY', count: rule.count };
+      case 'any_lines':
+        return { type: 'ANY_ROWS', count: rule.count, rows };
+      case 'full_house':
+        return { type: 'EXACT_LIST', numbers: sorted };
+      case 'lines':
+        return {
+          type: 'EXACT_LIST',
+          numbers: rule.lines.flatMap((positions, r) => positions.map(i => rows[r][i]).filter(n => n > 0))
+        };
+      case 'columns':
+        return {
+          type: 'EXACT_LIST',
+          numbers: rule.columns.flatMap(c => ticket.grid.map(row => row[c]).filter(n => n > 0))
+        };
+      case 'extremes':
+        return {
+          type: 'EXACT_LIST',
+          numbers: [...sorted.slice(0, rule.low), ...(rule.high ? sorted.slice(-rule.high) : [])]
+        };
+      case 'values': {
+        const test = {
+          odd: n => n % 2 === 1,
+          even: n => n % 2 === 0,
+          digit: n => numberHasDigit(n, rule.digit),
+          range: n => n >= rule.min && n <= rule.max
+        }[rule.test];
+        return { type: 'EXACT_LIST', numbers: sorted.filter(test) };
+      }
+      default:
+        return null;
     }
+  }
 
-    if (pattern.id === 'top_line') {
-      return { type: 'EXACT_LIST', numbers: grid[0].filter(n => n > 0) };
+  // Later Full Houses can only be won after the earlier ones, by a different player.
+  function checkFullHouseOrder(game, pattern, playerId) {
+    const definition = PATTERN_BY_ID[pattern.id];
+    if (!definition || definition.rule.type !== 'full_house') return null;
+    const tierPatterns = game.patterns
+      .map(p => ({ p, def: PATTERN_BY_ID[p.id] }))
+      .filter(entry => entry.def && entry.def.rule.type === 'full_house' && entry.def.rule.tier < definition.rule.tier);
+    for (const { p } of tierPatterns) {
+      if (p.winners.length < p.maxWinners) return `${pattern.name} opens only after ${p.name} has been won`;
+      if (p.winners.some(w => w.playerId === playerId)) return `You already won ${p.name}; ${pattern.name} goes to another player`;
     }
-
-    if (pattern.id === 'middle_line') {
-      return { type: 'EXACT_LIST', numbers: grid[1].filter(n => n > 0) };
-    }
-
-    if (pattern.id === 'bottom_line') {
-      return { type: 'EXACT_LIST', numbers: grid[2].filter(n => n > 0) };
-    }
-
-    if (pattern.id === 'four_corners') {
-      const topNums = grid[0].filter(n => n > 0);
-      const botNums = grid[2].filter(n => n > 0);
-      if (topNums.length < 2 || botNums.length < 2) return null;
-      const corners = [topNums[0], topNums[topNums.length - 1], botNums[0], botNums[botNums.length - 1]];
-      return { type: 'EXACT_LIST', numbers: corners };
-    }
-
-    if (pattern.id === 'any_two_lines') {
-      return {
-        type: 'ANY_TWO_ROWS',
-        row0: grid[0].filter(n => n > 0),
-        row1: grid[1].filter(n => n > 0),
-        row2: grid[2].filter(n => n > 0)
-      };
-    }
-
-    if (pattern.id === 'full_house') {
-      return { type: 'EXACT_LIST', numbers: ticket.allNumbers };
-    }
-
-    if (pattern.id === 'custom' && pattern.customCells) {
-      const customNumbers = [];
-      pattern.customCells.forEach(([r, c]) => {
-        if (grid[r] && grid[r][c] > 0) {
-          customNumbers.push(grid[r][c]);
-        }
-      });
-      return { type: 'EXACT_LIST', numbers: customNumbers };
-    }
-
     return null;
+  }
+
+  // The game ends when its final Full House is won, or when every pattern is closed.
+  function isGameComplete(game) {
+    const fullHouses = game.patterns.filter(p => PATTERN_BY_ID[p.id] && PATTERN_BY_ID[p.id].rule.type === 'full_house');
+    const closed = p => p.winners.length >= p.maxWinners;
+    if (fullHouses.length > 0) {
+      const finalTier = fullHouses.reduce((best, p) =>
+        PATTERN_BY_ID[p.id].rule.tier > PATTERN_BY_ID[best.id].rule.tier ? p : best);
+      if (closed(finalTier)) return true;
+    }
+    return game.patterns.every(closed);
   }
 
   /**
@@ -433,10 +499,19 @@
       return { success: false, reason: 'Invalid pattern structure' };
     }
 
+    const orderProblem = checkFullHouseOrder(game, pattern, playerId);
+    if (orderProblem) {
+      return { success: false, reason: orderProblem };
+    }
+
+    if (req.type === 'EXACT_LIST' && req.numbers.length === 0) {
+      return { success: false, reason: `Your ticket has no numbers for ${pattern.name}` };
+    }
+
     if (req.type === 'EXACT_LIST') {
       matchedNumbers = req.numbers.filter(n => drawnSet.has(n));
       missingNumbers = req.numbers.filter(n => !drawnSet.has(n));
-      isValid = missingNumbers.length === 0 && req.numbers.length > 0;
+      isValid = missingNumbers.length === 0;
     } else if (req.type === 'COUNT_ANY') {
       const marked = ticket.allNumbers.filter(n => drawnSet.has(n));
       matchedNumbers = marked;
@@ -444,17 +519,10 @@
       if (!isValid) {
         missingNumbers = ticket.allNumbers.filter(n => !drawnSet.has(n));
       }
-    } else if (req.type === 'ANY_TWO_ROWS') {
-      const r0Complete = req.row0.every(n => drawnSet.has(n));
-      const r1Complete = req.row1.every(n => drawnSet.has(n));
-      const r2Complete = req.row2.every(n => drawnSet.has(n));
-      const completedCount = (r0Complete ? 1 : 0) + (r1Complete ? 1 : 0) + (r2Complete ? 1 : 0);
-      isValid = completedCount >= 2;
-      matchedNumbers = [
-        ...(r0Complete ? req.row0 : []),
-        ...(r1Complete ? req.row1 : []),
-        ...(r2Complete ? req.row2 : [])
-      ];
+    } else if (req.type === 'ANY_ROWS') {
+      const completeRows = req.rows.filter(row => row.every(n => drawnSet.has(n)));
+      isValid = completeRows.length >= req.count;
+      matchedNumbers = completeRows.flat();
     }
 
     if (!isValid) {
@@ -498,13 +566,12 @@
     };
     game.auditLog.push(auditEntry);
 
-    // If Full House is won, check if game should end
-    if (patternId === 'full_house' && pattern.winners.length >= pattern.maxWinners) {
+    if (isGameComplete(game)) {
       game.phase = 'FINISHED';
       game.auditLog.push({
-        type: 'FULL_HOUSE_CONCLUDED',
+        type: 'GAME_CONCLUDED',
         timestamp: Date.now(),
-        message: 'Full House claimed! Match successfully completed.'
+        message: `${pattern.name} claimed! Match successfully completed.`
       });
     }
 
@@ -519,7 +586,10 @@
 
   return {
     COLUMN_RANGES,
+    PATTERN_CATALOG,
+    DEFAULT_PATTERN_IDS,
     STANDARD_PATTERNS,
+    sanitizePatternIds,
     generateTicket,
     createGame,
     drawNextBall,

@@ -328,6 +328,81 @@ async function runMultiplayerTests() {
     assert(!roomManager.rooms.get(lobbyCode).players.some(p => p.id === lobbyJoin.data.player.id));
     console.log('   ✓ Offline lobby seat released after grace period');
 
+    // 12. A 40-player Tambola room with a host-chosen pattern set
+    console.log('12. Running a 40-player Tambola room with custom winning patterns...');
+    const bigCreate = await post('/api/rooms/create', {
+      hostName: 'Big Caller',
+      gameType: 'tambola',
+      maxPlayers: 40,
+      rules: {
+        patternIds: ['pyramid', 'early_five', 'not_a_pattern'],
+        activePatterns: [{ id: 'custom', customCells: [[0, 0]] }],
+        callerRole: 'AUTO',
+        autoIntervalSeconds: 999
+      }
+    });
+    assert.strictEqual(bigCreate.status, 200);
+    const bigCode = bigCreate.data.roomCode;
+    const bigHostToken = bigCreate.data.reconnectToken;
+    assert.strictEqual(bigCreate.data.room.maxPlayers, 40);
+    assert.deepStrictEqual(bigCreate.data.room.rules.patternIds, ['early_five', 'pyramid']);
+    assert.strictEqual(bigCreate.data.room.rules.activePatterns, undefined, 'Client pattern objects are discarded');
+    assert.strictEqual(bigCreate.data.room.rules.autoIntervalSeconds, 30, 'Interval is clamped');
+
+    const bigGuests = [];
+    for (let i = 1; i < 40; i++) {
+      const joined = await post('/api/rooms/join', { roomCode: bigCode, playerName: `Player ${i}` });
+      assert.strictEqual(joined.status, 200, `Player ${i} could not join: ${joined.data && joined.data.error}`);
+      bigGuests.push(joined.data);
+    }
+    const overflow = await post('/api/rooms/join', { roomCode: bigCode, playerName: 'One Too Many' });
+    assert.strictEqual(overflow.status, 400, 'The 41st player is turned away');
+
+    const guestSetup = await post('/api/rooms/settings', {
+      roomCode: bigCode, rules: { patternIds: ['full_house'] }
+    }, bigGuests[0].reconnectToken);
+    assert.strictEqual(guestSetup.status, 400, 'Only the host can change the game setup');
+
+    const hostSetup = await post('/api/rooms/settings', {
+      roomCode: bigCode,
+      rules: { patternIds: ['full_house', 'star', 'temperature', 'early_five', 'second_full_house'], callerRole: 'HOST' }
+    }, bigHostToken);
+    assert.strictEqual(hostSetup.status, 200);
+    assert.deepStrictEqual(hostSetup.data.room.rules.patternIds,
+      ['early_five', 'star', 'temperature', 'full_house', 'second_full_house']);
+
+    for (const guest of bigGuests) {
+      await post('/api/rooms/ready', { roomCode: bigCode, isReady: true }, guest.reconnectToken);
+    }
+    // Simulate 40 live connections so the draw is broadcast to every player.
+    const streams = [bigCreate.data.player, ...bigGuests.map(g => g.player)].map(player => {
+      const stream = { playerId: player.id, events: [], write(chunk) { this.events.push(chunk); } };
+      roomManager.addSubscriber(bigCode, stream, player.id);
+      return stream;
+    });
+    const bigStart = await post('/api/rooms/start', { roomCode: bigCode }, bigHostToken);
+    assert.strictEqual(bigStart.status, 200);
+    assert.deepStrictEqual(bigStart.data.gameState.patterns.map(p => p.id),
+      ['early_five', 'star', 'temperature', 'full_house', 'second_full_house']);
+    assert.strictEqual(bigStart.data.gameState.players.length, 40);
+
+    streams.forEach(stream => { stream.events = []; });
+    const drawStarted = Date.now();
+    const draw = await post('/api/rooms/action', { roomCode: bigCode, action: { type: 'DRAW_BALL' } }, bigHostToken);
+    const drawMs = Date.now() - drawStarted;
+    assert.strictEqual(draw.status, 200);
+    streams.forEach(stream => {
+      const update = stream.events
+        .map(chunk => JSON.parse(chunk.replace(/^data: /, '')))
+        .find(event => event.type === 'GAME_STATE_UPDATED');
+      assert(update, `Player ${stream.playerId} missed the draw`);
+      assert.deepStrictEqual(Object.keys(update.gameState.tickets), [stream.playerId], 'Each player sees only their own ticket');
+      assert.strictEqual(update.gameState.ballPool, undefined);
+    });
+    assert(drawMs < 1500, `Broadcasting a draw to 40 players took ${drawMs}ms`);
+    streams.forEach(stream => roomManager.removeSubscriber(bigCode, stream));
+    console.log(`   ✓ 40 players joined, host-only setup enforced, draw broadcast privately to all 40 in ${drawMs}ms`);
+
     console.log('\n====================================================');
     console.log('ALL MULTIPLAYER INTEGRATION TESTS PASSED! 🎉');
     console.log('====================================================');
