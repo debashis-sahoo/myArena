@@ -1,6 +1,6 @@
 # 👑 myArena Royalty — "Your friends. Your arena."
 
-Current version: **1.0.1**
+Current version: **1.0.3**
 
 A browser-based social board-game arcade designed for friends to play instantly across desktop, iPhone, and Android without account creation.
 

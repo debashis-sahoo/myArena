@@ -864,6 +864,7 @@
     const canvasWrapper = document.getElementById('boardCanvasWrapper');
     const tambolaWrapper = document.getElementById('tambolaWrapper');
     const sidePanel = document.getElementById('gameSidePanel');
+    document.getElementById('diceActionBox').classList.toggle('is-ludo', r.gameType === 'ludo');
 
     if (r.gameType === 'tambola') {
       canvasWrapper.style.display = 'none';
@@ -916,28 +917,33 @@
     const diceBtn = document.getElementById('btnRollDice');
     const diceCube = document.getElementById('diceCube');
     const helper = document.getElementById('diceHelperText');
+    let canRoll = false;
 
     if (r.gameType === 'ludo') {
       const isMyTurn = currentP && currentP.id === state.playerId;
       if (gs.phase === 'ROLL') {
-        diceBtn.disabled = !isMyTurn || currentP.isAI;
+        canRoll = isMyTurn && !currentP.isAI;
+        diceBtn.disabled = !canRoll;
         helper.textContent = isMyTurn ? 'Tap Roll Dice!' : `Waiting for ${currentP.name} to roll...`;
-        diceCube.textContent = gs.currentDice ? gs.currentDice : '🎲';
+        renderDiceFace(diceCube, getDisplayedDiceValue(gs));
       } else if (gs.phase === 'MOVE') {
         diceBtn.disabled = true;
-        diceCube.textContent = gs.currentDice || '🎲';
+        renderDiceFace(diceCube, getDisplayedDiceValue(gs));
         helper.textContent = isMyTurn ? 'Tap a glowing legal token to move!' : `${currentP.name} is selecting a token...`;
       }
       renderLudoBoard();
     } else if (r.gameType === 'snakes') {
       const isMyTurn = currentP && currentP.id === state.playerId;
-      diceBtn.disabled = !isMyTurn || currentP.isAI;
-      diceCube.textContent = gs.currentDice ? gs.currentDice : '🎲';
+      canRoll = isMyTurn && !currentP.isAI;
+      diceBtn.disabled = !canRoll;
+      renderDiceFace(diceCube, getDisplayedDiceValue(gs));
       helper.textContent = isMyTurn ? 'Tap Roll Dice to advance!' : `Waiting for ${currentP.name}...`;
       renderSnakesBoard();
     } else if (r.gameType === 'tambola') {
       updateTambolaDisplay();
     }
+    diceCube.classList.toggle('disabled', !canRoll);
+    diceCube.setAttribute('aria-disabled', String(!canRoll));
 
     // Append to Activity Feed
     if (gs.lastAction && gs.lastAction.message) {
@@ -946,12 +952,202 @@
         state.lastActivityKey = activityKey;
         appendActivityFeed(gs.lastAction.message);
       }
+
     }
 
     // Trigger AI if needed
     if (state.isSolo) {
       runAITurnIfApplicable();
     }
+  }
+
+  function getDisplayedDiceValue(gameState) {
+    const value = gameState.currentDice || gameState.lastAction?.roll;
+    return Number.isInteger(value) && value >= 1 && value <= 6 ? value : null;
+  }
+
+  const DICE_PIP_LAYOUT = {
+    1: [4],
+    2: [0, 8],
+    3: [0, 4, 8],
+    4: [0, 2, 6, 8],
+    5: [0, 2, 4, 6, 8],
+    6: [0, 2, 3, 5, 6, 8]
+  };
+
+  // Opposite sides of a real die sum to 7; the front side carries the live value.
+  const DICE_SIDE_VALUES = { front: 1, back: 6, right: 3, left: 4, top: 2, bottom: 5 };
+
+  const DICE_ROLL_MS = 1180;
+  const DICE_REVEAL_MS = 470;
+
+  const diceRoll = {
+    active: false,
+    settling: false,
+    startedAt: 0,
+    value: null,
+    pendingValue: null,
+    revealedValue: null,
+    queuedValue: null,
+    revealTimer: null,
+    endTimer: null,
+    animations: []
+  };
+
+  function buildDiceCube(diceCube) {
+    let solid = diceCube.querySelector('.dice-solid');
+    if (solid) return solid;
+    solid = document.createElement('div');
+    solid.className = 'dice-solid';
+    solid.setAttribute('aria-hidden', 'true');
+    solid.innerHTML = Object.keys(DICE_SIDE_VALUES).map(side => {
+      const pips = Array.from({ length: 9 }, (_, index) =>
+        `<span class="dice-pip${DICE_PIP_LAYOUT[DICE_SIDE_VALUES[side]].includes(index) ? ' active' : ''}"></span>`
+      ).join('');
+      return `<div class="dice-side" data-face="${side}">${pips}</div>`;
+    }).join('');
+    diceCube.appendChild(solid);
+    return solid;
+  }
+
+  function paintDiceSide(side, value) {
+    const pips = side.querySelectorAll('.dice-pip');
+    const layout = DICE_PIP_LAYOUT[value] || [];
+    pips.forEach((pip, index) => pip.classList.toggle('active', layout.includes(index)));
+  }
+
+  function renderDiceFace(diceCube, value) {
+    const solid = buildDiceCube(diceCube);
+    if (diceRoll.active) {
+      // Once this throw has shown its number, a newer roll waits its turn instead of stealing it.
+      if (diceRoll.revealedValue) {
+        diceRoll.queuedValue = value;
+      } else {
+        diceRoll.pendingValue = value;
+        if (Date.now() - diceRoll.startedAt >= DICE_REVEAL_MS) revealDiceValue(diceCube);
+      }
+      return;
+    }
+    // A value that changes outside our own roll belongs to an opponent or AI: throw it too.
+    if (value && diceRoll.value && value !== diceRoll.value && !diceRoll.settling) {
+      animateDiceRoll(diceCube);
+      diceRoll.pendingValue = value;
+      return;
+    }
+    const shown = value || diceRoll.value || 1;
+    paintDiceSide(solid.querySelector('.dice-side[data-face="front"]'), shown);
+    diceRoll.value = value || diceRoll.value;
+    diceCube.setAttribute('aria-label', value ? `Dice showing ${value}` : 'Roll dice');
+  }
+
+  function revealDiceValue(diceCube) {
+    const value = diceRoll.pendingValue;
+    if (!value) return;
+    const solid = diceCube.querySelector('.dice-solid');
+    if (!solid) return;
+    paintDiceSide(solid.querySelector('.dice-side[data-face="front"]'), value);
+    diceRoll.value = value;
+    diceRoll.revealedValue = value;
+    diceCube.setAttribute('aria-label', `Dice showing ${value}`);
+  }
+
+  // Throw arc + decaying tumble + three shrinking bounces, landing flat on the front side.
+  const DICE_REST_X = -10;
+  const DICE_REST_Y = 14;
+
+  function diceThrowKeyframes(size, dir) {
+    const up = 'cubic-bezier(0.17, 0.84, 0.44, 1)';
+    const down = 'cubic-bezier(0.55, 0.06, 0.68, 0.19)';
+    const hop = (offset, x, y, rx, ry, rz, easing) => ({
+      offset,
+      transform: `translate3d(${(x * size * dir).toFixed(2)}px, ${(y * size).toFixed(2)}px, 0) rotateX(${rx + DICE_REST_X}deg) rotateY(${ry + DICE_REST_Y}deg) rotateZ(${rz}deg)`,
+      easing
+    });
+    return [
+      hop(0, -0.32, 0.04, 0, 0, 0, up),
+      hop(0.14, -0.10, -0.46, 250, 165, -14, down),
+      hop(0.3, 0.06, 0.02, 560, 360, 8, up),
+      hop(0.44, 0.17, -0.25, 760, 520, -6, down),
+      hop(0.58, 0.23, 0.02, 930, 625, 4, up),
+      hop(0.7, 0.2, -0.11, 1012, 684, -2, down),
+      hop(0.8, 0.14, 0.01, 1058, 708, 1, up),
+      hop(0.88, 0.08, -0.04, 1072, 716, 0, down),
+      hop(0.95, 0.02, 0, 1086, 723, 0, 'ease-out'),
+      hop(1, 0, 0, 1080, 720, 0)
+    ];
+  }
+
+  function diceShadowKeyframes() {
+    const up = 'cubic-bezier(0.17, 0.84, 0.44, 1)';
+    const down = 'cubic-bezier(0.55, 0.06, 0.68, 0.19)';
+    const step = (offset, scale, opacity, easing) => ({
+      offset,
+      transform: `translateX(-50%) scale(${scale})`,
+      opacity,
+      easing
+    });
+    return [
+      step(0, 0.9, 0.5, up),
+      step(0.14, 0.56, 0.2, down),
+      step(0.3, 1.06, 0.58, up),
+      step(0.44, 0.76, 0.33, down),
+      step(0.58, 1.03, 0.56, up),
+      step(0.7, 0.88, 0.44, down),
+      step(0.8, 1.01, 0.55, up),
+      step(0.88, 0.95, 0.5, down),
+      step(1, 1, 0.55)
+    ];
+  }
+
+  function animateDiceRoll(diceCube) {
+    if (diceRoll.active) return;
+    const solid = buildDiceCube(diceCube);
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const canAnimate = typeof solid.animate === 'function' && !reduceMotion;
+
+    diceRoll.active = true;
+    diceRoll.pendingValue = null;
+    diceRoll.revealedValue = null;
+    diceRoll.queuedValue = null;
+    diceRoll.animations = [];
+    diceRoll.startedAt = Date.now();
+    diceCube.classList.add('rolling');
+    clearTimeout(diceRoll.revealTimer);
+    clearTimeout(diceRoll.endTimer);
+
+    const duration = canAnimate ? DICE_ROLL_MS : 180;
+    if (canAnimate) {
+      const size = diceCube.offsetHeight || 110;
+      const dir = Math.random() < 0.5 ? -1 : 1;
+      const timing = { duration, easing: 'linear', fill: 'both' };
+      diceRoll.animations.push(solid.animate(diceThrowKeyframes(size, dir), timing));
+      const shadow = document.getElementById('diceShadow');
+      if (shadow && typeof shadow.animate === 'function') {
+        diceRoll.animations.push(shadow.animate(diceShadowKeyframes(), timing));
+      }
+    }
+
+    diceRoll.revealTimer = setTimeout(() => revealDiceValue(diceCube), canAnimate ? DICE_REVEAL_MS : 0);
+    diceRoll.endTimer = setTimeout(() => {
+      diceRoll.animations.forEach(animation => animation.cancel());
+      diceRoll.animations = [];
+      diceRoll.active = false;
+      diceCube.classList.remove('rolling');
+      const gameState = state.room && state.room.gameState;
+      const settled = diceRoll.revealedValue || diceRoll.pendingValue ||
+        (gameState ? getDisplayedDiceValue(gameState) : null);
+      const queued = diceRoll.queuedValue;
+      diceRoll.pendingValue = null;
+      diceRoll.queuedValue = null;
+      diceRoll.revealedValue = null;
+      diceRoll.settling = true;
+      renderDiceFace(diceCube, settled);
+      diceRoll.settling = false;
+      if (queued && queued !== diceRoll.value) {
+        animateDiceRoll(diceCube);
+        diceRoll.pendingValue = queued;
+      }
+    }, duration);
   }
 
   function appendActivityFeed(msg) {
@@ -966,10 +1162,11 @@
 
   // Roll Dice Action Trigger
   async function triggerRollDice() {
-    sound.playDiceRoll();
+    const diceBtn = document.getElementById('btnRollDice');
     const diceCube = document.getElementById('diceCube');
-    diceCube.classList.add('rolling');
-    setTimeout(() => diceCube.classList.remove('rolling'), 600);
+    if (diceBtn.disabled || diceCube.classList.contains('rolling')) return;
+    sound.playDiceRoll();
+    animateDiceRoll(diceCube);
 
     if (state.isSolo) {
       if (state.room.gameType === 'ludo') {
@@ -1813,6 +2010,12 @@
     // In-Game Buttons
     document.getElementById('btnRollDice').addEventListener('click', triggerRollDice);
     document.getElementById('diceCube').addEventListener('click', triggerRollDice);
+    document.getElementById('diceCube').addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        triggerRollDice();
+      }
+    });
     document.getElementById('btnDrawBall').addEventListener('click', triggerDrawBall);
 
     // Auto-caller toggle for Tambola

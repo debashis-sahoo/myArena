@@ -103,12 +103,27 @@ def run_e2e():
         canvas = wait.until(EC.visibility_of_element_located((By.ID, "boardCanvas")))
         assert canvas.is_displayed()
         dice_btn = driver.find_element(By.ID, "btnRollDice")
+        dice_cube = driver.find_element(By.ID, "diceCube")
         assert dice_btn.is_displayed()
-        print("  ✓ 3D Board Canvas and Dice controls rendered")
+        assert dice_cube.size["width"] >= 120, f"Expected enlarged Ludo die, got {dice_cube.size['width']}px"
+        sides = driver.find_elements(By.CSS_SELECTOR, "#diceCube .dice-side")
+        assert len(sides) == 6, f"Expected a six-sided 3D die, found {len(sides)} sides"
+        print("  ✓ 3D Board Canvas and enlarged Dice controls rendered")
 
         # Roll Dice for Human Player
-        dice_btn.click()
-        time.sleep(1.2)
+        dice_cube.click()
+        time.sleep(0.4)
+        rolling_transform = driver.execute_script(
+            "return getComputedStyle(document.querySelector('#diceCube .dice-solid')).transform;"
+        )
+        assert rolling_transform.startswith("matrix3d"), f"Expected a 3D tumble mid-roll, got {rolling_transform}"
+        time.sleep(1.4)
+        active_pips = driver.find_elements(
+            By.CSS_SELECTOR, "#diceCube .dice-side[data-face='front'] .dice-pip.active"
+        )
+        assert 1 <= len(active_pips) <= 6, f"Expected a pip-based dice face, found {len(active_pips)} pips"
+        assert dice_cube.get_attribute("aria-label") == f"Dice showing {len(active_pips)}", \
+            f"Dice label '{dice_cube.get_attribute('aria-label')}' disagrees with {len(active_pips)} pips"
         activity_items = driver.find_elements(By.CSS_SELECTOR, "#activityFeedList .feed-item")
         assert len(activity_items) > 0
         latest_act = activity_items[0].text

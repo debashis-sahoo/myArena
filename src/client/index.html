@@ -877,45 +877,203 @@
 
     /* Dice Box */
     .dice-action-box {
-      background: var(--bg-card);
+      background:
+        radial-gradient(circle at 50% 22%, rgba(245, 158, 11, 0.12), transparent 44%),
+        var(--bg-card);
       border: 1.5px solid var(--border-royal);
       border-radius: var(--radius-md);
-      padding: 20px;
+      padding: 22px;
       text-align: center;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
       box-shadow: var(--shadow-card);
+      overflow: hidden;
+      position: relative;
+      isolation: isolate;
+    }
+
+    .dice-action-box.is-ludo {
+      border-color: rgba(245, 158, 11, 0.55);
+      box-shadow:
+        var(--shadow-card),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 28px rgba(245, 158, 11, 0.09);
+    }
+
+    /* The tray gives the thrown die vertical headroom to arc and bounce in. */
+    .dice-tray {
+      position: relative;
+      width: 100%;
+      height: 156px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 26px;
+    }
+
+    .dice-action-box.is-ludo .dice-tray {
+      height: 202px;
+    }
+
+    .dice-tray::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: 6px;
+      width: 68%;
+      height: 30px;
+      margin-left: -34%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(245, 158, 11, 0.16) 0%, rgba(255, 255, 255, 0.05) 48%, transparent 74%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .dice-shadow {
+      position: absolute;
+      left: 50%;
+      bottom: 19px;
+      width: 84px;
+      height: 15px;
+      margin-left: -42px;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.38) 46%, transparent 72%);
+      filter: blur(4px);
+      opacity: 0.55;
+      pointer-events: none;
+      z-index: 0;
+      will-change: transform, opacity;
+    }
+
+    .dice-action-box.is-ludo .dice-shadow {
+      width: 110px;
+      margin-left: -55px;
+      height: 18px;
+      bottom: 18px;
     }
 
     .dice-cube {
-      width: 76px;
-      height: 76px;
-      background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
-      border-radius: 16px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.5), inset 0 2px 4px #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2.8rem;
-      color: #0f172a;
+      --dice-half: 48px;
+      --dice-radius: 11px;
+      position: relative;
+      width: 96px;
+      height: 96px;
+      perspective: 900px;
       cursor: pointer;
       user-select: none;
-      transition: transform 0.15s ease;
-      border: 2px solid #cbd5e1;
+      z-index: 1;
+      border-radius: var(--dice-radius);
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+
+    .dice-action-box.is-ludo .dice-cube {
+      --dice-half: 62px;
+      --dice-radius: 14px;
+      width: 124px;
+      height: 124px;
+    }
+
+    .dice-solid {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transform: translate3d(0, 0, 0) rotateX(-10deg) rotateY(14deg);
+      will-change: transform;
+    }
+
+    .dice-side {
+      position: absolute;
+      inset: 0;
+      border-radius: var(--dice-radius);
+      background: linear-gradient(145deg, #ffffff 0%, #f4f7fb 44%, #ccd7e6 100%);
+      border: 2px solid rgba(255, 255, 255, 0.92);
+      box-shadow:
+        inset 0 3px 6px rgba(255, 255, 255, 0.95),
+        inset 0 -7px 14px rgba(100, 116, 139, 0.26),
+        0 0 0 1px rgba(100, 116, 139, 0.35);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      place-items: center;
+      padding: 13%;
+      backface-visibility: hidden;
+    }
+
+    .dice-side[data-face="front"] { transform: translateZ(var(--dice-half)); }
+    .dice-side[data-face="back"] { transform: rotateY(180deg) translateZ(var(--dice-half)); filter: brightness(0.78); }
+    .dice-side[data-face="right"] { transform: rotateY(90deg) translateZ(var(--dice-half)); filter: brightness(0.84); }
+    .dice-side[data-face="left"] { transform: rotateY(-90deg) translateZ(var(--dice-half)); filter: brightness(0.88); }
+    .dice-side[data-face="top"] { transform: rotateX(90deg) translateZ(var(--dice-half)); filter: brightness(1.05); }
+    .dice-side[data-face="bottom"] { transform: rotateX(-90deg) translateZ(var(--dice-half)); filter: brightness(0.7); }
+
+    .dice-cube:hover:not(.disabled):not(.rolling) {
+      transform: translateY(-4px) scale(1.035);
+      filter: brightness(1.06) drop-shadow(0 0 16px rgba(245, 158, 11, 0.35));
+    }
+
+    .dice-cube:active:not(.disabled):not(.rolling) {
+      transform: translateY(2px) scale(0.98);
+    }
+
+    .dice-cube:focus-visible {
+      outline: 3px solid var(--gold-bright);
+      outline-offset: 7px;
+    }
+
+    .dice-cube.disabled {
+      cursor: not-allowed;
+      filter: grayscale(0.35) brightness(0.72);
+      opacity: 0.74;
     }
 
     .dice-cube.rolling {
-      animation: diceRoll 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      filter: drop-shadow(0 0 22px rgba(245, 158, 11, 0.5));
     }
 
-    @keyframes diceRoll {
-      0% { transform: rotate(0deg) scale(0.9); }
-      25% { transform: rotate(180deg) scale(1.1); }
-      50% { transform: rotate(360deg) scale(0.9); }
-      75% { transform: rotate(540deg) scale(1.05); }
-      100% { transform: rotate(720deg) scale(1); }
+    .dice-pip {
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 30%, #4b5563 0%, #172033 40%, #020617 100%);
+      box-shadow:
+        inset 1px 1px 2px rgba(255, 255, 255, 0.22),
+        0 1px 2px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transition: width 0.12s ease, height 0.12s ease, opacity 0.12s ease;
+    }
+
+    .dice-pip.active {
+      width: 76%;
+      height: 76%;
+      opacity: 1;
+    }
+
+    @media (max-width: 540px) {
+      .dice-action-box.is-ludo .dice-tray {
+        height: 182px;
+      }
+
+      .dice-action-box.is-ludo .dice-cube {
+        --dice-half: 54px;
+        --dice-radius: 13px;
+        width: 108px;
+        height: 108px;
+      }
+
+      .dice-action-box.is-ludo .dice-shadow {
+        width: 96px;
+        margin-left: -48px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .dice-cube,
+      .dice-pip {
+        transition: none;
+      }
     }
 
     /* Activity Feed */
@@ -1216,7 +1374,7 @@
       </svg>
       <div class="brand-text">
         <span class="brand-name">myArena Royalty</span>
-        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.0.1</span></span>
+        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.0.3</span></span>
       </div>
     </div>
 
@@ -1549,8 +1707,9 @@
             <!-- 3D Dice Action Box -->
             <div class="dice-action-box" id="diceActionBox">
               <span style="font-size: 0.85rem; color: var(--text-gold); font-weight: 700;">ACTION DICE</span>
-              <div class="dice-cube" id="diceCube" role="button" tabindex="0" aria-label="Roll Dice">
-                🎲
+              <div class="dice-tray">
+                <div class="dice-shadow" id="diceShadow" aria-hidden="true"></div>
+                <div class="dice-cube" id="diceCube" role="button" tabindex="0" aria-label="Roll dice"></div>
               </div>
               <button class="btn btn-primary" id="btnRollDice" style="width: 100%;">
                 Roll Dice
