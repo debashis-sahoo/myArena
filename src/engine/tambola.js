@@ -281,7 +281,7 @@
       throw new Error('Game is not in progress');
     }
 
-    if (callerPlayerId && game.callerRole !== 'AUTO' && callerPlayerId !== game.callerId) {
+    if (callerPlayerId && callerPlayerId !== game.callerId) {
       throw new Error('Only the designated caller can draw balls');
     }
 

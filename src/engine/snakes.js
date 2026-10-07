@@ -150,7 +150,7 @@
 
     game.currentDice = roll;
 
-    const startPos = currentPlayer.position === 0 ? 1 : currentPlayer.position;
+    const startPos = currentPlayer.position;
     let targetPos = startPos + roll;
     let finishReached = false;
     let bounceAmount = 0;

@@ -12,6 +12,26 @@ class RoomManager {
   constructor() {
     this.rooms = new Map(); // roomCode -> room object
     this.subscribers = new Map(); // roomCode -> Set of response streams/sockets
+    this.disconnectTimers = new Map(); // roomCode:playerId -> grace-period timer
+    this.cleanupTimer = setInterval(() => this.cleanupInactiveRooms(), 60000);
+    this.cleanupTimer.unref();
+  }
+
+  cleanupInactiveRooms(maxIdleMs = 60 * 60 * 1000) {
+    const cutoff = Date.now() - maxIdleMs;
+    for (const [roomCode, room] of this.rooms) {
+      const subscribers = this.subscribers.get(roomCode);
+      if (room.lastActivity < cutoff && (!subscribers || subscribers.size === 0)) {
+        this.rooms.delete(roomCode);
+        this.subscribers.delete(roomCode);
+        for (const [key, timer] of this.disconnectTimers) {
+          if (key.startsWith(`${roomCode}:`)) {
+            clearTimeout(timer);
+            this.disconnectTimers.delete(key);
+          }
+        }
+      }
+    }
   }
 
   generateRoomCode() {
@@ -30,11 +50,50 @@ class RoomManager {
     return crypto.randomBytes(16).toString('hex');
   }
 
-  createRoom({ hostName, gameType, maxPlayers, rules, heroId }) {
-    if (!hostName || hostName.trim().length === 0) {
-      throw new Error('Host display name is required');
-    }
+  normalizeRoomCode(roomCode) {
+    return String(roomCode || '').trim().toUpperCase();
+  }
 
+  validateDisplayName(name, label = 'Display name') {
+    const cleanName = String(name || '').trim();
+    if (!cleanName) {
+      throw new Error(`${label} is required`);
+    }
+    if (cleanName.length > 20) {
+      throw new Error(`${label} must be 20 characters or fewer`);
+    }
+    return cleanName;
+  }
+
+  getMaxPlayersForGame(gameType) {
+    return gameType === 'tambola' ? 8 : 4;
+  }
+
+  authenticate(roomCode, reconnectToken) {
+    const normalizedCode = this.normalizeRoomCode(roomCode);
+    const room = this.rooms.get(normalizedCode);
+    if (!room) throw new Error('Room not found');
+    if (!reconnectToken) throw new Error('Authentication token is required');
+
+    const player = room.players.find(p => p.reconnectToken === reconnectToken);
+    if (!player) throw new Error('Invalid authentication token');
+    player.lastSeen = Date.now();
+    return { room, player };
+  }
+
+  getPublicPlayer(player) {
+    return {
+      id: player.id,
+      name: player.name,
+      role: player.role,
+      isReady: player.isReady,
+      heroId: player.heroId,
+      connected: player.connected
+    };
+  }
+
+  createRoom({ hostName, gameType, maxPlayers, rules, heroId }) {
+    const cleanHostName = this.validateDisplayName(hostName, 'Host display name');
     const validGames = ['ludo', 'snakes', 'tambola'];
     if (!validGames.includes(gameType)) {
       throw new Error(`Invalid game type: ${gameType}`);
@@ -46,7 +105,7 @@ class RoomManager {
 
     const host = {
       id: hostId,
-      name: hostName.trim(),
+      name: cleanHostName,
       role: 'HOST',
       isReady: true,
       heroId: heroId || (gameType === 'ludo' ? 'iron_man' : 'iron_hero'),
@@ -60,7 +119,10 @@ class RoomManager {
       gameType: gameType,
       status: 'LOBBY', // 'LOBBY' | 'IN_GAME' | 'FINISHED'
       hostId: hostId,
-      maxPlayers: Math.min(Math.max(parseInt(maxPlayers, 10) || 4, 1), 8),
+      maxPlayers: Math.min(
+        Math.max(parseInt(maxPlayers, 10) || 4, 1),
+        this.getMaxPlayersForGame(gameType)
+      ),
       rules: rules || {},
       players: [host],
       gameState: null,
@@ -76,6 +138,7 @@ class RoomManager {
   }
 
   joinRoom({ roomCode, playerName, heroId, reconnectToken }) {
+    roomCode = this.normalizeRoomCode(roomCode);
     const room = this.rooms.get(roomCode);
     if (!room) {
       throw new Error(`Room with code ${roomCode} does not exist`);
@@ -88,9 +151,9 @@ class RoomManager {
         existing.connected = true;
         existing.lastSeen = Date.now();
         if (playerName && playerName.trim()) {
-          existing.name = playerName.trim();
+          existing.name = this.validateDisplayName(playerName);
         }
-        this.broadcast(roomCode, { type: 'PLAYER_RECONNECTED', player: existing });
+        this.broadcast(roomCode, { type: 'PLAYER_RECONNECTED', player: this.getPublicPlayer(existing) });
         return { room, player: existing, reconnectToken: existing.reconnectToken, reconnected: true };
       }
     }
@@ -103,7 +166,7 @@ class RoomManager {
       throw new Error(`Room has reached maximum capacity of ${room.maxPlayers} players`);
     }
 
-    const cleanName = (playerName || 'Player').trim();
+    const cleanName = this.validateDisplayName(playerName || 'Player');
     // Validate unique display name in room
     const isDuplicate = room.players.some(p => p.name.toLowerCase() === cleanName.toLowerCase());
     if (isDuplicate) {
@@ -127,12 +190,13 @@ class RoomManager {
     room.players.push(newPlayer);
     room.lastActivity = Date.now();
 
-    this.broadcast(roomCode, { type: 'PLAYER_JOINED', player: newPlayer });
+    this.broadcast(roomCode, { type: 'PLAYER_JOINED', player: this.getPublicPlayer(newPlayer) });
 
     return { room, player: newPlayer, reconnectToken: newReconnectToken, reconnected: false };
   }
 
   leaveRoom(roomCode, playerId) {
+    roomCode = this.normalizeRoomCode(roomCode);
     const room = this.rooms.get(roomCode);
     if (!room) return null;
 
@@ -143,10 +207,20 @@ class RoomManager {
     room.players.splice(playerIdx, 1);
     room.lastActivity = Date.now();
 
+    if (room.gameState) {
+      this.removePlayerFromGame(room, playerId);
+    }
+
     if (room.players.length === 0) {
       // Clean up empty room
       this.rooms.delete(roomCode);
       this.subscribers.delete(roomCode);
+      for (const [key, timer] of this.disconnectTimers) {
+        if (key.startsWith(`${roomCode}:`)) {
+          clearTimeout(timer);
+          this.disconnectTimers.delete(key);
+        }
+      }
       return { roomClosed: true };
     }
 
@@ -156,6 +230,9 @@ class RoomManager {
       // Deterministically assign host rights to next senior player
       room.hostId = room.players[0].id;
       room.players[0].role = 'HOST';
+      if (room.status === 'LOBBY') {
+        room.players[0].isReady = true;
+      }
       hostMigrated = true;
     }
 
@@ -164,7 +241,8 @@ class RoomManager {
       playerId: playerId,
       playerName: leavingPlayer.name,
       newHostId: room.hostId,
-      hostMigrated: hostMigrated
+      hostMigrated: hostMigrated,
+      room: this.getRoomSummary(room)
     });
 
     return { roomClosed: false, room, hostMigrated };
@@ -176,7 +254,22 @@ class RoomManager {
     if (room.hostId !== hostId) throw new Error('Only the host can modify room settings');
     if (room.status !== 'LOBBY') throw new Error('Settings cannot be changed after game starts');
 
-    if (maxPlayers) room.maxPlayers = Math.min(Math.max(parseInt(maxPlayers, 10), 1), 8);
+    const nextGameType = gameType || room.gameType;
+    if (!['ludo', 'snakes', 'tambola'].includes(nextGameType)) {
+      throw new Error(`Invalid game type: ${nextGameType}`);
+    }
+    const gamePlayerLimit = this.getMaxPlayersForGame(nextGameType);
+    if (room.players.length > gamePlayerLimit) {
+      throw new Error(`${nextGameType.toUpperCase()} supports at most ${gamePlayerLimit} players`);
+    }
+    if (maxPlayers) {
+      room.maxPlayers = Math.min(
+        Math.max(parseInt(maxPlayers, 10), room.players.length),
+        gamePlayerLimit
+      );
+    } else if (room.maxPlayers > gamePlayerLimit) {
+      room.maxPlayers = gamePlayerLimit;
+    }
     if (rules) room.rules = Object.assign(room.rules, rules);
     if (gameType) room.gameType = gameType;
     room.lastActivity = Date.now();
@@ -188,6 +281,7 @@ class RoomManager {
   setPlayerReady(roomCode, playerId, isReady) {
     const room = this.rooms.get(roomCode);
     if (!room) throw new Error('Room not found');
+    if (room.status !== 'LOBBY') throw new Error('Readiness can only be changed in the lobby');
     const player = room.players.find(p => p.id === playerId);
     if (!player) throw new Error('Player not in room');
 
@@ -201,6 +295,7 @@ class RoomManager {
   setPlayerHero(roomCode, playerId, heroId) {
     const room = this.rooms.get(roomCode);
     if (!room) throw new Error('Room not found');
+    if (room.status !== 'LOBBY') throw new Error('Hero can only be changed in the lobby');
     const player = room.players.find(p => p.id === playerId);
     if (!player) throw new Error('Player not in room');
 
@@ -213,14 +308,16 @@ class RoomManager {
     const room = this.rooms.get(roomCode);
     if (!room) throw new Error('Room not found');
     if (room.hostId !== hostId) throw new Error('Only the host can start the game');
-    if (room.status === 'IN_GAME') throw new Error('Game is already in progress');
+    if (room.status !== 'LOBBY') throw new Error('The room must be in the lobby before starting');
 
     const minRequired = room.gameType === 'ludo' ? 2 : (room.gameType === 'snakes' ? 1 : 1);
-    if (room.players.length < minRequired) {
+    const connectedPlayers = room.players.filter(player => player.connected);
+    if (connectedPlayers.length < minRequired) {
       throw new Error(`${room.gameType.toUpperCase()} requires at least ${minRequired} players`);
     }
-
-    room.status = 'IN_GAME';
+    if (!room.players.every(player => player.connected && player.isReady)) {
+      throw new Error('All players must be ready before the game can start');
+    }
 
     if (room.gameType === 'ludo') {
       const ludoPlayers = room.players.map((p, idx) => ({
@@ -252,6 +349,7 @@ class RoomManager {
       );
     }
 
+    room.status = 'IN_GAME';
     room.lastActivity = Date.now();
     this.broadcast(roomCode, { type: 'GAME_STARTED', gameState: room.gameState });
     return room.gameState;
@@ -314,6 +412,7 @@ class RoomManager {
     const room = this.rooms.get(roomCode);
     if (!room) throw new Error('Room not found');
     if (room.hostId !== hostId) throw new Error('Only the host can initiate a rematch');
+    if (room.status !== 'FINISHED') throw new Error('A rematch can only begin after the game finishes');
 
     room.status = 'LOBBY';
     room.gameState = null;
@@ -325,7 +424,83 @@ class RoomManager {
     return room;
   }
 
-  getRoomSummary(room) {
+  removePlayerFromGame(room, playerId) {
+    const game = room.gameState;
+    if (!game) return;
+
+    if (room.gameType === 'tambola') {
+      game.players = game.players.filter(player => player.id !== playerId);
+      delete game.tickets[playerId];
+      if (game.callerId === playerId && room.players.length > 0) {
+        game.callerId = room.hostId;
+      }
+      return;
+    }
+
+    const removedIndex = game.players.findIndex(player => player.id === playerId);
+    if (removedIndex === -1) return;
+    const removedCurrentPlayer = removedIndex === game.currentTurnIndex;
+    game.players.splice(removedIndex, 1);
+    game.winnerRankings = (game.winnerRankings || []).filter(id => id !== playerId);
+
+    if (game.players.length === 1) {
+      const winner = game.players[0];
+      game.phase = 'FINISHED';
+      game.winnerRankings = [winner.id];
+      room.status = 'FINISHED';
+      return;
+    }
+
+    if (removedIndex < game.currentTurnIndex) {
+      game.currentTurnIndex -= 1;
+    } else if (game.currentTurnIndex >= game.players.length) {
+      game.currentTurnIndex = 0;
+    }
+
+    if (removedCurrentPlayer) {
+      game.phase = 'ROLL';
+      game.currentDice = null;
+      game.legalMoves = [];
+      if (Object.prototype.hasOwnProperty.call(game, 'consecutiveSixes')) {
+        game.consecutiveSixes = 0;
+      }
+    }
+  }
+
+  getClientGameState(room, playerId) {
+    if (!room.gameState) return null;
+    const gameState = JSON.parse(JSON.stringify(room.gameState));
+    if (room.gameType === 'tambola') {
+      const ownTicket = gameState.tickets && gameState.tickets[playerId];
+      gameState.tickets = ownTicket ? { [playerId]: ownTicket } : {};
+      delete gameState.ballPool;
+      delete gameState.auditLog;
+      gameState.patterns.forEach(pattern => {
+        pattern.winners.forEach(winner => {
+          delete winner.matchedNumbers;
+        });
+      });
+    }
+    return gameState;
+  }
+
+  getClientActionResult(actionResult) {
+    if (!actionResult || typeof actionResult !== 'object') return actionResult;
+    const clientResult = Object.assign({}, actionResult);
+    delete clientResult.game;
+    if (clientResult.winRecord) {
+      clientResult.winRecord = Object.assign({}, clientResult.winRecord);
+      delete clientResult.winRecord.matchedNumbers;
+    }
+    if (clientResult.audit) {
+      clientResult.audit = Object.assign({}, clientResult.audit);
+      delete clientResult.audit.ticketGrid;
+      delete clientResult.audit.matchedNumbers;
+    }
+    return clientResult;
+  }
+
+  getRoomSummary(room, playerId = null) {
     return {
       code: room.code,
       gameType: room.gameType,
@@ -341,21 +516,68 @@ class RoomManager {
         heroId: p.heroId,
         connected: p.connected
       })),
-      gameState: room.gameState
+      gameState: playerId ? this.getClientGameState(room, playerId) : null
     };
   }
 
-  addSubscriber(roomCode, res) {
+  addSubscriber(roomCode, res, playerId) {
     if (!this.subscribers.has(roomCode)) {
       this.subscribers.set(roomCode, new Set());
     }
-    this.subscribers.get(roomCode).add(res);
+    this.subscribers.get(roomCode).add({ res, playerId });
+    const room = this.rooms.get(roomCode);
+    const player = room && room.players.find(candidate => candidate.id === playerId);
+    if (player && !player.connected) {
+      player.connected = true;
+      this.broadcast(roomCode, {
+        type: 'PLAYER_CONNECTION_CHANGED',
+        playerId,
+        connected: true
+      });
+    }
+    const timerKey = `${roomCode}:${playerId}`;
+    const disconnectTimer = this.disconnectTimers.get(timerKey);
+    if (disconnectTimer) {
+      clearTimeout(disconnectTimer);
+      this.disconnectTimers.delete(timerKey);
+    }
   }
 
   removeSubscriber(roomCode, res) {
     const set = this.subscribers.get(roomCode);
     if (set) {
-      set.delete(res);
+      let playerId = null;
+      for (const subscriber of set) {
+        if (subscriber.res === res) {
+          playerId = subscriber.playerId;
+          set.delete(subscriber);
+          break;
+        }
+      }
+      if (playerId && !Array.from(set).some(subscriber => subscriber.playerId === playerId)) {
+        const room = this.rooms.get(roomCode);
+        const player = room && room.players.find(candidate => candidate.id === playerId);
+        if (player) {
+          player.connected = false;
+          this.broadcast(roomCode, {
+            type: 'PLAYER_CONNECTION_CHANGED',
+            playerId,
+            connected: false
+          });
+          const timerKey = `${roomCode}:${playerId}`;
+          const timer = setTimeout(() => {
+            this.disconnectTimers.delete(timerKey);
+            const currentSet = this.subscribers.get(roomCode);
+            const reconnected = currentSet &&
+              Array.from(currentSet).some(subscriber => subscriber.playerId === playerId);
+            if (!reconnected && this.rooms.has(roomCode)) {
+              this.leaveRoom(roomCode, playerId);
+            }
+          }, 60000);
+          timer.unref();
+          this.disconnectTimers.set(timerKey, timer);
+        }
+      }
       if (set.size === 0) {
         // Keep room until expiry
       }
@@ -366,14 +588,25 @@ class RoomManager {
     const set = this.subscribers.get(roomCode);
     if (!set) return;
 
-    const payload = `data: ${JSON.stringify(eventData)}\n\n`;
-    for (const res of set) {
+    const room = this.rooms.get(roomCode);
+    for (const subscriber of set) {
       try {
-        if (typeof res.write === 'function') {
-          res.write(payload);
+        if (typeof subscriber.res.write === 'function') {
+          const clientEvent = Object.assign({}, eventData);
+          if (clientEvent.gameState && room) {
+            clientEvent.gameState = this.getClientGameState(room, subscriber.playerId);
+          }
+          if (clientEvent.room && room) {
+            clientEvent.room = this.getRoomSummary(room, subscriber.playerId);
+          }
+          if (clientEvent.actionResult && clientEvent.actionResult.game) {
+            clientEvent.actionResult = this.getClientActionResult(clientEvent.actionResult);
+          }
+          const payload = `data: ${JSON.stringify(clientEvent)}\n\n`;
+          subscriber.res.write(payload);
         }
       } catch (err) {
-        set.delete(res);
+        set.delete(subscriber);
       }
     }
   }

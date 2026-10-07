@@ -16,7 +16,7 @@
     getItem: function (key) {
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
-          return window.safeStorage.getItem(key);
+          return window.localStorage.getItem(key);
         }
       } catch (e) {}
       return memoryStore[key] || null;
@@ -24,10 +24,18 @@
     setItem: function (key, val) {
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
-          window.safeStorage.setItem(key, val);
+          window.localStorage.setItem(key, String(val));
         }
       } catch (e) {}
       memoryStore[key] = String(val);
+    },
+    removeItem: function (key) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.removeItem(key);
+        }
+      } catch (e) {}
+      delete memoryStore[key];
     }
   };
 
@@ -196,7 +204,11 @@
     gameType: 'ludo',
     effects3D: safeStorage.getItem('myarena_3d') !== 'false',
     sseSource: null,
-    tambolaAutoTimer: null
+    tambolaAutoTimer: null,
+    currentGameId: null,
+    lastActivityKey: null,
+    resultsGameId: null,
+    sseDisconnected: false
   };
 
   // Announce to Screen Reader
@@ -217,6 +229,15 @@
       toast.style.opacity = '0';
       setTimeout(() => toast.remove(), 300);
     }, 3200);
+  }
+
+  function escapeHTML(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   // View Navigation
@@ -350,6 +371,18 @@
         </div>
       `;
     }
+
+  }
+
+  function updatePlayerCapacityOptions(gameType) {
+    const select = document.getElementById('selectMaxPlayers');
+    const maxPlayers = gameType === 'tambola' ? 8 : 4;
+    Array.from(select.options).forEach(option => {
+      option.disabled = Number(option.value) > maxPlayers;
+    });
+    if (Number(select.value) > maxPlayers) {
+      select.value = String(maxPlayers);
+    }
   }
 
   function getSelectedRules(gameType) {
@@ -381,18 +414,18 @@
   // 6. ROOM LIFECYCLE & MULTIPLAYER API
   // =========================================================================
   async function apiPost(endpoint, data) {
-    try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Request failed');
-      return json;
-    } catch (err) {
-      throw err;
+    const headers = { 'Content-Type': 'application/json' };
+    if (state.reconnectToken) {
+      headers['X-Reconnect-Token'] = state.reconnectToken;
     }
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data)
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Request failed');
+    return json;
   }
 
   async function createRoomAction() {
@@ -445,6 +478,10 @@
       if (match) roomCode = match[1];
     }
     roomCode = roomCode.toUpperCase();
+    if (!/^ROYAL-[A-Z0-9]{4}$/.test(roomCode)) {
+      showToast('Enter a valid room code such as ROYAL-7K4P');
+      return;
+    }
 
     const joinName = (document.getElementById('inputJoinName').value || state.user.name).trim();
     if (!joinName) {
@@ -496,8 +533,14 @@
     }
 
     try {
-      state.sseSource = new EventSource(`/api/rooms/${roomCode}/stream`);
-      state.sseSource.onmessage = (event) => {
+      const token = encodeURIComponent(state.reconnectToken);
+      const source = new EventSource(`/api/rooms/${roomCode}/stream?token=${token}`);
+      state.sseSource = source;
+      source.onopen = () => {
+        if (state.sseDisconnected) showToast('Connection restored');
+        state.sseDisconnected = false;
+      };
+      source.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           handleNetworkEvent(data);
@@ -505,8 +548,11 @@
           // ignore heartbeat
         }
       };
-      state.sseSource.onerror = () => {
-        // SSE connection drops will reconnect automatically
+      source.onerror = () => {
+        if (state.sseSource === source && !state.sseDisconnected) {
+          state.sseDisconnected = true;
+          showToast('Connection interrupted. Reconnecting...');
+        }
       };
     } catch (err) {
       console.warn('SSE not supported or local file mode');
@@ -535,9 +581,32 @@
       state.room.gameState = event.gameState;
       updateGameDisplay(event.actionResult);
     } else if (event.type === 'GAME_RESET_TO_LOBBY') {
+      if (state.tambolaAutoTimer) {
+        clearInterval(state.tambolaAutoTimer);
+        state.tambolaAutoTimer = null;
+      }
       state.room = event.room;
       renderLobby();
       switchView('lobby');
+    } else if (event.type === 'PLAYER_READY_CHANGED') {
+      const player = state.room.players.find(p => p.id === event.playerId);
+      if (player) player.isReady = event.isReady;
+      if (state.view === 'lobby') renderLobby();
+    } else if (event.type === 'HERO_CHANGED') {
+      const player = state.room.players.find(p => p.id === event.playerId);
+      if (player) player.heroId = event.heroId;
+      if (state.view === 'lobby') renderLobby();
+    } else if (event.type === 'SETTINGS_UPDATED') {
+      state.room = event.room;
+      if (state.view === 'lobby') renderLobby();
+    } else if (event.type === 'PLAYER_RECONNECTED') {
+      const player = state.room.players.find(p => p.id === event.player.id);
+      if (player) Object.assign(player, event.player);
+      if (state.view === 'lobby') renderLobby();
+    } else if (event.type === 'PLAYER_CONNECTION_CHANGED') {
+      const player = state.room.players.find(p => p.id === event.playerId);
+      if (player) player.connected = event.connected;
+      if (state.view === 'lobby') renderLobby();
     } else if (event.type === 'PLAYER_JOINED') {
       showToast(`${event.player.name} entered the lobby`);
       if (state.view === 'lobby') {
@@ -552,9 +621,18 @@
         state.isHost = event.newHostId === state.playerId;
         showToast('Host rights transferred');
       }
-      if (state.view === 'lobby') {
+      if (event.room) {
+        state.room = event.room;
+      } else {
         state.room.players = state.room.players.filter(p => p.id !== event.playerId);
+      }
+      if (state.room.status === 'FINISHED' && state.room.gameState) {
+        setupGameView();
+        switchView('game');
+      } else if (state.view === 'lobby') {
         renderLobby();
+      } else if (state.view === 'game') {
+        updateGameDisplay();
       }
     }
   }
@@ -587,11 +665,11 @@
         </div>
         <div class="player-info">
           <div class="player-name-row">
-            <span>${p.name}</span>
+            <span>${escapeHTML(p.name)}</span>
             ${p.role === 'HOST' ? '<span class="player-role-tag tag-host">Host</span>' : ''}
           </div>
-          <div class="ready-indicator ${p.isReady ? 'status-ready' : 'status-waiting'}">
-            ${p.isReady ? '✓ Ready' : '⏳ Waiting'}
+          <div class="ready-indicator ${p.connected && p.isReady ? 'status-ready' : 'status-waiting'}">
+            ${!p.connected ? '○ Reconnecting' : (p.isReady ? '✓ Ready' : '⏳ Waiting')}
           </div>
         </div>
       `;
@@ -617,14 +695,14 @@
       `;
     } else if (r.gameType === 'snakes') {
       badgeContainer.innerHTML = `
-        <span class="meta-tag">Finish: ${r.rules.finishMode || 'exact_stay'}</span>
-        <span class="meta-tag">Theme: ${r.rules.themeId || 'royal_gold'}</span>
+        <span class="meta-tag">Finish: ${escapeHTML(r.rules.finishMode || 'exact_stay')}</span>
+        <span class="meta-tag">Theme: ${escapeHTML(r.rules.themeId || 'royal_gold')}</span>
         <span class="meta-tag">Bonus on 6: ${r.rules.bonusOnSix ? 'Yes' : 'No'}</span>
       `;
     } else if (r.gameType === 'tambola') {
       badgeContainer.innerHTML = `
         <span class="meta-tag">90-Ball Tambola</span>
-        <span class="meta-tag">Caller: ${r.rules.callerRole || 'HOST'}</span>
+        <span class="meta-tag">Caller: ${escapeHTML(r.rules.callerRole || 'HOST')}</span>
         <span class="meta-tag">Auto-Claim Verification: Enabled</span>
       `;
     }
@@ -635,7 +713,7 @@
     if (state.isHost) {
       startBtn.style.display = 'inline-flex';
       const minReq = r.gameType === 'ludo' ? 2 : 1;
-      const allReady = r.players.every(p => p.isReady);
+      const allReady = r.players.every(p => p.connected && p.isReady);
       startBtn.disabled = r.players.length < minReq || !allReady;
     } else {
       startBtn.style.display = 'none';
@@ -694,7 +772,7 @@
         { id: 'player_human', name: state.user.name, role: 'HOST' }
       ];
       const gameState = window.TambolaEngine.createGame(
-        { hostId: 'player_human', callerRole: 'HOST' },
+        { hostId: 'player_human', callerRole: rules.callerRole || 'HOST' },
         players
       );
       state.room = {
@@ -722,6 +800,7 @@
 
     // AI thinking delay
     setTimeout(() => {
+      if (!state.room || state.room.gameState !== gs) return;
       if (state.room.gameType === 'ludo') {
         if (gs.phase === 'ROLL') {
           sound.playDiceRoll();
@@ -730,6 +809,7 @@
 
           if (!rollRes.turnAdvanced && gs.phase === 'MOVE') {
             setTimeout(() => {
+              if (!state.room || state.room.gameState !== gs) return;
               const bestToken = window.GameAI.pickLudoMove(gs);
               if (bestToken !== null) {
                 sound.playMove();
@@ -772,6 +852,13 @@
   // =========================================================================
   function setupGameView() {
     const r = state.room;
+    if (state.currentGameId !== r.gameState.id) {
+      state.currentGameId = r.gameState.id;
+      state.lastActivityKey = null;
+      state.resultsGameId = null;
+      const activityList = document.getElementById('activityFeedList');
+      if (activityList) activityList.innerHTML = '';
+    }
     document.getElementById('gameRoomCodeBadge').textContent = r.code;
 
     const canvasWrapper = document.getElementById('boardCanvasWrapper');
@@ -800,7 +887,17 @@
 
     // Check game finished
     if (gs.phase === 'FINISHED') {
-      showResultsModal();
+      if (state.tambolaAutoTimer) {
+        clearInterval(state.tambolaAutoTimer);
+        state.tambolaAutoTimer = null;
+      }
+      if (r.gameType === 'ludo') renderLudoBoard();
+      if (r.gameType === 'snakes') renderSnakesBoard();
+      if (r.gameType === 'tambola') updateTambolaDisplay();
+      if (state.resultsGameId !== gs.id) {
+        state.resultsGameId = gs.id;
+        showResultsModal();
+      }
       return;
     }
 
@@ -844,7 +941,11 @@
 
     // Append to Activity Feed
     if (gs.lastAction && gs.lastAction.message) {
-      appendActivityFeed(gs.lastAction.message);
+      const activityKey = `${gs.history ? gs.history.length : 0}:${gs.lastAction.type}:${gs.lastAction.message}`;
+      if (activityKey !== state.lastActivityKey) {
+        state.lastActivityKey = activityKey;
+        appendActivityFeed(gs.lastAction.message);
+      }
     }
 
     // Trigger AI if needed
@@ -885,7 +986,6 @@
       try {
         await apiPost('/api/rooms/action', {
           roomCode: state.room.code,
-          playerId: state.playerId,
           action: { type: 'ROLL_DICE' }
         });
       } catch (err) {
@@ -905,7 +1005,6 @@
       try {
         await apiPost('/api/rooms/action', {
           roomCode: state.room.code,
-          playerId: state.playerId,
           action: { type: 'MOVE_TOKEN', tokenIndex: tokenIdx }
         });
       } catch (err) {
@@ -926,6 +1025,7 @@
     ctx = canvas.getContext('2d');
 
     // Canvas click detection for token selection
+    canvas.removeEventListener('click', handleCanvasClick);
     canvas.addEventListener('click', handleCanvasClick);
   }
 
@@ -1173,7 +1273,7 @@
         [{r:11,c:2},{r:11,c:4},{r:13,c:2},{r:13,c:4}] // Blue
       ];
       const b = yardBases[teamIndex][tokenIndex];
-      return { x: (b.c + 0.5) * cellW, y: (b.r + 0.5) * cellH };
+      return { x: b.c * cellW, y: b.r * cellH };
     }
 
     // Reached Home (56)
@@ -1341,10 +1441,10 @@
     // Caller Buttons
     const drawBtn = document.getElementById('btnDrawBall');
     const autoBtn = document.getElementById('btnAutoCallerToggle');
-    const isCaller = (state.isHost && gs.callerId === state.playerId) || gs.callerRole === 'AUTO';
+    const isCaller = gs.callerId === state.playerId;
 
-    drawBtn.style.display = isCaller ? 'inline-flex' : 'none';
-    autoBtn.style.display = isCaller ? 'inline-flex' : 'none';
+    drawBtn.style.display = isCaller && gs.callerRole !== 'AUTO' ? 'inline-flex' : 'none';
+    autoBtn.style.display = isCaller && gs.callerRole === 'AUTO' ? 'inline-flex' : 'none';
 
     // Build 1-90 Number Grid
     const board = document.getElementById('tambola90Board');
@@ -1389,15 +1489,16 @@
       card.className = `claim-card ${pat.winners.length >= pat.maxWinners ? 'won' : ''}`;
       card.id = `claim_${pat.id}`;
       card.innerHTML = `
-        <div style="font-weight:700; font-size:0.95rem; color:var(--text-gold);">${pat.name}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">${pat.description}</div>
+        <div style="font-weight:700; font-size:0.95rem; color:var(--text-gold);">${escapeHTML(pat.name)}</div>
+        <div style="font-size:0.75rem; color:var(--text-muted);">${escapeHTML(pat.description)}</div>
         <div style="font-size:0.78rem; color:#10b981; margin-top:2px;">
-          ${pat.winners.length > 0 ? `Won by: ${pat.winners.map(w => w.playerName).join(', ')}` : 'Available'}
+          ${pat.winners.length > 0 ? `Won by: ${pat.winners.map(w => escapeHTML(w.playerName)).join(', ')}` : 'Available'}
         </div>
-        <button class="btn btn-primary" style="margin-top:6px; padding:6px 12px; font-size:0.8rem;" ${pat.winners.length >= pat.maxWinners ? 'disabled' : ''} onclick="claimPattern('${pat.id}')">
-          Claim ${pat.name}
+        <button class="btn btn-primary" style="margin-top:6px; padding:6px 12px; font-size:0.8rem;" ${pat.winners.length >= pat.maxWinners ? 'disabled' : ''}>
+          Claim ${escapeHTML(pat.name)}
         </button>
       `;
+      card.querySelector('button').addEventListener('click', () => window.claimPattern(pat.id));
       patternsList.appendChild(card);
     });
   }
@@ -1447,7 +1548,6 @@
       try {
         const res = await apiPost('/api/rooms/action', {
           roomCode: state.room.code,
-          playerId: state.playerId,
           action: { type: 'CLAIM_WIN', patternId: patternId }
         });
         if (res.actionResult && res.actionResult.success) {
@@ -1472,7 +1572,6 @@
       try {
         await apiPost('/api/rooms/action', {
           roomCode: state.room.code,
-          playerId: state.playerId,
           action: { type: 'DRAW_BALL' }
         });
       } catch (err) {
@@ -1490,10 +1589,32 @@
     const podium = document.getElementById('resultsPodium');
     podium.innerHTML = '';
 
-    const rankings = gs.winnerRankings || [];
-    const p1 = gs.players.find(p => p.id === rankings[0]) || gs.players[0];
-    const p2 = gs.players.find(p => p.id === rankings[1]) || (gs.players[1] || null);
-    const p3 = gs.players.find(p => p.id === rankings[2]) || (gs.players[2] || null);
+    let rankings = gs.winnerRankings || [];
+    const isTambola = state.room.gameType === 'tambola';
+    if (isTambola) {
+      const winnerIds = [];
+      const fullHouse = gs.patterns.find(pattern => pattern.id === 'full_house');
+      const fullHouseWins = (fullHouse ? fullHouse.winners : [])
+        .slice()
+        .sort((a, b) => a.timestamp - b.timestamp);
+      const otherWins = gs.patterns
+        .filter(pattern => pattern.id !== 'full_house')
+        .flatMap(pattern => pattern.winners)
+        .sort((a, b) => a.timestamp - b.timestamp);
+      const orderedWins = [...fullHouseWins, ...otherWins];
+      orderedWins.forEach(win => {
+        if (!winnerIds.includes(win.playerId)) winnerIds.push(win.playerId);
+      });
+      rankings = winnerIds;
+    }
+    const fallbackPlayers = isTambola ? [] : gs.players;
+    const p1 = gs.players.find(p => p.id === rankings[0]) || fallbackPlayers[0] || null;
+    const p2 = gs.players.find(p => p.id === rankings[1]) || fallbackPlayers[1] || null;
+    const p3 = gs.players.find(p => p.id === rankings[2]) || fallbackPlayers[2] || null;
+    document.getElementById('resultsSubtitle').textContent =
+      isTambola && rankings.length === 0
+        ? 'All balls were called without a winning claim.'
+        : 'Match concluded with royal honor.';
 
     const steps = [
       { player: p2, rank: 2, label: '2nd' },
@@ -1506,7 +1627,7 @@
       const stepEl = document.createElement('div');
       stepEl.className = `podium-step rank-${s.rank}`;
       stepEl.innerHTML = `
-        <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px; color:#fff;">${s.player.name}</div>
+        <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px; color:#fff;">${escapeHTML(s.player.name)}</div>
         <div class="podium-pillar">${s.label}</div>
       `;
       podium.appendChild(stepEl);
@@ -1524,6 +1645,42 @@
     { id: 'hulk', name: 'Gamma Titan', symbol: '✊' },
     { id: 'thor', name: 'Thunder God', symbol: '⚡' }
   ];
+
+  async function leaveCurrentRoom() {
+    const roomCode = state.room && state.room.code;
+    if (!roomCode) {
+      switchView('landing');
+      return;
+    }
+
+    if (!state.isSolo) {
+      try {
+        await apiPost('/api/rooms/leave', { roomCode });
+      } catch (err) {
+        showToast(`Unable to leave room: ${err.message}`);
+        return;
+      }
+    }
+
+    if (state.sseSource) {
+      state.sseSource.close();
+      state.sseSource = null;
+    }
+    if (state.tambolaAutoTimer) {
+      clearInterval(state.tambolaAutoTimer);
+      state.tambolaAutoTimer = null;
+    }
+    safeStorage.removeItem(`myarena_rec_${roomCode}`);
+    safeStorage.removeItem(`myarena_pid_${roomCode}`);
+    state.room = null;
+    state.playerId = null;
+    state.reconnectToken = null;
+    state.isHost = false;
+    state.isSolo = false;
+    state.currentGameId = null;
+    state.lastActivityKey = null;
+    switchView('landing');
+  }
 
   function initApp() {
     updateNavProfile();
@@ -1548,9 +1705,17 @@
     });
 
     // Landing Page Buttons
-    document.getElementById('btnNavHome').addEventListener('click', () => switchView('landing'));
+    document.getElementById('btnNavHome').addEventListener('click', () => {
+      if (state.room) {
+        leaveCurrentRoom();
+      } else {
+        switchView('landing');
+      }
+    });
     document.getElementById('btnOpenCreateModal').addEventListener('click', () => {
-      renderRuleConfig(document.getElementById('selectGameType').value);
+      const gameType = document.getElementById('selectGameType').value;
+      renderRuleConfig(gameType);
+      updatePlayerCapacityOptions(gameType);
       openModal('modalCreateRoom');
     });
     document.getElementById('btnOpenJoinModal').addEventListener('click', () => openModal('modalJoinRoom'));
@@ -1558,6 +1723,7 @@
 
     document.getElementById('selectGameType').addEventListener('change', (e) => {
       renderRuleConfig(e.target.value);
+      updatePlayerCapacityOptions(e.target.value);
     });
 
     // Play Catalog Buttons
@@ -1566,6 +1732,7 @@
         const game = btn.getAttribute('data-game');
         document.getElementById('selectGameType').value = game;
         renderRuleConfig(game);
+        updatePlayerCapacityOptions(game);
         openModal('modalCreateRoom');
       });
     });
@@ -1612,7 +1779,6 @@
         try {
           await apiPost('/api/rooms/ready', {
             roomCode: state.room.code,
-            playerId: state.playerId,
             isReady: nextReady
           });
           myP.isReady = nextReady;
@@ -1630,10 +1796,9 @@
       } else {
         try {
           const res = await apiPost('/api/rooms/start', {
-            roomCode: state.room.code,
-            hostId: state.playerId
+            roomCode: state.room.code
           });
-          state.room.gameState = res.gameState;
+          state.room = res.room;
           setupGameView();
           switchView('game');
         } catch (err) {
@@ -1642,16 +1807,8 @@
       }
     });
 
-    document.getElementById('btnLeaveLobby').addEventListener('click', () => {
-      if (state.sseSource) state.sseSource.close();
-      state.room = null;
-      switchView('landing');
-    });
-
-    document.getElementById('btnReturnLobby').addEventListener('click', () => {
-      renderLobby();
-      switchView('lobby');
-    });
+    document.getElementById('btnLeaveLobby').addEventListener('click', leaveCurrentRoom);
+    document.getElementById('btnReturnLobby').addEventListener('click', leaveCurrentRoom);
 
     // In-Game Buttons
     document.getElementById('btnRollDice').addEventListener('click', triggerRollDice);
@@ -1680,8 +1837,7 @@
       } else {
         try {
           await apiPost('/api/rooms/rematch', {
-            roomCode: state.room.code,
-            hostId: state.playerId
+            roomCode: state.room.code
           });
         } catch (err) {
           showToast(err.message);
@@ -1691,8 +1847,7 @@
 
     document.getElementById('btnResultsBackLobby').addEventListener('click', () => {
       closeModal('modalResults');
-      renderLobby();
-      switchView('lobby');
+      leaveCurrentRoom();
     });
 
     // Check URL parameters for direct room joining (?room=ROYAL-XXXX)

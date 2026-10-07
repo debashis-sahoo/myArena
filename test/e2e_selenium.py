@@ -1,30 +1,31 @@
 """
 End-to-End Automated Testing for myArena Royalty Web Application
 Uses Headless Chromium and Selenium WebDriver to test desktop, mobile, solo AI, and game rendering
-via data:text/html;base64 (supported by sandbox Chromium policy).
+against a locally started application server.
 """
 
 import os
 import sys
 import time
-import base64
+import subprocess
+import urllib.request
+from pathlib import Path
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 
-HTML_PATH = "/working_dir/c_98d74091caecd262/artifacts/file_generation/ttl=63d/output/myarena_royalty.html"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+BASE_URL = "http://localhost:3001"
 
 def run_e2e():
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     print("====================================================")
     print("🚀 RUNNING END-TO-END SELENIUM BROWSER TESTS")
     print("====================================================")
-
-    with open(HTML_PATH, "rb") as f:
-        html_bytes = f.read()
-    b64_data = base64.b64encode(html_bytes).decode("utf-8")
-    data_url = "data:text/html;base64," + b64_data
 
     chrome_options = Options()
     chrome_options.add_argument("--headless=new")
@@ -34,7 +35,23 @@ def run_e2e():
     chrome_options.add_argument("--window-size=1280,800")
 
     driver = None
+    server = subprocess.Popen(
+        ["node", "src/server/server.js"],
+        cwd=REPO_ROOT,
+        env={**dict(os.environ), "PORT": "3001"},
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT,
+    )
     try:
+        for _ in range(50):
+            try:
+                urllib.request.urlopen(BASE_URL, timeout=1)
+                break
+            except OSError:
+                time.sleep(0.1)
+        else:
+            raise RuntimeError("Application server did not start")
+
         driver = webdriver.Chrome(options=chrome_options)
         wait = WebDriverWait(driver, 15)
 
@@ -42,7 +59,7 @@ def run_e2e():
         # TEST 1: DESKTOP LANDING PAGE & BRANDING
         # ---------------------------------------------------------------------
         print("\n--- Test 1: Desktop Landing Page & Visual Identity ---")
-        driver.get(data_url)
+        driver.get(BASE_URL)
         wait.until(lambda d: "myArena Royalty" in d.title)
         print("  ✓ Page title verified:", driver.title)
 
@@ -52,8 +69,8 @@ def run_e2e():
         assert "your friends. your arena." in brand_tagline.lower(), f"Unexpected tagline: {brand_tagline}"
         print(f"  ✓ Wordmark: '{brand_name}' | Tagline: '{brand_tagline}'")
 
-        hero_title = driver.find_element(By.CLASS_NAME, "hero-title").text
-        assert "Your Friends" in hero_title
+        hero_title = driver.find_element(By.CLASS_NAME, "hero-title").get_attribute("textContent")
+        assert "your friends" in hero_title.lower()
         print("  ✓ Hero headline rendered")
 
         # Verify MVP Playable Games Catalog
@@ -127,15 +144,16 @@ def run_e2e():
         # ---------------------------------------------------------------------
         print("\n--- Test 4: Snakes & Ladders Solo Match ---")
         driver.find_element(By.ID, "btnNavHome").click()
-        time.sleep(0.5)
+        driver.set_window_size(1280, 800)
+        wait.until(EC.visibility_of_element_located((By.ID, "viewLanding")))
 
-        snakes_card_btn = driver.find_element(By.CSS_SELECTOR, ".btn-play-game[data-game='snakes']")
+        snakes_card_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".btn-play-game[data-game='snakes']")))
         snakes_card_btn.click()
-        time.sleep(0.5)
+        wait.until(EC.visibility_of_element_located((By.ID, "modalCreateRoom")))
 
         # Switch to Solo mode in modal
         mode_select = driver.find_element(By.ID, "selectGameMode")
-        mode_select.send_keys("Solo Play")
+        Select(mode_select).select_by_value("solo")
         driver.find_element(By.ID, "btnSubmitCreateRoom").click()
         time.sleep(1)
 
@@ -154,10 +172,10 @@ def run_e2e():
 
         tambola_card_btn = driver.find_element(By.CSS_SELECTOR, ".btn-play-game[data-game='tambola']")
         tambola_card_btn.click()
-        time.sleep(0.5)
+        wait.until(EC.visibility_of_element_located((By.ID, "modalCreateRoom")))
 
         mode_select = driver.find_element(By.ID, "selectGameMode")
-        mode_select.send_keys("Solo Play")
+        Select(mode_select).select_by_value("solo")
         driver.find_element(By.ID, "btnSubmitCreateRoom").click()
         time.sleep(1)
 
@@ -193,6 +211,11 @@ def run_e2e():
     finally:
         if driver:
             driver.quit()
+        server.terminate()
+        try:
+            server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server.kill()
 
 if __name__ == "__main__":
     run_e2e()

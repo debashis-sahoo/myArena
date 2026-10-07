@@ -9,17 +9,19 @@ const { server, startServer } = require('../src/server/server');
 const TEST_PORT = 3333;
 const BASE_URL = `http://localhost:${TEST_PORT}`;
 
-function post(endpoint, data) {
+function post(endpoint, data, reconnectToken = null) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify(data || {});
+    const headers = {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(payload)
+    };
+    if (reconnectToken) headers['X-Reconnect-Token'] = reconnectToken;
     const req = http.request(
       `${BASE_URL}${endpoint}`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(payload)
-        }
+        headers
       },
       res => {
         let body = '';
@@ -65,6 +67,10 @@ async function runMultiplayerTests() {
   await startServer(TEST_PORT);
 
   try {
+    const indexRes = await get('/');
+    assert.strictEqual(indexRes.status, 200);
+    assert.strictEqual((indexRes.raw.match(/src="\/app\.js"/g) || []).length, 1);
+
     // 1. Create Room
     console.log('1. Host creates a Ludo room...');
     const createRes = await post('/api/rooms/create', {
@@ -105,17 +111,31 @@ async function runMultiplayerTests() {
     console.log('4. Non-host attempts to start game...');
     const invalidStart = await post('/api/rooms/start', {
       roomCode: roomCode,
-      hostId: guestPlayer.id
-    });
+      hostId: hostPlayer.id
+    }, guestToken);
     assert.strictEqual(invalidStart.status, 400);
     console.log('   ✓ Unauthorized start properly rejected');
 
-    // 5. Host starts game
-    console.log('5. Host starts game...');
-    const startRes = await post('/api/rooms/start', {
+    // 5. Server enforces readiness, then host starts game
+    console.log('5. Guest readies up and host starts game...');
+    const unreadyStart = await post('/api/rooms/start', {
+      roomCode: roomCode
+    }, hostToken);
+    assert.strictEqual(unreadyStart.status, 400);
+    assert(unreadyStart.data.error.includes('ready'));
+
+    const readyRes = await post('/api/rooms/ready', {
       roomCode: roomCode,
-      hostId: hostPlayer.id
-    });
+      playerId: hostPlayer.id,
+      isReady: true
+    }, guestToken);
+    assert.strictEqual(readyRes.status, 200);
+    assert.strictEqual(readyRes.data.player.id, guestPlayer.id);
+    assert.strictEqual(readyRes.data.player.isReady, true);
+
+    const startRes = await post('/api/rooms/start', {
+      roomCode: roomCode
+    }, hostToken);
     assert.strictEqual(startRes.status, 200);
     assert.strictEqual(startRes.data.gameState.phase, 'ROLL');
     console.log('   ✓ Game started with valid authoritative state');
@@ -124,9 +144,9 @@ async function runMultiplayerTests() {
     console.log('6. Guest attempts to roll on Host\'s turn...');
     const wrongTurnRes = await post('/api/rooms/action', {
       roomCode: roomCode,
-      playerId: guestPlayer.id,
+      playerId: hostPlayer.id,
       action: { type: 'ROLL_DICE' }
-    });
+    }, guestToken);
     assert.strictEqual(wrongTurnRes.status, 400);
     assert(wrongTurnRes.data.error.includes("turn, not yours"));
     console.log('   ✓ Wrong-turn action properly rejected');
@@ -135,9 +155,9 @@ async function runMultiplayerTests() {
     console.log('7. Host rolls dice...');
     const rollRes = await post('/api/rooms/action', {
       roomCode: roomCode,
-      playerId: hostPlayer.id,
+      playerId: guestPlayer.id,
       action: { type: 'ROLL_DICE' }
-    });
+    }, hostToken);
     assert.strictEqual(rollRes.status, 200);
     console.log(`   ✓ Dice rolled successfully: ${rollRes.data.actionResult.roll}`);
 
@@ -155,13 +175,49 @@ async function runMultiplayerTests() {
     // 9. Host handoff test
     console.log('9. Host leaves room, testing host handoff...');
     const leaveRes = await post('/api/rooms/leave', {
-      roomCode: roomCode,
-      playerId: hostPlayer.id
-    });
+      roomCode: roomCode
+    }, hostToken);
     assert.strictEqual(leaveRes.status, 200);
     assert.strictEqual(leaveRes.data.hostMigrated, true);
     assert.strictEqual(leaveRes.data.room.hostId, guestPlayer.id);
+    assert.strictEqual(leaveRes.data.room.status, 'FINISHED');
+    assert.deepStrictEqual(leaveRes.data.room.gameState.winnerRankings, [guestPlayer.id]);
     console.log(`   ✓ Host rights transferred deterministically to: ${guestPlayer.name}`);
+
+    // 10. Tambola state is personalized and future draws remain private
+    console.log('10. Verifying private Tambola state...');
+    const tambolaCreate = await post('/api/rooms/create', {
+      hostName: 'Caller',
+      gameType: 'tambola',
+      maxPlayers: 2
+    });
+    const tambolaCode = tambolaCreate.data.roomCode;
+    const tambolaHost = tambolaCreate.data.player;
+    const tambolaHostToken = tambolaCreate.data.reconnectToken;
+    const tambolaJoin = await post('/api/rooms/join', {
+      roomCode: tambolaCode,
+      playerName: 'Ticket Holder'
+    });
+    const tambolaGuest = tambolaJoin.data.player;
+    const tambolaGuestToken = tambolaJoin.data.reconnectToken;
+
+    await post('/api/rooms/ready', {
+      roomCode: tambolaCode,
+      isReady: true
+    }, tambolaGuestToken);
+    const tambolaStart = await post('/api/rooms/start', {
+      roomCode: tambolaCode
+    }, tambolaHostToken);
+    assert.deepStrictEqual(Object.keys(tambolaStart.data.gameState.tickets), [tambolaHost.id]);
+    assert.strictEqual(tambolaStart.data.gameState.ballPool, undefined);
+
+    const tambolaReconnect = await post('/api/rooms/join', {
+      roomCode: tambolaCode,
+      reconnectToken: tambolaGuestToken
+    });
+    assert.deepStrictEqual(Object.keys(tambolaReconnect.data.room.gameState.tickets), [tambolaGuest.id]);
+    assert.strictEqual(tambolaReconnect.data.room.gameState.ballPool, undefined);
+    console.log('   ✓ Tickets and future ball order are private per player');
 
     console.log('\n====================================================');
     console.log('ALL MULTIPLAYER INTEGRATION TESTS PASSED! 🎉');

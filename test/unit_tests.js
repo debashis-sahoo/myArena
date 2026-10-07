@@ -76,6 +76,29 @@ runTest('Ludo: Rolling 6 allows leaving base onto start square', () => {
   assert.strictEqual(game.currentTurnIndex, 0); // Still Tony's turn
 });
 
+runTest('Ludo: Rolling 6 with no legal move preserves the configured bonus turn', () => {
+  const players = [
+    { id: 'u1', name: 'Tony', teamIndex: 0 },
+    { id: 'u2', name: 'Bruce', teamIndex: 1 }
+  ];
+  const game = LudoEngine.createGame(players, { entryRoll: [1], bonusOnSix: true });
+  const result = LudoEngine.rollDice(game, 6);
+  assert.strictEqual(result.turnAdvanced, false);
+  assert.strictEqual(game.currentTurnIndex, 0);
+  assert.strictEqual(game.phase, 'ROLL');
+});
+
+runTest('Ludo: Consecutive six counter resets when the turn advances', () => {
+  const players = [
+    { id: 'u1', name: 'Tony', teamIndex: 0 },
+    { id: 'u2', name: 'Bruce', teamIndex: 1 }
+  ];
+  const game = LudoEngine.createGame(players, { entryRoll: [1], bonusOnSix: false });
+  LudoEngine.rollDice(game, 6);
+  assert.strictEqual(game.currentTurnIndex, 1);
+  assert.strictEqual(game.consecutiveSixes, 0);
+});
+
 runTest('Ludo: Three consecutive sixes forfeits turn', () => {
   const players = [
     { id: 'u1', name: 'Tony', teamIndex: 0 },
@@ -204,6 +227,16 @@ runTest('Snakes & Ladders: Climbing ladder atomically moves token to ladder top'
   assert.strictEqual(res.toPos, 14);
   assert.strictEqual(res.shortcutType, 'LADDER');
   assert.strictEqual(game.players[0].position, 14);
+});
+
+runTest('Snakes & Ladders: Opening roll advances from square zero without an extra step', () => {
+  const game = SnakesEngine.createGame([
+    { id: 'p1', name: 'Alice' },
+    { id: 'p2', name: 'Bob' }
+  ]);
+  const result = SnakesEngine.playTurn(game, 3);
+  assert.strictEqual(result.fromPos, 0);
+  assert.strictEqual(result.toPos, 3);
 });
 
 runTest('Snakes & Ladders: Snake bite atomically slides token to tail', () => {

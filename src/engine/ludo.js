@@ -239,6 +239,10 @@
       game.history.push(game.lastAction);
       game.currentDice = null;
       game.phase = 'ROLL';
+      if (roll === 6 && game.rules.bonusOnSix) {
+        game.lastAction.message += ' Bonus roll awarded.';
+        return { game, roll, legalMoves: [], turnAdvanced: false };
+      }
       advanceTurn(game);
       return { game, roll, legalMoves: [], turnAdvanced: true };
     }
@@ -392,6 +396,7 @@
   function advanceTurn(game) {
     if (game.phase === 'FINISHED') return;
 
+    game.consecutiveSixes = 0;
     let nextIndex = game.currentTurnIndex;
     let attempts = 0;
     do {

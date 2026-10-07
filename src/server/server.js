@@ -6,11 +6,11 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const url = require('url');
 const roomManager = require('./room_manager');
 
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const CLIENT_DIR = path.join(__dirname, '../client');
+const ENGINE_DIR = path.join(__dirname, '../engine');
 
 function sendJson(res, statusCode, data) {
   res.writeHead(statusCode, {
@@ -42,8 +42,13 @@ function parseJsonBody(req) {
   });
 }
 
+function getReconnectToken(req) {
+  const token = req.headers['x-reconnect-token'];
+  return Array.isArray(token) ? token[0] : token;
+}
+
 const server = http.createServer(async (req, res) => {
-  const parsedUrl = url.parse(req.url, true);
+  const parsedUrl = new URL(req.url, 'http://localhost');
   const pathname = parsedUrl.pathname;
   const method = req.method;
 
@@ -64,10 +69,8 @@ const server = http.createServer(async (req, res) => {
     const sseMatch = pathname.match(/^\/api\/rooms\/([A-Z0-9-]+)\/stream$/);
     if (sseMatch && method === 'GET') {
       const roomCode = sseMatch[1];
-      const room = roomManager.rooms.get(roomCode);
-      if (!room) {
-        return sendJson(res, 404, { error: 'Room not found' });
-      }
+      const auth = roomManager.authenticate(roomCode, parsedUrl.searchParams.get('token'));
+      const room = auth.room;
 
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
@@ -77,9 +80,12 @@ const server = http.createServer(async (req, res) => {
       });
 
       // Send initial snapshot
-      res.write(`data: ${JSON.stringify({ type: 'ROOM_SYNC', room: roomManager.getRoomSummary(room) })}\n\n`);
+      res.write(`data: ${JSON.stringify({
+        type: 'ROOM_SYNC',
+        room: roomManager.getRoomSummary(room, auth.player.id)
+      })}\n\n`);
 
-      roomManager.addSubscriber(roomCode, res);
+      roomManager.addSubscriber(roomCode, res, auth.player.id);
 
       const heartbeat = setInterval(() => {
         try {
@@ -105,9 +111,9 @@ const server = http.createServer(async (req, res) => {
       const room = roomManager.rooms.get(result.roomCode);
       return sendJson(res, 200, {
         roomCode: result.roomCode,
-        player: result.player,
+        player: roomManager.getPublicPlayer(result.player),
         reconnectToken: result.reconnectToken,
-        room: roomManager.getRoomSummary(room)
+        room: roomManager.getRoomSummary(room, result.player.id)
       });
     }
 
@@ -115,8 +121,8 @@ const server = http.createServer(async (req, res) => {
       const body = await parseJsonBody(req);
       const result = roomManager.joinRoom(body);
       return sendJson(res, 200, {
-        room: roomManager.getRoomSummary(result.room),
-        player: result.player,
+        room: roomManager.getRoomSummary(result.room, result.player.id),
+        player: roomManager.getPublicPlayer(result.player),
         reconnectToken: result.reconnectToken,
         reconnected: result.reconnected
       });
@@ -124,45 +130,62 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/rooms/leave' && method === 'POST') {
       const body = await parseJsonBody(req);
-      const result = roomManager.leaveRoom(body.roomCode, body.playerId);
-      return sendJson(res, 200, result || { success: true });
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      const result = roomManager.leaveRoom(body.roomCode, auth.player.id);
+      return sendJson(res, 200, {
+        success: true,
+        roomClosed: result.roomClosed,
+        hostMigrated: Boolean(result.hostMigrated),
+        room: result.room ? roomManager.getRoomSummary(result.room, auth.player.id) : null
+      });
     }
 
     if (pathname === '/api/rooms/settings' && method === 'POST') {
       const body = await parseJsonBody(req);
-      const room = roomManager.updateSettings(body.roomCode, body.hostId, body);
-      return sendJson(res, 200, { room: roomManager.getRoomSummary(room) });
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      const room = roomManager.updateSettings(body.roomCode, auth.player.id, body);
+      return sendJson(res, 200, { room: roomManager.getRoomSummary(room, auth.player.id) });
     }
 
     if (pathname === '/api/rooms/ready' && method === 'POST') {
       const body = await parseJsonBody(req);
-      const player = roomManager.setPlayerReady(body.roomCode, body.playerId, body.isReady);
-      return sendJson(res, 200, { player });
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      const player = roomManager.setPlayerReady(body.roomCode, auth.player.id, body.isReady);
+      return sendJson(res, 200, { player: roomManager.getPublicPlayer(player) });
     }
 
     if (pathname === '/api/rooms/hero' && method === 'POST') {
       const body = await parseJsonBody(req);
-      const player = roomManager.setPlayerHero(body.roomCode, body.playerId, body.heroId);
-      return sendJson(res, 200, { player });
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      const player = roomManager.setPlayerHero(body.roomCode, auth.player.id, body.heroId);
+      return sendJson(res, 200, { player: roomManager.getPublicPlayer(player) });
     }
 
     if (pathname === '/api/rooms/start' && method === 'POST') {
       const body = await parseJsonBody(req);
-      const gameState = roomManager.startGame(body.roomCode, body.hostId);
-      const room = roomManager.rooms.get(body.roomCode);
-      return sendJson(res, 200, { gameState, room: roomManager.getRoomSummary(room) });
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      roomManager.startGame(body.roomCode, auth.player.id);
+      return sendJson(res, 200, {
+        gameState: roomManager.getClientGameState(auth.room, auth.player.id),
+        room: roomManager.getRoomSummary(auth.room, auth.player.id)
+      });
     }
 
     if (pathname === '/api/rooms/action' && method === 'POST') {
       const body = await parseJsonBody(req);
-      const result = roomManager.executeAction(body.roomCode, body.playerId, body.action);
-      return sendJson(res, 200, result);
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      const result = roomManager.executeAction(body.roomCode, auth.player.id, body.action);
+      return sendJson(res, 200, {
+        gameState: roomManager.getClientGameState(auth.room, auth.player.id),
+        actionResult: roomManager.getClientActionResult(result.actionResult)
+      });
     }
 
     if (pathname === '/api/rooms/rematch' && method === 'POST') {
       const body = await parseJsonBody(req);
-      const room = roomManager.restartGame(body.roomCode, body.hostId);
-      return sendJson(res, 200, { room: roomManager.getRoomSummary(room) });
+      const auth = roomManager.authenticate(body.roomCode, getReconnectToken(req));
+      const room = roomManager.restartGame(body.roomCode, auth.player.id);
+      return sendJson(res, 200, { room: roomManager.getRoomSummary(room, auth.player.id) });
     }
 
     const roomGetMatch = pathname.match(/^\/api\/rooms\/([A-Z0-9-]+)$/);
@@ -176,14 +199,18 @@ const server = http.createServer(async (req, res) => {
     // -------------------------------------------------------------------------
     // STATIC FILE SERVING
     // -------------------------------------------------------------------------
-    let filePath = path.join(CLIENT_DIR, pathname === '/' ? 'index.html' : pathname);
+    const clientFiles = {
+      '/': path.join(CLIENT_DIR, 'index.html'),
+      '/index.html': path.join(CLIENT_DIR, 'index.html'),
+      '/app.js': path.join(CLIENT_DIR, 'app.js'),
+      '/engine/ludo.js': path.join(ENGINE_DIR, 'ludo.js'),
+      '/engine/snakes.js': path.join(ENGINE_DIR, 'snakes.js'),
+      '/engine/tambola.js': path.join(ENGINE_DIR, 'tambola.js'),
+      '/engine/ai.js': path.join(ENGINE_DIR, 'ai.js')
+    };
+    const filePath = clientFiles[pathname];
 
-    // If file doesn't exist, fallback to index.html (SPA routing)
-    if (!fs.existsSync(filePath)) {
-      filePath = path.join(CLIENT_DIR, 'index.html');
-    }
-
-    if (fs.existsSync(filePath)) {
+    if (filePath && fs.existsSync(filePath)) {
       const ext = path.extname(filePath).toLowerCase();
       const mimeTypes = {
         '.html': 'text/html; charset=utf-8',

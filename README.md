@@ -1,5 +1,7 @@
 # 👑 myArena Royalty — "Your friends. Your arena."
 
+Current version: **1.0.1**
+
 A browser-based social board-game arcade designed for friends to play instantly across desktop, iPhone, and Android without account creation.
 
 ---
@@ -67,7 +69,8 @@ All roadmap cards are clearly labeled "Coming soon" with disabled action buttons
    - Guest participation: Display name validation preventing duplicate names in the same room.
    - Short room codes (`ROYAL-XXXX`) and direct invite URLs (`?room=ROYAL-XXXX`).
    - Deterministic host handoff if the host disconnects or leaves.
-   - Reconnect tokens: Players can reload their browser and seamlessly resume their active session.
+   - Reconnect tokens authenticate every room mutation and SSE stream.
+   - Personalized state serialization keeps Tambola tickets and future ball order private.
 3. **Firebase / Cloud Deployment Guide**:
    - To deploy for public online multiplayer across separate networks without maintaining a continuous Node.js server process:
      1. Enable Firebase Realtime Database or Firestore.
@@ -82,12 +85,10 @@ All roadmap cards are clearly labeled "Coming soon" with disabled action buttons
 Run all test suites from the project root:
 
 ```bash
-# 1. Game Engine Unit Tests (16 tests for Ludo, Snakes, Tambola, AI)
-node test/unit_tests.js
+# Game engine and authoritative multiplayer integration tests
+npm test
 
-# 2. Authoritative Multiplayer Server Integration Tests
-node test/multiplayer_integration.test.js
-
-# 3. Headless Chromium / Selenium End-to-End Tests
-python3 test/e2e_selenium.py
+# Headless Chromium / Selenium end-to-end tests
+python -m pip install -r requirements.txt
+python test/e2e_selenium.py
 ```
