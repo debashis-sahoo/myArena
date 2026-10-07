@@ -1237,6 +1237,280 @@
     }
   }
 
+  // =========================================================================
+  // WEBGL DIE: one solid rounded cube, ray-marched from a signed distance field
+  // so corners and edges are genuinely rounded with no seams. The hidden CSS cube
+  // (.dice-solid) still carries the throw animation and pips for accessibility and
+  // tests; each frame its live transform is copied into the shader.
+  // =========================================================================
+  const DICE_GL_CANVAS_SCALE = 3.2;
+  const DICE_PERSPECTIVE_PX = 900;
+
+  const DICE_GL_VERTEX = `
+    attribute vec2 a_pos;
+    void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+  `;
+
+  const DICE_GL_FRAGMENT = `
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    #else
+    precision mediump float;
+    #endif
+    uniform vec2 u_res;      // canvas size in device pixels
+    uniform float u_scale;   // device pixels per die unit (die spans -1..1)
+    uniform float u_eye;     // camera distance in die units (CSS perspective)
+    uniform mat3 u_rot;      // die local -> world rotation (CSS axes: x right, y down, z toward viewer)
+    uniform mat3 u_inv;      // world -> die local rotation
+    uniform vec3 u_trans;    // die translation in die units
+    uniform vec3 u_valsA;    // pip counts: front, back, right
+    uniform vec3 u_valsB;    // pip counts: left, top, bottom
+
+    const float RADIUS = 0.3;
+    const float PIP_RADIUS = 0.19;
+    const float PIP_SPACING = 0.5;
+
+    float sdRoundBox(vec3 p) {
+      vec3 q = abs(p) - vec3(1.0 - RADIUS);
+      return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0) - RADIUS;
+    }
+
+    vec3 surfaceNormal(vec3 p) {
+      const vec2 e = vec2(1.0, -1.0) * 0.0015;
+      return normalize(e.xyy * sdRoundBox(p + e.xyy) + e.yyx * sdRoundBox(p + e.yyx) +
+                       e.yxy * sdRoundBox(p + e.yxy) + e.xxx * sdRoundBox(p + e.xxx));
+    }
+
+    float pipDistance(vec2 uv, float value) {
+      float g = PIP_SPACING;
+      float d = 10.0;
+      if (mod(value, 2.0) > 0.5) d = min(d, length(uv));
+      if (value > 1.5) { d = min(d, length(uv - vec2(-g, -g))); d = min(d, length(uv - vec2(g, g))); }
+      if (value > 3.5) { d = min(d, length(uv - vec2(g, -g))); d = min(d, length(uv - vec2(-g, g))); }
+      if (value > 5.5) { d = min(d, length(uv - vec2(-g, 0.0))); d = min(d, length(uv - vec2(g, 0.0))); }
+      return d;
+    }
+
+    void main() {
+      vec2 screen = vec2(gl_FragCoord.x - 0.5 * u_res.x, 0.5 * u_res.y - gl_FragCoord.y) / u_scale;
+      vec3 eye = vec3(0.0, 0.0, u_eye);
+      vec3 dir = normalize(vec3(screen, 0.0) - eye);
+      vec3 ro = u_inv * (eye - u_trans);
+      vec3 rd = u_inv * dir;
+
+      // Skip everything outside the die's bounding sphere.
+      float b = dot(ro, rd);
+      float h = b * b - (dot(ro, ro) - 3.02);
+      if (h < 0.0) { gl_FragColor = vec4(0.0); return; }
+      h = sqrt(h);
+      float t = max(-b - h, 0.0);
+      float tEnd = -b + h;
+
+      float closest = 1e3;
+      float tClosest = t;
+      bool hit = false;
+      for (int i = 0; i < 72; i++) {
+        float d = sdRoundBox(ro + rd * t);
+        if (d < closest) { closest = d; tClosest = t; }
+        if (d < 0.0006) { hit = true; break; }
+        t += d;
+        if (t > tEnd) break;
+      }
+
+      float pixel = 1.0 / u_scale;
+      float alpha = hit ? 1.0 : 1.0 - smoothstep(0.0, 1.4 * pixel, closest);
+      if (alpha <= 0.0) { gl_FragColor = vec4(0.0); return; }
+
+      vec3 p = ro + rd * (hit ? t : tClosest);
+      vec3 nLocal = surfaceNormal(p);
+      vec3 n = normalize(u_rot * nLocal);
+      vec3 v = -dir;
+
+      // Which face, and where on it, decides the pips (same layout as the CSS faces).
+      vec3 a = abs(p);
+      vec2 uv;
+      float value;
+      if (a.z >= a.x && a.z >= a.y) {
+        if (p.z > 0.0) { uv = p.xy; value = u_valsA.x; } else { uv = vec2(-p.x, p.y); value = u_valsA.y; }
+      } else if (a.x >= a.y) {
+        if (p.x > 0.0) { uv = vec2(-p.z, p.y); value = u_valsA.z; } else { uv = vec2(p.z, p.y); value = u_valsB.x; }
+      } else {
+        if (p.y < 0.0) { uv = vec2(p.x, p.z); value = u_valsB.y; } else { uv = vec2(p.x, -p.z); value = u_valsB.z; }
+      }
+      float pd = pipDistance(uv, value);
+      float pipMask = 1.0 - smoothstep(PIP_RADIUS - 1.2 * pixel, PIP_RADIUS + 1.2 * pixel, pd);
+
+      vec3 light = normalize(vec3(-0.35, -0.6, 1.0));
+      vec3 halfway = normalize(light + v);
+      float diffuse = max(dot(n, light), 0.0);
+      float sky = 0.5 - 0.5 * n.y;
+      float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
+
+      vec3 ivory = vec3(0.985, 0.98, 0.965);
+      vec3 body = ivory * (0.36 + 0.52 * diffuse + 0.2 * sky);
+      body += vec3(1.0) * pow(max(dot(n, halfway), 0.0), 56.0) * 0.42;
+      body += vec3(0.85, 0.88, 1.0) * rim * 0.12;
+
+      // Pips read as dimples: a dark well whose inner wall lightens toward the rim.
+      float depth = clamp(pd / PIP_RADIUS, 0.0, 1.0);
+      vec3 pip = mix(vec3(0.015, 0.02, 0.045), vec3(0.11, 0.12, 0.17), smoothstep(0.5, 1.0, depth));
+      pip *= 0.75 + 0.35 * diffuse;
+
+      vec3 color = mix(body, pip, pipMask);
+      gl_FragColor = vec4(clamp(color, 0.0, 1.0) * alpha, alpha);
+    }
+  `;
+
+  const diceGL = {
+    ready: false,
+    failed: false,
+    cube: null,
+    canvas: null,
+    gl: null,
+    uniforms: null,
+    values: [1, 6, 3, 4, 2, 5],
+    drawQueued: false,
+    loop: null
+  };
+
+  function compileDiceShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      throw new Error(gl.getShaderInfoLog(shader) || 'Dice shader failed to compile');
+    }
+    return shader;
+  }
+
+  function disableDiceGL() {
+    diceGL.ready = false;
+    diceGL.failed = true;
+    if (diceGL.loop) cancelAnimationFrame(diceGL.loop);
+    diceGL.loop = null;
+    if (diceGL.cube) diceGL.cube.classList.remove('has-webgl');
+    if (diceGL.canvas) diceGL.canvas.remove();
+  }
+
+  function initDiceGL(diceCube) {
+    if (diceGL.ready || diceGL.failed) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.className = 'dice-gl';
+      canvas.setAttribute('aria-hidden', 'true');
+      const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false });
+      if (!gl) throw new Error('WebGL unavailable');
+
+      const program = gl.createProgram();
+      gl.attachShader(program, compileDiceShader(gl, gl.VERTEX_SHADER, DICE_GL_VERTEX));
+      gl.attachShader(program, compileDiceShader(gl, gl.FRAGMENT_SHADER, DICE_GL_FRAGMENT));
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        throw new Error(gl.getProgramInfoLog(program) || 'Dice shader failed to link');
+      }
+      gl.useProgram(program);
+
+      // One triangle that covers the whole canvas.
+      gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const position = gl.getAttribLocation(program, 'a_pos');
+      gl.enableVertexAttribArray(position);
+      gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+      diceGL.uniforms = {};
+      ['u_res', 'u_scale', 'u_eye', 'u_rot', 'u_inv', 'u_trans', 'u_valsA', 'u_valsB'].forEach(name => {
+        diceGL.uniforms[name] = gl.getUniformLocation(program, name);
+      });
+
+      canvas.addEventListener('webglcontextlost', event => {
+        event.preventDefault();
+        disableDiceGL();
+      });
+
+      diceGL.cube = diceCube;
+      diceGL.canvas = canvas;
+      diceGL.gl = gl;
+      diceGL.ready = true;
+      diceCube.appendChild(canvas);
+      diceCube.classList.add('has-webgl');
+
+      if (typeof ResizeObserver === 'function') {
+        new ResizeObserver(requestDiceDraw).observe(diceCube);
+      }
+      // Redraw whenever the resting transform is changed directly (not via animation).
+      const solid = diceCube.querySelector('.dice-solid');
+      if (solid && typeof MutationObserver === 'function') {
+        new MutationObserver(requestDiceDraw).observe(solid, { attributes: true, attributeFilter: ['style'] });
+      }
+      requestDiceDraw();
+    } catch (err) {
+      console.warn('3D die falls back to CSS:', err.message);
+      disableDiceGL();
+    }
+  }
+
+  function drawDiceGL() {
+    diceGL.drawQueued = false;
+    if (!diceGL.ready) return;
+    const { cube, canvas, gl, uniforms } = diceGL;
+    const size = cube.offsetWidth;
+    if (!size) return;
+
+    const half = size / 2;
+    const cssSize = Math.round(size * DICE_GL_CANVAS_SCALE);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const pixels = Math.round(cssSize * dpr);
+    if (canvas.width !== pixels) {
+      canvas.width = pixels;
+      canvas.height = pixels;
+      canvas.style.width = `${cssSize}px`;
+      canvas.style.height = `${cssSize}px`;
+      canvas.style.left = `${(size - cssSize) / 2}px`;
+      canvas.style.top = `${(size - cssSize) / 2}px`;
+    }
+
+    const solid = cube.querySelector('.dice-solid');
+    const transform = solid ? getComputedStyle(solid).transform : 'none';
+    const m = transform && transform !== 'none' ? new DOMMatrix(transform) : new DOMMatrix();
+    const columns = [[m.m11, m.m12, m.m13], [m.m21, m.m22, m.m23], [m.m31, m.m32, m.m33]]
+      .map(column => {
+        const length = Math.hypot(column[0], column[1], column[2]) || 1;
+        return column.map(component => component / length);
+      });
+    const rotation = columns.flat();
+    const inverse = [0, 1, 2].flatMap(row => columns.map(column => column[row]));
+
+    gl.viewport(0, 0, pixels, pixels);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(uniforms.u_res, pixels, pixels);
+    gl.uniform1f(uniforms.u_scale, half * dpr);
+    gl.uniform1f(uniforms.u_eye, DICE_PERSPECTIVE_PX / half);
+    gl.uniformMatrix3fv(uniforms.u_rot, false, rotation);
+    gl.uniformMatrix3fv(uniforms.u_inv, false, inverse);
+    gl.uniform3f(uniforms.u_trans, m.m41 / half, m.m42 / half, m.m43 / half);
+    gl.uniform3f(uniforms.u_valsA, diceGL.values[0], diceGL.values[1], diceGL.values[2]);
+    gl.uniform3f(uniforms.u_valsB, diceGL.values[3], diceGL.values[4], diceGL.values[5]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
+
+  function requestDiceDraw() {
+    if (!diceGL.ready || diceGL.drawQueued) return;
+    diceGL.drawQueued = true;
+    requestAnimationFrame(drawDiceGL);
+  }
+
+  // Redraw every frame only while a throw is in flight; otherwise draw on demand.
+  function runDiceRenderLoop() {
+    if (!diceGL.ready || diceGL.loop) return;
+    const tick = () => {
+      drawDiceGL();
+      diceGL.loop = diceRoll.active ? requestAnimationFrame(tick) : null;
+      if (!diceGL.loop) requestDiceDraw();
+    };
+    diceGL.loop = requestAnimationFrame(tick);
+  }
+
   function buildDiceCube(diceCube) {
     let solid = diceCube.querySelector('.dice-solid');
     if (solid) return solid;
@@ -1255,6 +1529,7 @@
     }).join('');
     solid.innerHTML = core + faces;
     diceCube.appendChild(solid);
+    initDiceGL(diceCube);
     return solid;
   }
 
@@ -1283,6 +1558,8 @@
     Object.entries(values).forEach(([sideName, value]) => {
       paintDiceSide(diceCube.querySelector(`.dice-side[data-face="${sideName}"]`), value);
     });
+    diceGL.values = [values.front, values.back, values.right, values.left, values.top, values.bottom];
+    requestDiceDraw();
   }
 
   function isDieValue(value) {
@@ -1408,6 +1685,7 @@
       if (shadow && typeof shadow.animate === 'function') {
         diceRoll.animations.push(shadow.animate(diceShadowKeyframes(), timing));
       }
+      runDiceRenderLoop();
     }
 
     diceRoll.revealTimer = setTimeout(() => landDice(diceCube), canAnimate ? DICE_REVEAL_MS : 0);

@@ -986,6 +986,18 @@
       will-change: transform;
     }
 
+    /* With WebGL the die is drawn as one solid rounded body on this canvas; the CSS
+       cube stays in the DOM (hidden) to drive the animation and expose the faces. */
+    .dice-gl {
+      position: absolute;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .dice-cube.has-webgl .dice-solid {
+      visibility: hidden;
+    }
+
     /* Inner planes, pulled in from each face, fill the vertices that the rounded
        face corners leave open, so the die reads as one solid rounded body. */
     .dice-core-side {
@@ -1535,7 +1547,7 @@
       </svg>
       <div class="brand-text">
         <span class="brand-name">myArena Royalty</span>
-        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.0.7</span></span>
+        <span class="brand-tagline">Your friends. Your arena.<span class="app-version">v1.0.8</span></span>
       </div>
     </div>
 
