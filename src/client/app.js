@@ -2386,17 +2386,20 @@
   }
 
   // Sample a sinuous body from head to tail; the wave fades out at both ends so the
-  // head and tail land exactly on their squares.
-  function buildSnakeBody(head, tail, cell, size, seed) {
+  // head and tail stay pinned to their squares. Advancing `time` sends the wave from
+  // head to tail, the way a real snake slithers.
+  const SNAKE_WAVE_SPEED = 1.8; // radians per second
+
+  function buildSnakeBody(head, tail, cell, size, seed, time = 0) {
     const dx = tail.x - head.x;
     const dy = tail.y - head.y;
     const length = Math.hypot(dx, dy);
     const nx = -dy / length;
     const ny = dx / length;
     const waves = Math.max(1, Math.round(length / (cell * 2.3)));
-    const amplitude = Math.min(cell * 0.45, length * 0.16);
-    const phase = seed % 2 ? 0 : Math.PI;
-    const samples = Math.max(60, Math.ceil(length / (cell * 0.05)));
+    const amplitude = Math.min(cell * 0.45, length * 0.16) * (0.88 + 0.12 * Math.sin(time * 0.9 + seed * 1.3));
+    const phase = (seed % 2 ? 0 : Math.PI) - time * SNAKE_WAVE_SPEED;
+    const samples = Math.max(48, Math.ceil(length / (cell * 0.06)));
     const margin = cell * 0.2;
     const points = [];
     for (let i = 0; i <= samples; i++) {
@@ -2408,6 +2411,7 @@
         t
       });
     }
+    points.restLength = length;
     const maxWidth = cell * 0.34;
     points.forEach((point, i) => {
       const prev = points[Math.max(0, i - 1)];
@@ -2424,8 +2428,34 @@
       const neck = t < 0.1 ? 0.78 + 0.22 * (t / 0.1) : 1;
       const taper = t > 0.5 ? Math.pow(1 - (t - 0.5) / 0.5, 0.85) : 1;
       point.half = (maxWidth / 2) * neck * Math.max(0.06, taper);
+      point.s = i === 0 ? 0 : points[i - 1].s + Math.hypot(point.x - points[i - 1].x, point.y - points[i - 1].y);
     });
     return points;
+  }
+
+  // Interpolated point at a fraction of the body's current arc length. Markings placed
+  // by fraction ride along with the skin as the body flexes instead of snapping.
+  function snakePointAt(points, fraction, cursor) {
+    const target = fraction * points[points.length - 1].s;
+    let i = Math.max(1, cursor.index || 1);
+    while (i < points.length - 1 && points[i].s < target) i++;
+    cursor.index = i;
+    const a = points[i - 1];
+    const b = points[i];
+    const span = b.s - a.s || 1;
+    const k = Math.min(1, Math.max(0, (target - a.s) / span));
+    const tx = a.tx + (b.tx - a.tx) * k;
+    const ty = a.ty + (b.ty - a.ty) * k;
+    const tl = Math.hypot(tx, ty) || 1;
+    return {
+      x: a.x + (b.x - a.x) * k,
+      y: a.y + (b.y - a.y) * k,
+      tx: tx / tl,
+      ty: ty / tl,
+      nx: -ty / tl,
+      ny: tx / tl,
+      half: a.half + (b.half - a.half) * k
+    };
   }
 
   // A strip running along the body between two signed fractions of its half-width.
@@ -2447,14 +2477,11 @@
 
   function drawSnakePattern(context, points, skin, cell) {
     const spacing = { diamond: cell * 0.3, bands: cell * 0.2, chevron: cell * 0.24, blotch: cell * 0.28 }[skin.pattern];
-    let travelled = 0;
-    let index = 0;
-    for (let i = 1; i < points.length; i++) {
-      travelled += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
-      const p = points[i];
-      if (travelled < spacing || p.t < 0.07 || p.t > 0.97) continue;
-      travelled = 0;
-      index += 1;
+    // Mark count comes from the fixed head-to-tail distance, so it never changes mid-animation.
+    const count = Math.max(1, Math.floor((points.restLength * 1.08 * 0.9) / spacing));
+    const cursor = {};
+    for (let index = 1; index <= count; index++) {
+      const p = snakePointAt(points, 0.07 + ((index - 0.5) / count) * 0.9, cursor);
       const angle = Math.atan2(p.ty, p.tx);
       context.save();
       context.translate(p.x, p.y);
@@ -2499,18 +2526,15 @@
   }
 
   function drawSnakeScales(context, points, cell) {
-    const step = cell * 0.065;
-    let travelled = 0;
-    let row = 0;
+    const rows = Math.max(1, Math.floor((points.restLength * 1.08) / (cell * 0.065)));
+    const cursor = {};
     context.save();
     context.lineWidth = Math.max(0.6, cell * 0.008);
     context.strokeStyle = 'rgba(0, 0, 0, 0.22)';
-    for (let i = 1; i < points.length; i++) {
-      travelled += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
-      if (travelled < step) continue;
-      travelled = 0;
-      row += 1;
-      const p = points[i];
+    // Every scale goes into one path: a single stroke keeps per-frame cost low.
+    context.beginPath();
+    for (let row = 1; row <= rows; row++) {
+      const p = snakePointAt(points, (row - 0.5) / rows, cursor);
       const radius = Math.max(cell * 0.016, p.half * 0.24);
       const back = Math.atan2(-p.ty, -p.tx);
       for (let k = -2; k <= 2; k++) {
@@ -2518,19 +2542,21 @@
         if (Math.abs(across) > 0.85) continue;
         const sx = p.x + p.nx * p.half * across;
         const sy = p.y + p.ny * p.half * across;
-        context.beginPath();
+        context.moveTo(sx + Math.cos(back - 1.1) * radius, sy + Math.sin(back - 1.1) * radius);
         context.arc(sx, sy, radius, back - 1.1, back + 1.1);
-        context.stroke();
       }
     }
+    context.stroke();
     context.restore();
   }
 
-  function drawSnakeHead(context, points, skin, cell, seed) {
+  function drawSnakeHead(context, points, skin, cell, seed, time, animated) {
     const head = points[0];
     const neckIndex = Math.min(points.length - 1, Math.ceil(points.length * 0.04));
     const neck = points[neckIndex];
-    const angle = Math.atan2(head.y - neck.y, head.x - neck.x);
+    // The head follows the neck, plus a slow, slight sway of its own while alive.
+    const sway = animated ? 0.08 * Math.sin(time * 1.6 + seed * 2.1) : 0;
+    const angle = Math.atan2(head.y - neck.y, head.x - neck.x) + sway;
     const length = cell * 0.52;
     const width = points[neckIndex].half * 2 * 1.5;
 
@@ -2618,27 +2644,39 @@
       context.fill();
     });
 
-    // Forked tongue on alternating snakes.
-    if (seed % 2 === 0) {
+    // Forked tongue. Animated snakes flick it twice in quick succession on their own
+    // rhythm with quivering tips; static boards show it on alternating snakes.
+    let reach = 0;
+    if (animated) {
+      const cycle = 2.4 + (seed % 3) * 0.8;
+      const local = (time + seed * 0.77) % cycle;
+      const flickWindow = 0.6;
+      if (local < flickWindow) reach = Math.pow(Math.sin(Math.PI * 2 * local / flickWindow), 2);
+    } else if (seed % 2 === 0) {
+      reach = 1;
+    }
+    if (reach > 0.03) {
+      const tip = length * (0.7 + 0.28 * reach);
+      const spread = width * 0.14 * reach * (animated ? 0.65 + 0.35 * Math.sin(time * 48 + seed) : 1);
       context.lineCap = 'round';
       context.lineJoin = 'round';
       context.lineWidth = Math.max(1.2, cell * 0.022);
       context.strokeStyle = '#e11d48';
       context.beginPath();
       context.moveTo(length * 0.68, 0);
-      context.lineTo(length * 0.98, 0);
-      context.moveTo(length * 0.98, 0);
-      context.lineTo(length * 1.12, -width * 0.14);
-      context.moveTo(length * 0.98, 0);
-      context.lineTo(length * 1.12, width * 0.14);
+      context.lineTo(tip, 0);
+      context.moveTo(tip, 0);
+      context.lineTo(tip + length * 0.14 * reach, -spread);
+      context.moveTo(tip, 0);
+      context.lineTo(tip + length * 0.14 * reach, spread);
       context.stroke();
     }
     context.restore();
   }
 
-  function drawSnake(context, head, tail, cell, size, seed) {
+  function drawSnake(context, head, tail, cell, size, seed, time = 0, animated = false) {
     const skin = SNAKE_SKINS[seed % SNAKE_SKINS.length];
-    const points = buildSnakeBody(head, tail, cell, size, seed);
+    const points = buildSnakeBody(head, tail, cell, size, seed, time);
     const lightAlong = p => Math.max(-1, Math.min(1, p.nx * BOARD_LIGHT.x + p.ny * BOARD_LIGHT.y));
 
     context.save();
@@ -2684,9 +2722,10 @@
     context.stroke();
     context.restore();
 
-    drawSnakeHead(context, points, skin, cell, seed);
+    drawSnakeHead(context, points, skin, cell, seed, time, animated);
   }
 
+  // Tiles and ladders never move, so they are cached; snakes are drawn every frame.
   function getSnakesStaticLayer(size, theme) {
     const key = `${size}:${theme.id}`;
     if (snakesBoardCache.key === key && snakesBoardCache.layer) return snakesBoardCache.layer;
@@ -2701,9 +2740,6 @@
     drawBoardTiles(context, size, theme, fontFamily);
     Object.entries(window.SnakesEngine.LADDERS).forEach(([from, to]) => {
       drawLadder(context, snakesCellCenter(Number(from), cell), snakesCellCenter(Number(to), cell), cell);
-    });
-    Object.entries(window.SnakesEngine.SNAKES).forEach(([head, tail], index) => {
-      drawSnake(context, snakesCellCenter(Number(head), cell), snakesCellCenter(Number(tail), cell), cell, size, index);
     });
 
     snakesBoardCache.key = key;
@@ -2758,7 +2794,44 @@
     context.restore();
   }
 
+  // Snakes slither in place while the board is on screen; the loop stops itself when the
+  // player leaves, the tab is hidden (rAF pauses), effects are off or motion is reduced.
+  const reducedMotionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const snakesAnimation = { raf: null, lastFrame: 0, interval: 33, costMs: 0 };
+
+  function snakesAnimationEnabled() {
+    return state.effects3D !== false && !(reducedMotionQuery && reducedMotionQuery.matches);
+  }
+
+  function ensureSnakesAnimation() {
+    if (snakesAnimation.raf || !snakesAnimationEnabled()) return;
+    const tick = now => {
+      const onBoard = state.view === 'game' && state.room && state.room.gameType === 'snakes' && canvas && ctx;
+      if (!onBoard || !snakesAnimationEnabled()) {
+        snakesAnimation.raf = null;
+        return;
+      }
+      if (now - snakesAnimation.lastFrame >= snakesAnimation.interval) {
+        snakesAnimation.lastFrame = now;
+        const started = performance.now();
+        drawSnakesFrame(now / 1000);
+        // Back off the frame rate on slower devices so the page stays responsive.
+        snakesAnimation.costMs = snakesAnimation.costMs * 0.9 + (performance.now() - started) * 0.1;
+        snakesAnimation.interval = Math.min(100, Math.max(33, snakesAnimation.costMs * 4));
+      }
+      snakesAnimation.raf = requestAnimationFrame(tick);
+    };
+    snakesAnimation.raf = requestAnimationFrame(tick);
+  }
+
   function renderSnakesBoard() {
+    if (!canvas || !ctx || !state.room || !state.room.gameState) return;
+    drawSnakesFrame(snakesAnimationEnabled() ? performance.now() / 1000 : null);
+    ensureSnakesAnimation();
+  }
+
+  // time === null draws the classic still pose (effects off or reduced motion).
+  function drawSnakesFrame(time) {
     if (!canvas || !ctx || !state.room || !state.room.gameState) return;
     const size = canvas.width;
     const cell = size / 10;
@@ -2769,6 +2842,10 @@
 
     ctx.clearRect(0, 0, size, size);
     ctx.drawImage(getSnakesStaticLayer(size, theme), 0, 0);
+    Object.entries(window.SnakesEngine.SNAKES).forEach(([head, tail], index) => {
+      drawSnake(ctx, snakesCellCenter(Number(head), cell), snakesCellCenter(Number(tail), cell), cell, size,
+        index, time === null ? 0 : time, time !== null);
+    });
 
     // Spread tokens that share a square so each stays visible.
     const fontFamily = getComputedStyle(document.body).fontFamily || 'sans-serif';
@@ -3068,6 +3145,7 @@
       state.effects3D = !state.effects3D;
       safeStorage.setItem('myarena_3d', state.effects3D);
       showToast(state.effects3D ? '3D Lighting Enabled' : 'Flat 2D High-Performance Mode');
+      if (state.view === 'game' && state.room && state.room.gameType === 'snakes') renderSnakesBoard();
     });
 
     // Landing Page Buttons
