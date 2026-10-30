@@ -1,6 +1,7 @@
 node_modules/
 dist/
 build/
+!apps/web/build/
 coverage/
 playwright-report/
 test-results/
