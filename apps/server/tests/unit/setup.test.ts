@@ -41,7 +41,7 @@ describe('workspace setup', () => {
     expect(blueprint.services).toHaveLength(1);
     expect(blueprint.services[0]).toMatchObject({
       plan: 'starter', numInstances: 1, healthCheckPath: '/healthz',
-      buildCommand: 'npm ci && npm run build', startCommand: 'npm start',
+      buildCommand: 'npm ci --include=dev && npm run build', startCommand: 'npm start',
     });
     expect(blueprint.services[0].envVars).toEqual([
       { key: 'PORT', sync: false }, { key: 'NODE_ENV', sync: false },
