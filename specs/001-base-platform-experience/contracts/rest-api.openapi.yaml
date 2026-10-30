@@ -1,0 +1,261 @@
+openapi: 3.1.0
+info:
+  title: myArena Hub Base Platform REST API
+  version: 0.1.0-draft
+  description: >
+    Entry-point operations for rooms. All other room interaction uses the WebSocket protocol in
+    realtime-protocol.md. Membership is authenticated by the HttpOnly member cookie issued on
+    create or join; no request body field grants identity or authority.
+servers:
+  - url: /
+paths:
+  /healthz:
+    get:
+      summary: Liveness check for Render
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+  /api/games:
+    get:
+      summary: List games available for room selection
+      operationId: listGames
+      responses:
+        "200":
+          description: Available game descriptors
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [games]
+                properties:
+                  games:
+                    type: array
+                    items: { $ref: "#/components/schemas/GameDescriptor" }
+  /api/rooms:
+    post:
+      summary: Create a private room and become its host
+      operationId: createRoom
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName]
+              additionalProperties: false
+              properties:
+                displayName: { $ref: "#/components/schemas/DisplayName" }
+      responses:
+        "201":
+          description: Room created. Sets the member cookie for this room.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/MemberCookie"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntryResult" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+  /api/invitations/{code}:
+    get:
+      summary: Check whether an invitation can be used, without disclosing room state
+      operationId: previewInvitation
+      parameters:
+        - $ref: "#/components/parameters/InviteCode"
+      responses:
+        "200":
+          description: Invitation is usable
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [available]
+                properties:
+                  available: { type: boolean, const: true }
+        "404":
+          description: INVITATION_UNAVAILABLE (invalid, revoked, expired, or closed)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          description: ROOM_FULL
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/rooms/join:
+    post:
+      summary: Join a room as a PLAYER using a room code or invite link code
+      operationId: joinRoom
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, displayName]
+              additionalProperties: false
+              properties:
+                code: { $ref: "#/components/schemas/InviteCode" }
+                displayName: { $ref: "#/components/schemas/DisplayName" }
+      responses:
+        "200":
+          description: Joined. Sets the member cookie for this room.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/MemberCookie"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntryResult" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "410": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+  /api/rooms/{roomId}/session:
+    get:
+      summary: Probe whether the caller's member cookie can still recover its seat
+      operationId: getSession
+      security:
+        - memberCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "200":
+          description: Seat is held; the client may open the WebSocket
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [roomId, participantId, role, connection]
+                properties:
+                  roomId: { type: string, format: uuid }
+                  participantId: { type: string, format: uuid }
+                  role: { $ref: "#/components/schemas/Role" }
+                  connection: { type: string, enum: [CONNECTED, DISCONNECTED] }
+        "401": { $ref: "#/components/responses/Problem" }
+        "410": { $ref: "#/components/responses/Problem" }
+  /api/rooms/{roomId}/leave:
+    post:
+      summary: Explicitly leave the room (idempotent)
+      operationId: leaveRoom
+      security:
+        - memberCookie: []
+      parameters:
+        - $ref: "#/components/parameters/RoomId"
+      responses:
+        "204":
+          description: Seat released, or already released. Clears the member cookie.
+        "401": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    memberCookie:
+      type: apiKey
+      in: cookie
+      name: mah_m_{roomId}
+      description: Opaque HttpOnly credential issued by the server. Never readable by scripts.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Client-generated UUID so a retry after a network failure returns the original result.
+      schema: { type: string, format: uuid }
+    InviteCode:
+      name: code
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/InviteCode" }
+    RoomId:
+      name: roomId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  headers:
+    MemberCookie:
+      description: mah_m_{roomId}=<opaque>; HttpOnly; Secure; SameSite=Strict; Path=/
+      schema: { type: string }
+  responses:
+    Problem:
+      description: Error with a clear message and safe next step
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    DisplayName:
+      type: string
+      minLength: 1
+      maxLength: 24
+      description: Trimmed, NFC-normalized; letters, numbers, spaces, and ' - _ .
+    InviteCode:
+      type: string
+      pattern: "^[A-HJ-NP-Z2-9]{10}$"
+    Role:
+      type: string
+      enum: [HOST, PLAYER]
+    GameDescriptor:
+      type: object
+      required: [id, name, minParticipants, maxParticipants]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        minParticipants: { type: integer, minimum: 1 }
+        maxParticipants: { type: integer, minimum: 1 }
+    EntryResult:
+      type: object
+      required: [roomId, participantId, role]
+      properties:
+        roomId: { type: string, format: uuid }
+        participantId: { type: string, format: uuid }
+        role: { $ref: "#/components/schemas/Role" }
+        invitation:
+          description: Present only for the HOST
+          type: object
+          properties:
+            code: { $ref: "#/components/schemas/InviteCode" }
+            link: { type: string }
+    Problem:
+      type: object
+      required: [type, title, status, code, detail, nextStep]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+            - INVITATION_UNAVAILABLE
+            - ROOM_FULL
+            - SERVICE_AT_CAPACITY
+            - RECOVERY_EXPIRED
+            - UNAUTHENTICATED
+            - RATE_LIMITED
+            - ORIGIN_NOT_ALLOWED
+        detail:
+          type: string
+          description: Plain-language explanation; never contains tokens, codes, or private room data
+        nextStep:
+          type: string
+          description: A safe action the user can take
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }

@@ -1,0 +1,19 @@
+.art {
+  --art-a: #334155;
+  --art-b: #64748b;
+  display: grid;
+  place-items: center;
+  min-block-size: 5.5rem;
+  border-radius: var(--radius);
+  color: #fff;
+  background: linear-gradient(135deg, var(--art-a), var(--art-b));
+}
+.art--crimson { --art-a: #9f1239; --art-b: #e11d48; }
+.art--emerald { --art-a: #065f46; --art-b: #10b981; }
+.art--amber { --art-a: #92400e; --art-b: #d97706; }
+.art--violet { --art-a: #5b21b6; --art-b: #8b5cf6; }
+.art--indigo { --art-a: #3730a3; --art-b: #6366f1; }
+.art--rose { --art-a: #9d174d; --art-b: #ec4899; }
+.art--teal { --art-a: #115e59; --art-b: #14b8a6; }
+.art--slate { --art-a: #334155; --art-b: #64748b; }
+.art--mini { min-block-size: 3rem; min-inline-size: 3rem; }

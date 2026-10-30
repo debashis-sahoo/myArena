@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: myarena-hub
+    runtime: node
+    plan: starter
+    numInstances: 1
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        sync: false
+      - key: NODE_ENV
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: DEPLOY_TARGET
+        sync: false
+      - key: TEST_GAME_SECONDS
+        sync: false

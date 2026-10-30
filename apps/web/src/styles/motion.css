@@ -1,0 +1,19 @@
+/* Motion is opt-in: only users who have not asked to reduce it get short, non-essential transitions. */
+@media (prefers-reduced-motion: no-preference) {
+  button, input, select, textarea, a { transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease; }
+
+  /* Decorative effects: only when the visitor has them on, and never under reduced motion. */
+  :root[data-effects="on"] .tile { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.15s ease; }
+  :root[data-effects="on"] .tile:not([aria-disabled="true"]):hover,
+  :root[data-effects="on"] .tile:not([aria-disabled="true"]):focus-visible { transform: translateY(-3px); box-shadow: var(--glow); }
+  :root[data-effects="on"] .art { background-size: 220% 220%; animation: art-shimmer 9s ease-in-out infinite alternate; }
+}
+@keyframes art-shimmer { from { background-position: 0% 50%; } to { background-position: 100% 50%; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

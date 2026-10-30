@@ -1,0 +1,172 @@
+openapi: 3.1.0
+info:
+  title: myArena Hub REST API, games landing page delta
+  version: 0.1.0-draft
+  description: >
+    Delta over specs/001-base-platform-experience/contracts/rest-api.openapi.yaml. Merge rule used
+    by the contract tests: every path item and every component schema defined here replaces the
+    item of the same name in the 001 file; everything not listed here is unchanged. Operations in
+    this file keep the 001 security model (HttpOnly member cookie, same-origin, rate limits).
+servers:
+  - url: /
+paths:
+  /api/catalog:
+    get:
+      summary: List every game the landing page shows, playable and coming soon
+      operationId: getCatalog
+      description: >
+        Playable entries come from registered games. Coming-soon entries come from a static
+        roadmap and are omitted when a registered game uses the same id. Public, read-only, and
+        contains no room or visitor data.
+      responses:
+        "200":
+          description: Catalog entries, playable first, in a stable order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [entries]
+                additionalProperties: false
+                properties:
+                  entries:
+                    type: array
+                    items: { $ref: "#/components/schemas/CatalogEntry" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /api/rooms:
+    post:
+      summary: Create a private room for a game with a chosen player limit and become its host
+      operationId: createRoom
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName]
+              additionalProperties: false
+              properties:
+                displayName: { $ref: "#/components/schemas/DisplayName" }
+                gameId:
+                  type: string
+                  description: A registered game that supports online rooms
+                maxParticipants:
+                  type: integer
+                  minimum: 2
+                  maximum: 100
+                  description: >
+                    Requires gameId. Allowed range is max(2, game minimum) to min(100, game
+                    maximum). When omitted with a gameId, the game's default applies, else its
+                    maximum capped at 100.
+      responses:
+        "201":
+          description: >
+            Room created, with the game already selected, the player limit applied, and the
+            game's default settings. Sets the member cookie for this room.
+          headers:
+            Set-Cookie:
+              $ref: "#/components/headers/MemberCookie"
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntryResult" }
+        "400":
+          description: >
+            VALIDATION_FAILED, including a maxParticipants without a gameId or outside the
+            allowed range (reported in fieldErrors)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "409":
+          description: GAME_UNAVAILABLE (unknown game, or a game without online rooms)
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+components:
+  schemas:
+    CatalogEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - description
+        - category
+        - status
+        - test
+        - minParticipants
+        - maxParticipants
+        - defaultParticipants
+        - durationMinutes
+        - modes
+        - art
+      properties:
+        id: { type: string, pattern: "^[a-z0-9-]{1,40}$" }
+        name: { type: string, minLength: 1, maxLength: 40 }
+        description: { type: string, minLength: 1, maxLength: 200 }
+        category: { type: string, minLength: 1, maxLength: 30 }
+        status: { type: string, enum: [PLAYABLE, COMING_SOON] }
+        test:
+          type: boolean
+          description: True for test games, which the page labels "Test game"
+        minParticipants: { type: integer, minimum: 1, maximum: 100 }
+        maxParticipants: { type: integer, minimum: 1, maximum: 100 }
+        defaultParticipants: { type: integer, minimum: 1, maximum: 100 }
+        durationMinutes:
+          type: object
+          additionalProperties: false
+          required: [min, max]
+          properties:
+            min: { type: integer, minimum: 1, maximum: 600 }
+            max: { type: integer, minimum: 1, maximum: 600 }
+        modes:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, enum: [SOLO_AI, ONLINE] }
+          description: Ways the game supports. A COMING_SOON entry lists intended modes but offers none.
+        art:
+          type: object
+          additionalProperties: false
+          required: [icon, palette]
+          properties:
+            icon:
+              type: string
+              enum: [TARGET, SNAKE, TICKET, PALETTE, CROWN, DICE, DISCS, FLASK]
+            palette:
+              type: string
+              enum: [CRIMSON, EMERALD, AMBER, VIOLET, INDIGO, ROSE, TEAL, SLATE]
+    Problem:
+      type: object
+      required: [type, title, status, code, detail, nextStep]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          type: string
+          enum:
+            - VALIDATION_FAILED
+            - INVITATION_UNAVAILABLE
+            - ROOM_FULL
+            - SERVICE_AT_CAPACITY
+            - RECOVERY_EXPIRED
+            - UNAUTHENTICATED
+            - RATE_LIMITED
+            - ORIGIN_NOT_ALLOWED
+            - GAME_UNAVAILABLE
+        detail:
+          type: string
+          description: Plain-language explanation; never contains tokens, codes, or private room data
+        nextStep:
+          type: string
+          description: A safe action the user can take
+        fieldErrors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }

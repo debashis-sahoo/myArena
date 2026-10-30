@@ -1,0 +1,1 @@
+export function focusElement(element: HTMLElement | null): void { element?.focus(); }
