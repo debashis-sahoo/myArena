@@ -1,4 +1,4 @@
-import type { ArtIcon, ArtPalette, DurationRange, GameMode } from './presentation.js';
+import type { ArtIcon, ArtImage, ArtPalette, DurationRange, GameMode } from './presentation.js';
 
 export interface SettingsSchema {
   safeParse(value: unknown):
@@ -22,7 +22,7 @@ export interface GameDescriptor {
   modes: readonly GameMode[];
   /** Inside [max(2, min), min(100, max)]; omitted means the maximum capped at 100. */
   defaultParticipants?: number;
-  art: { icon: ArtIcon; palette: ArtPalette };
+  art: { icon: ArtIcon; palette: ArtPalette; image?: ArtImage };
   /** True only for test games, which the catalog labels "Test game". */
   test?: boolean;
 }

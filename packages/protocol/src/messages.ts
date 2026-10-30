@@ -15,6 +15,7 @@ export const clientIntentSchema = z.discriminatedUnion('type', [
   z.strictObject({ ...intentBase, type: z.literal('host.transfer'), targetParticipantId: z.uuid() }),
   z.strictObject({ ...intentBase, type: z.literal('member.remove'), targetParticipantId: z.uuid() }),
   z.strictObject({ ...intentBase, type: z.literal('resync'), lastVersion: z.number().int().nonnegative().optional() }),
+  z.strictObject({ ...intentBase, type: z.literal('game.action'), action: z.strictObject({ type: z.string().min(1).max(32).regex(/^[a-z][a-zA-Z0-9.]*$/), payload: z.json().optional() }) }),
 ]);
 
 const messageBase = { v: z.literal(1) };
@@ -41,9 +42,15 @@ export const ackSchema = z.discriminatedUnion('status', [
   z.strictObject({ ...ackBase, status: z.literal('ACCEPTED') }),
   z.strictObject({ ...ackBase, status: z.literal('REJECTED'), code: z.enum(Object.keys(rejections) as [keyof typeof rejections, ...(keyof typeof rejections)[]]), detail: z.string(), nextStep: z.string() }),
 ]);
-export const snapshotSchema = z.strictObject({ ...messageBase, type: z.literal('snapshot'), version, lobby: lobbyViewSchema, self: selfSchema });
+export const snapshotSchema = z.strictObject({
+  ...messageBase, type: z.literal('snapshot'), version, lobby: lobbyViewSchema, self: selfSchema,
+  game: z.strictObject({ matchId: z.uuid(), seq: z.number().int().nonnegative(), state: z.json() }).nullable().optional(),
+});
+export const gameMessageSchema = z.strictObject({
+  ...messageBase, type: z.literal('game'), matchId: z.uuid(), seq: z.number().int().min(1), state: z.json(), events: z.array(z.json()),
+});
 export const serverMessageSchema = z.union([
-  snapshotSchema, eventSchema, ackSchema,
+  snapshotSchema, eventSchema, ackSchema, gameMessageSchema,
   z.strictObject({ ...messageBase, type: z.literal('pong') }),
   z.strictObject({ ...messageBase, type: z.literal('closing'), reason: z.string() }),
 ]);
@@ -55,3 +62,4 @@ export type ClientIntent = z.infer<typeof clientIntentSchema>;
 export type ServerMessage = z.infer<typeof serverMessageSchema>;
 export type RoomEvent = z.infer<typeof eventSchema>;
 export type Ack = z.infer<typeof ackSchema>;
+export type GameMessage = z.infer<typeof gameMessageSchema>;

@@ -1,4 +1,5 @@
-import type { ActionResult, Clock, GameAction, GameLifecycle } from '@myarena/game-sdk';
+import { randomUUID } from 'node:crypto';
+import type { ActionResult, Clock, GameAction, GameLifecycle, JsonValue, SeatReleaseReason } from '@myarena/game-sdk';
 import type { RejectionCode } from '@myarena/protocol';
 import type { GameCatalog } from './catalog.js';
 import { ok, reject, type Context, type Outcome } from './outcome.js';
@@ -18,7 +19,10 @@ export function startBlockedReason(room: Room, game: GameLifecycle | undefined):
 // Drives the game lifecycle through the SDK only; it holds no game rules.
 export class MatchManager {
   private readonly tokens = new Map<string, object>();
-  constructor(private readonly clock: Clock) {}
+  constructor(
+    private readonly clock: Clock,
+    private readonly publish: (roomId: string, events: readonly JsonValue[]) => void = () => {},
+  ) {}
 
   start(ctx: Context, kind: 'match.started' | 'match.rematch'): Outcome {
     const { room, games, emit } = ctx;
@@ -29,15 +33,20 @@ export class MatchManager {
     if (reason || !game) return reject(reason ?? 'GAME_UNAVAILABLE');
     const token = {};
     this.tokens.set(room.id, token);
+    if (room.matchId) game.releaseMatch?.(room.id);
+    room.matchId = randomUUID();
+    room.gameSeq = 0;
     room.status = 'IN_MATCH';
     room.matchStatus = 'IN_PROGRESS';
     emit(kind, {});
     game.onMatchStart({
       roomId: room.id,
       participantIds: room.participants.map((member) => member.id),
+      participants: room.participants.map((member) => ({ id: member.id, label: member.displayLabel })),
       settings: room.settings.gameSettings,
       clock: this.clock,
       endMatch: () => this.end(ctx, game, token),
+      publish: (events = []) => this.publish(room.id, events),
     });
     return ok;
   }
@@ -54,11 +63,23 @@ export class MatchManager {
 
   abort(room: Room, games: GameCatalog): void {
     this.tokens.delete(room.id);
-    if (room.matchStatus === 'IN_PROGRESS') (room.selectedGameId ? games.get(room.selectedGameId) : undefined)?.onMatchEnd(room.id);
+    const game = room.selectedGameId ? games.get(room.selectedGameId) : undefined;
+    if (room.matchStatus === 'IN_PROGRESS') game?.onMatchEnd(room.id);
+    if (room.matchId) game?.releaseMatch?.(room.id);
+    room.matchId = null;
   }
 
-  returnToLobby({ room, emit }: Context): Outcome {
+  // Only while a match runs; the host's role is never passed on.
+  participantLeft(room: Room, participantId: string, reason: SeatReleaseReason, games: GameCatalog): void {
+    if (room.matchStatus !== 'IN_PROGRESS') return;
+    (room.selectedGameId ? games.get(room.selectedGameId) : undefined)?.onParticipantLeft?.(room.id, participantId, reason);
+  }
+
+  returnToLobby({ room, games, emit }: Context): Outcome {
     if (room.matchStatus !== 'ENDED') return reject('MATCH_NOT_ENDED');
+    if (room.matchId) (room.selectedGameId ? games.get(room.selectedGameId) : undefined)?.releaseMatch?.(room.id);
+    room.matchId = null;
+    room.gameSeq = 0;
     room.status = 'LOBBY';
     room.matchStatus = 'NONE';
     emit('match.returnedToLobby', {});

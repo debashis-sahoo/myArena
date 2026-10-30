@@ -5,8 +5,8 @@ import type { IntentRateLimiter } from './rate-limit.js';
 import type { RoomService } from '../rooms/room-service.js';
 import { reject } from '../rooms/outcome.js';
 
-export const rejectionAck = (clientActionId: string, version: number, code: RejectionCode): Ack =>
-  ({ v: 1, type: 'ack', clientActionId, status: 'REJECTED', version, code, ...rejections[code] });
+export const rejectionAck = (clientActionId: string, version: number, code: RejectionCode, override: { detail?: string; nextStep?: string } = {}): Ack =>
+  ({ v: 1, type: 'ack', clientActionId, status: 'REJECTED', version, code, ...rejections[code], ...(override.detail ? { detail: override.detail } : {}), ...(override.nextStep ? { nextStep: override.nextStep } : {}) });
 
 const frameHeader = z.looseObject({ clientActionId: z.uuid(), type: z.string().optional() });
 const IMPERSONATION_FIELDS = ['participantId', 'targetParticipantId', 'userId'];
@@ -33,7 +33,7 @@ export function createIntentHandlers({ rooms, limiter }: IntentDeps) {
     const outcome = denied ? reject(denied) : rooms.perform(room, participant, intent);
     const ack: Ack = outcome.ok
       ? { v: 1, type: 'ack', clientActionId: intent.clientActionId, status: 'ACCEPTED', version: room.version }
-      : rejectionAck(intent.clientActionId, room.version, outcome.code);
+      : rejectionAck(intent.clientActionId, room.version, outcome.code, outcome);
     participant.actionLog.record(intent.clientActionId, ack, now);
 
     if (intent.type === 'resync' && outcome.ok) {

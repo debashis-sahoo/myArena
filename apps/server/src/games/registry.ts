@@ -1,5 +1,5 @@
 import type { GameDescriptor, GameLifecycle } from '@myarena/game-sdk';
-import { ART_ICONS, ART_PALETTES, GAME_MODES } from '@myarena/game-sdk';
+import { ART_ICONS, ART_IMAGES, ART_PALETTES, GAME_MODES } from '@myarena/game-sdk';
 
 const idPattern = /^[a-z0-9-]{1,40}$/;
 
@@ -15,7 +15,8 @@ function validate(descriptor: GameDescriptor): void {
     && durationMinutes.min >= 1 && durationMinutes.max <= 600 && durationMinutes.min <= durationMinutes.max
     && modes.length > 0 && new Set(modes).size === modes.length && modes.every((mode) => GAME_MODES.includes(mode))
     && (defaultParticipants === undefined || (Number.isInteger(defaultParticipants) && defaultParticipants >= lo && defaultParticipants <= hi))
-    && ART_ICONS.includes(art.icon) && ART_PALETTES.includes(art.palette);
+    && ART_ICONS.includes(art.icon) && ART_PALETTES.includes(art.palette)
+    && (art.image === undefined || ART_IMAGES.includes(art.image));
   if (!valid) throw new Error('Invalid or duplicate game descriptor.');
 }
 

@@ -1,7 +1,8 @@
 import type { LobbyView, RoomEvent, ServerMessage } from '@myarena/protocol';
 
-export interface RoomState { lobby: LobbyView | null; version: number; needsResync: boolean; }
-export const initialRoomState: RoomState = { lobby: null, version: 0, needsResync: false };
+export interface GameState { matchId: string; seq: number; state: unknown; events: readonly unknown[]; }
+export interface RoomState { lobby: LobbyView | null; version: number; needsResync: boolean; game: GameState | null; }
+export const initialRoomState: RoomState = { lobby: null, version: 0, needsResync: false, game: null };
 
 function applyEvent(lobby: LobbyView, event: RoomEvent): LobbyView {
   switch (event.kind) {
@@ -34,9 +35,16 @@ function applyEvent(lobby: LobbyView, event: RoomEvent): LobbyView {
 export function reduceRoomMessage(state: RoomState, message: ServerMessage): RoomState {
   if (message.type === 'snapshot') {
     if (message.version < state.version) return state;
-    return { lobby: message.lobby, version: message.version, needsResync: false };
+    const fromSnapshot: GameState | null = message.game ? { matchId: message.game.matchId, seq: message.game.seq, state: message.game.state, events: [] } : null;
+    const newer = state.game && fromSnapshot && state.game.matchId === fromSnapshot.matchId && state.game.seq > fromSnapshot.seq;
+    return { lobby: message.lobby, version: message.version, needsResync: false, game: newer ? state.game : fromSnapshot };
+  }
+  if (message.type === 'game') {
+    if (state.game && state.game.matchId === message.matchId && message.seq <= state.game.seq) return state;
+    return { ...state, game: { matchId: message.matchId, seq: message.seq, state: message.state, events: message.events } };
   }
   if (message.type !== 'event' || message.version <= state.version) return state;
   if (!state.lobby || state.needsResync || message.version !== state.version + 1) return { ...state, needsResync: true };
-  return { lobby: { ...applyEvent(state.lobby, message), version: message.version }, version: message.version, needsResync: false };
+  const resetsGame = message.kind === 'match.started' || message.kind === 'match.rematch' || message.kind === 'match.returnedToLobby';
+  return { lobby: { ...applyEvent(state.lobby, message), version: message.version }, version: message.version, needsResync: false, game: resetsGame ? null : state.game };
 }

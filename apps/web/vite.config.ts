@@ -1,9 +1,10 @@
 import { gzipSync } from 'node:zlib';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vitest/config';
-import { checkBudget } from './build/budget';
+import { checkBudget, checkTileImages } from './build/budget';
 
-// Fails the build when the entry and lobby routes outgrow 200 KB gzipped or pull in Babylon.js.
+// Fails the build when the initial routes outgrow 200 KB gzipped, when a 3D engine is in an initial chunk,
+// when the Ludo lazy chunks outgrow 400 KB gzipped, or when a game tile picture outgrows 100 KB.
 function bundleBudget(): Plugin {
   return {
     name: 'bundle-budget',
@@ -13,7 +14,11 @@ function bundleBudget(): Plugin {
         name: output.fileName, gzipBytes: gzipSync(output.code).length, modules: Object.keys(output.modules), lazy: output.isDynamicEntry && !output.isEntry,
       }] : []));
       const result = checkBudget(chunks);
-      if (!result.ok) this.error(result.problems.join(' '));
+      const pictures = Object.values(bundle).flatMap((output) => (output.type === 'asset'
+        ? [{ fileName: output.fileName, bytes: typeof output.source === 'string' ? Buffer.byteLength(output.source) : output.source.byteLength }]
+        : []));
+      const oversized = checkTileImages(pictures);
+      if (!result.ok || oversized.length > 0) this.error([...result.problems, ...oversized].join(' '));
     },
   };
 }

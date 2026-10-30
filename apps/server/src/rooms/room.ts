@@ -12,6 +12,10 @@ export interface Room extends StoredRoom {
   selectedGameId: string | null;
   settings: RoomSettings;
   matchStatus: 'NONE' | 'IN_PROGRESS' | 'ENDED';
+  /** New on every match start and rematch; null in the lobby. */
+  matchId: string | null;
+  /** Game updates published so far in this match. */
+  gameSeq: number;
   createdAt: number;
   invitation: Invitation;
   participants: Participant[];

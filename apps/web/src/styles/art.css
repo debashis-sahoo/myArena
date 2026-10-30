@@ -17,3 +17,8 @@
 .art--teal { --art-a: #115e59; --art-b: #14b8a6; }
 .art--slate { --art-a: #334155; --art-b: #64748b; }
 .art--mini { min-block-size: 3rem; min-inline-size: 3rem; }
+
+/* A real picture keeps a fixed 16:9 frame, so the tile never shifts while the image loads. */
+.art--picture { display: block; aspect-ratio: 16 / 9; min-block-size: 0; overflow: hidden; padding: 0; background: var(--surface-raised); }
+.art--picture img { display: block; inline-size: 100%; block-size: 100%; object-fit: cover; }
+.art--picture.art--mini { inline-size: 6rem; min-inline-size: 6rem; min-block-size: 0; flex: none; }

@@ -75,7 +75,7 @@ test('landing tiles expose name, status and selected state, and options and erro
   await expect(tile).toHaveAttribute('aria-pressed', 'false');
   await tile.click();
   await expect(tile).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('button', { name: /^Ludo Coming soon/ })).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByRole('button', { name: /^Snakes & Ladders Coming soon/ })).toHaveAttribute('aria-disabled', 'true');
   await expect(page.getByRole('status').filter({ hasText: 'Play options for Test match are available.' })).toHaveCount(1);
   await page.getByRole('button', { name: 'Create private room', exact: true }).click();
   await page.getByRole('button', { name: 'Create room', exact: true }).click();

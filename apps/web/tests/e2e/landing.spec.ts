@@ -27,11 +27,11 @@ test.describe('browsing the games', () => {
 
   test('explains a coming-soon tile with mouse and keyboard and starts nothing', async ({ page }) => {
     await page.goto('/');
-    const ludo = page.getByRole('button', { name: 'Ludo Coming soon' });
-    await expect(ludo).toHaveAttribute('aria-disabled', 'true');
+    const soon = page.getByRole('button', { name: 'Snakes & Ladders Coming soon' });
+    await expect(soon).toHaveAttribute('aria-disabled', 'true');
     // Playwright treats aria-disabled as not enabled, so force the click a real user could make.
-    await ludo.click({ force: true });
-    await expect(page.getByText('Ludo is not available yet.').first()).toBeVisible();
+    await soon.click({ force: true });
+    await expect(page.getByText('Snakes & Ladders is not available yet.').first()).toBeVisible();
     await page.getByRole('button', { name: 'Tambola Coming soon' }).focus();
     await page.keyboard.press('Enter');
     await expect(page.getByText('Tambola is not available yet.').first()).toBeVisible();

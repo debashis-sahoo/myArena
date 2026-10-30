@@ -3,7 +3,7 @@ import type { GameCatalog } from './catalog.js';
 import type { Participant } from './participant.js';
 import type { Room } from './room.js';
 
-export type Outcome = { ok: true; after?: () => void } | { ok: false; code: RejectionCode };
+export type Outcome = { ok: true; after?: () => void } | { ok: false; code: RejectionCode; detail?: string; nextStep?: string };
 export const ok: Outcome = { ok: true };
 export const reject = (code: RejectionCode): Outcome => ({ ok: false, code });
 

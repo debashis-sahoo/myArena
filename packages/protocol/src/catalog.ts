@@ -4,6 +4,7 @@ import { z } from 'zod';
 export const artIcons = ['TARGET', 'SNAKE', 'TICKET', 'PALETTE', 'CROWN', 'DICE', 'DISCS', 'FLASK'] as const;
 export const artPalettes = ['CRIMSON', 'EMERALD', 'AMBER', 'VIOLET', 'INDIGO', 'ROSE', 'TEAL', 'SLATE'] as const;
 export const gameModes = ['SOLO_AI', 'ONLINE'] as const;
+export const artImages = ['LUDO'] as const;
 
 const duration = z.int().min(1).max(600);
 const seats = z.int().min(1).max(100);
@@ -20,7 +21,7 @@ export const catalogEntrySchema = z.strictObject({
   defaultParticipants: seats,
   durationMinutes: z.strictObject({ min: duration, max: duration }).refine((value) => value.min <= value.max),
   modes: z.array(z.enum(gameModes)).min(1).refine((modes) => new Set(modes).size === modes.length),
-  art: z.strictObject({ icon: z.enum(artIcons), palette: z.enum(artPalettes) }),
+  art: z.strictObject({ icon: z.enum(artIcons), palette: z.enum(artPalettes), image: z.enum(artImages).optional() }),
 });
 
 export const catalogResponseSchema = z.strictObject({ entries: z.array(catalogEntrySchema) });

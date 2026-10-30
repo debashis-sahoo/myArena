@@ -106,6 +106,10 @@ export async function buildApp(options: AppOptions = {}) {
     const viewer = rooms.findParticipant(roomId, recipient.participantId)?.participant;
     return viewer ? eventFor(event, viewer) : undefined;
   });
+  rooms.publishGame = (roomId, { matchId, seq, events }) => broadcast(connections, roomId, (recipient) => {
+    const state = rooms.gameView(roomId, recipient.participantId);
+    return state === null ? undefined : { v: 1, type: 'game', matchId, seq, state, events: [...events] };
+  });
   rooms.onSeatReleased = (roomId, participantId, reason) => {
     const identity = { roomId, participantId };
     limiter.forget(participantId);

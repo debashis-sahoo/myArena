@@ -21,8 +21,10 @@ export function selectGame({ room, games, emit }: Context, gameId: string): Outc
   const game = games.get(gameId);
   if (!game) return reject('GAME_UNAVAILABLE');
   const defaults = game.descriptor.settingsSchema.safeParse({});
+  const gameMax = game.descriptor.maxParticipants;
+  if (room.participants.length > gameMax) return reject('START_BLOCKED_PARTICIPANT_COUNT');
   room.selectedGameId = gameId;
-  room.settings = { ...room.settings, gameSettings: defaults.success ? asGameSettings(defaults.data) : {} };
+  room.settings = { ...room.settings, maxParticipants: Math.min(room.settings.maxParticipants, gameMax), gameSettings: defaults.success ? asGameSettings(defaults.data) : {} };
   emit('game.selected', { gameId, settings: room.settings });
   return ok;
 }
@@ -32,6 +34,7 @@ export function validateSettingsChange(room: Room, game: GameLifecycle | undefin
   if (changes.maxParticipants !== undefined) {
     const next = changes.maxParticipants;
     if (!Number.isInteger(next) || next < 1 || next > 100 || next < room.participants.length) return { ok: false, code: 'VALIDATION_FAILED' };
+    if (game && next > game.descriptor.maxParticipants) return { ok: false, code: 'VALIDATION_FAILED' };
     maxParticipants = next;
   }
   if (changes.gameSettings !== undefined) {

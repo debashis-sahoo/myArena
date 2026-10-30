@@ -20,6 +20,8 @@ export default defineConfig({
       PORT: '3100', NODE_ENV: 'test', ALLOWED_ORIGINS: 'http://127.0.0.1:3100', TEST_GAME_SECONDS: '2',
       CREATE_LIMIT_PER_MINUTE: '1000', JOIN_LIMIT_PER_MINUTE: '1000', PREVIEW_LIMIT_PER_MINUTE: '1000',
       MAX_ROOMS: '500', MAX_TOTAL_PARTICIPANTS: '2000',
+      // A short scripted die so Ludo scenarios are repeatable; the server refuses this setting in production.
+      LUDO_TEST_DICE: '6,6,3,4,6,2,5,1,6,3,2,4',
     },
   },
 });
