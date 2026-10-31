@@ -47,12 +47,12 @@ describe('bundle budget', () => {
     expect(checkBudget([chunk(), chunk({ name: 'scene-abc.js', lazy: true, gzipBytes: 150 * 1024, modules: [threeModule] })]).ok).toBe(true);
   });
 
-  it('limits the Ludo lazy chunks together to 400 KB gzipped', () => {
-    const ludo = (name: string, gzipBytes: number, module = 'src/features/ludo/view/BoardView3D.tsx') => chunk({ name, gzipBytes, lazy: true, modules: [module] });
-    expect(LUDO_LAZY_BUDGET_BYTES).toBe(400 * 1024);
-    const fits = checkBudget([chunk(), ludo('ludo.js', 150 * 1024), ludo('scene.js', 250 * 1024, 'node_modules/three/build/three.module.js')]);
-    expect(fits).toMatchObject({ ok: true, ludoLazyBytes: 400 * 1024 });
-    const over = checkBudget([chunk(), ludo('ludo.js', 150 * 1024), ludo('scene.js', 251 * 1024, 'node_modules/three/build/three.module.js')]);
+  it('limits the Ludo lazy chunks together to 150 KB gzipped', () => {
+    const ludo = (name: string, gzipBytes: number, module = 'src/features/ludo/view/BoardView.tsx') => chunk({ name, gzipBytes, lazy: true, modules: [module] });
+    expect(LUDO_LAZY_BUDGET_BYTES).toBe(150 * 1024);
+    const fits = checkBudget([chunk(), ludo('ludo.js', 100 * 1024), ludo('engine.js', 50 * 1024, 'src/features/ludo/match/MatchView.tsx')]);
+    expect(fits).toMatchObject({ ok: true, ludoLazyBytes: 150 * 1024 });
+    const over = checkBudget([chunk(), ludo('ludo.js', 100 * 1024), ludo('engine.js', 51 * 1024, 'src/features/ludo/match/MatchView.tsx')]);
     expect(over.ok).toBe(false);
     expect(over.problems.join(' ')).toContain('Ludo lazy chunks');
   });

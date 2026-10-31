@@ -1,5 +1,7 @@
 # Research: Ludo
 
+> **Superseded by feature 004 (Ludo visual redesign):** R6 (how the die is drawn; the seeded throw stays), R7 (Three.js) and R8 (visual quality, the lite renderer) no longer apply. See `specs/004-ludo-visual-redesign/research.md`.
+
 Decisions that settle the open questions in the plan's Technical Context. There are no unresolved
 `NEEDS CLARIFICATION` items. Where a decision departs from a statement in an earlier feature, that
 is called out.

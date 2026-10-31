@@ -11,9 +11,11 @@ export interface ControlsProps {
   rolling?: boolean;
   /** Ends the roll animation for this viewer only. */
   onSkip?: () => void;
+  /** Tells the board which pawn's move button is pointed at or focused (null when none). */
+  onHighlight?: (pawn: number | null) => void;
 }
 
-export function Controls({ view, settled, onRoll, onMove, rolling = false, onSkip }: ControlsProps) {
+export function Controls({ view, settled, onRoll, onMove, rolling = false, onSkip, onHighlight }: ControlsProps) {
   const mine = view.turn.seat === view.you && view.you !== null;
   const canRoll = mine && view.turn.phase === 'ROLL';
   const choices = mine && view.turn.phase === 'MOVE' && settled ? view.turn.legalPawns : [];
@@ -24,7 +26,11 @@ export function Controls({ view, settled, onRoll, onMove, rolling = false, onSki
       {choices.length > 0 ? (
         <div role="group" aria-label="Choose a pawn" className="ludo-chooser">
           {choices.map((pawn) => (
-            <button key={pawn} type="button" className="btn-secondary" data-ludo-pawn onClick={() => onMove(pawn)}>{describePawnMove(view, pawn)}</button>
+            <button
+              key={pawn} type="button" className="btn-secondary" data-ludo-pawn onClick={() => onMove(pawn)}
+              onPointerEnter={() => onHighlight?.(pawn)} onPointerLeave={() => onHighlight?.(null)}
+              onFocus={() => onHighlight?.(pawn)} onBlur={() => onHighlight?.(null)}
+            >{describePawnMove(view, pawn)}</button>
           ))}
         </div>
       ) : null}

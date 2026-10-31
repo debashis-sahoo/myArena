@@ -4,8 +4,7 @@ import { test, expect, AxeBuilder, roomContexts, createRoom, joinByCode } from '
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const roll = (page: Page) => page.getByRole('button', { name: 'Roll the die' });
 
-async function startOnline(host: Page, player: Page, quality = 'lite') {
-  for (const page of [host, player]) await page.addInitScript((value) => localStorage.setItem('myarena-ludo-quality', value), quality);
+async function startOnline(host: Page, player: Page) {
   const code = await createRoom(host, 'Hosty', { game: 'Ludo', players: 2 });
   await joinByCode(player, code, 'Pat');
   await player.getByRole('button', { name: 'I am ready' }).click();
@@ -48,8 +47,7 @@ test.describe('Ludo accessibility', () => {
     });
   }
 
-  test('has no axe violations with the 3D board, in each board theme', async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'standard'));
+  test('has no axe violations on the board, in each board theme', async ({ page }) => {
     for (const theme of ['classic', 'super-heroes', 'halloween', 'diwali', 'winter']) {
       await page.goto('/');
       await page.evaluate((name) => {
@@ -58,7 +56,7 @@ test.describe('Ludo accessibility', () => {
       }, theme);
       await page.goto('/play/ludo/solo');
       await page.getByRole('button', { name: 'Start game' }).click();
-      await expect(page.locator('.ludo-board')).toHaveAttribute('data-render-state', 'ready', { timeout: 60_000 });
+      await expect(page.locator('.ludo-board')).toBeVisible();
       const { violations } = await new AxeBuilder({ page }).withTags(TAGS).analyze();
       expect(violations.map((violation) => ({ id: violation.id, theme, targets: violation.nodes.map((node) => node.target) }))).toEqual([]);
     }
@@ -93,7 +91,6 @@ test.describe('Ludo accessibility', () => {
     const context = await browser.newContext({ reducedMotion: 'reduce' });
     const page = await context.newPage();
     try {
-      await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
       await page.goto('/play/ludo/solo');
       await page.getByRole('button', { name: 'Start game' }).click();
       for (let attempt = 0; attempt < 60 && !(await roll(page).isEnabled()); attempt += 1) await page.waitForTimeout(500);
@@ -121,7 +118,6 @@ test.describe('Ludo accessibility', () => {
     const context = await browser.newContext({ viewport: { width: 320, height: 640 } });
     const page = await context.newPage();
     try {
-      await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
       await page.goto('/');
       await page.evaluate((saved) => localStorage.setItem('myarena-ludo-solo', JSON.stringify({ ...saved, savedAt: Date.now() })), sixInBase);
       await page.goto('/play/ludo/solo');

@@ -7,7 +7,6 @@ const board = (page: Page) => page.locator('.ludo-board');
 async function startThreeSeats(browser: import('@playwright/test').Browser) {
   const contexts = await Promise.all([browser.newContext(), browser.newContext(), browser.newContext()]);
   const [host, alex, sam] = await Promise.all(contexts.map((context) => context.newPage())) as [Page, Page, Page];
-  for (const page of [host, alex, sam]) await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
   const code = await createRoom(host, 'Hosty', { game: 'Ludo', players: 3 });
   await joinByCode(alex, code, 'Alex');
   await joinByCode(sam, code, 'Sam');

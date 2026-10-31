@@ -1,6 +1,6 @@
 export const BUDGET_BYTES = 200 * 1024;
-/** Everything Ludo loads when a match starts (engine scene, UI and Three.js) together. */
-export const LUDO_LAZY_BUDGET_BYTES = 400 * 1024;
+/** Everything Ludo loads when a match starts (the match UI and its engine code) together. */
+export const LUDO_LAZY_BUDGET_BYTES = 150 * 1024;
 
 /** Each game tile picture (for example `ludo-tile-<hash>.svg`) must stay small enough not to delay the landing page. */
 export const TILE_IMAGE_BUDGET_BYTES = 100 * 1024;

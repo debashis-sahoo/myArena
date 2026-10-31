@@ -5,7 +5,6 @@ const rollButton = (page: Page) => page.getByRole('button', { name: 'Roll the di
 const TIMEOUT_NOTICE = 'You ran out of time, so the game played for you.';
 
 async function startLudoMatch(host: Page, player: Page) {
-  for (const page of [host, player]) await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
   const code = await createRoom(host, 'Hosty', { game: 'Ludo', players: 2 });
   await joinByCode(player, code, 'Pat');
   // The shortest turn limit, so a timeout can be seen in a reasonable time.
@@ -42,7 +41,7 @@ test.describe('Ludo recovery', () => {
       const watcher = owner === host ? player : host;
       await expect(rollButton(owner)).toBeEnabled();
       const status = await owner.locator('.ludo-status').innerText();
-      const pawns = await owner.locator('.ludo-pawn').count();
+      const pawns = await owner.locator('.ludo-pin').count();
 
       await owner.context().setOffline(true);
       await owner.waitForTimeout(1500);
@@ -51,7 +50,7 @@ test.describe('Ludo recovery', () => {
 
       await expect(owner.getByRole('region', { name: 'Ludo match' })).toBeVisible();
       await expect(owner.locator('.ludo-status')).toHaveText(status);
-      expect(await owner.locator('.ludo-pawn').count()).toBe(pawns);
+      expect(await owner.locator('.ludo-pin').count()).toBe(pawns);
       await expect(owner.locator('.ludo-board')).toHaveAttribute('data-theme', 'classic');
       await expect(rollButton(owner)).toBeEnabled();
       await expect(rollButton(watcher)).toBeDisabled();

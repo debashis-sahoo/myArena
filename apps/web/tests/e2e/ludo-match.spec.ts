@@ -48,7 +48,6 @@ test.describe('a Ludo match in a room', () => {
   test('plays turns on the flat board with the game deciding every roll', async ({ browser }) => {
     const { host, player, close } = await roomContexts(browser);
     try {
-      for (const page of [host, player]) await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
       const code = await createRoom(host, 'Hosty', { game: 'Ludo', players: 2 });
       await joinByCode(player, code, 'Pat');
       await expect(player.getByText('Theme: Classic')).toBeVisible();
@@ -58,10 +57,10 @@ test.describe('a Ludo match in a room', () => {
 
       for (const page of [host, player]) {
         await expect(page.getByRole('region', { name: 'Ludo match' })).toBeVisible();
-        await expect(page.locator('.ludo-board')).toHaveAttribute('data-render-state', 'ready');
-        await expect(page.locator('.ludo-pawn--red')).toHaveCount(4);
-        await expect(page.locator('.ludo-pawn--yellow')).toHaveCount(4);
-        await expect(page.locator('.ludo-pawn--green')).toHaveCount(0);
+        await expect(page.locator('.ludo-board svg.ludo-board-svg')).toBeVisible();
+        await expect(page.locator('.ludo-pin--red')).toHaveCount(4);
+        await expect(page.locator('.ludo-pin--yellow')).toHaveCount(4);
+        await expect(page.locator('.ludo-pin--green')).toHaveCount(0);
       }
       await expect(host.getByRole('status').filter({ hasText: /roll the die|turn to roll/ }).first()).toBeVisible();
       // Exactly one seat may roll at a time.
@@ -70,7 +69,7 @@ test.describe('a Ludo match in a room', () => {
 
       for (let turn = 0; turn < 4; turn += 1) await playTurn([host, player]);
 
-      const pawnsOf = (page: Page) => page.locator('.ludo-pawn').count();
+      const pawnsOf = (page: Page) => page.locator('.ludo-pin').count();
       expect(await pawnsOf(host)).toBe(8);
       expect(await pawnsOf(player)).toBe(8);
       await expect(host.locator('.ludo-board')).toHaveAttribute('data-die-face', /^[1-6]?$/);
@@ -82,7 +81,6 @@ test.describe('a Ludo match in a room', () => {
     const lateContext = await browser.newContext();
     const late = await lateContext.newPage();
     try {
-      for (const page of [host, player]) await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
       const code = await createRoom(host, 'Hosty', { game: 'Ludo', players: 3 });
       await joinByCode(player, code, 'Pat');
       await player.getByRole('button', { name: 'I am ready' }).click();
@@ -95,7 +93,7 @@ test.describe('a Ludo match in a room', () => {
       await expect(late.locator('svg.ludo-board-svg')).toHaveCount(0);
       await expect(late.getByRole('button', { name: 'Roll the die' })).toHaveCount(0);
       await expect(late.getByRole('log', { name: 'Chat messages' })).toBeVisible();
-      await expect(host.locator('.ludo-pawn')).toHaveCount(8);
+      await expect(host.locator('.ludo-pin')).toHaveCount(8);
     } finally { await lateContext.close(); await close(); }
   });
 });

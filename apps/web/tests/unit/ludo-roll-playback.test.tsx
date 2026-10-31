@@ -124,8 +124,7 @@ describe('data-die-face', () => {
   const base = toMatchView(state, { theme: 'classic', turnLimitSeconds: 60, you: 0, legalPawns: legalPawns(state), decisionMsLeft: null, settleMsLeft: 0 });
 
   it('is empty while the die rolls and holds the number after', () => {
-    localStorage.setItem('myarena-ludo-quality', 'lite');
-    const props = { view: base, settled: true, onChoose: () => undefined, throwing: null, events: [], seq: 1, instant: false };
+    const props = { view: base, settled: true, onChoose: () => undefined, highlight: null, seq: 1, events: [], instant: false };
     const { container, rerender } = render(<BoardView {...props} face={4} rolling />);
     expect(container.querySelector('.ludo-board')?.getAttribute('data-die-face')).toBe('');
     rerender(<BoardView {...props} face={4} rolling={false} />);
