@@ -1,5 +1,5 @@
-import { ART_ICONS, ART_PALETTES, GAME_MODES, type GameLifecycle } from '@myarena/game-sdk';
-import { artIcons, artPalettes, gameModes } from '@myarena/protocol';
+import { ART_ICONS, ART_IMAGES, ART_PALETTES, GAME_MODES, type GameLifecycle } from '@myarena/game-sdk';
+import { artIcons, artImages, artPalettes, gameModes } from '@myarena/protocol';
 import { describe, expect, it } from 'vitest';
 import { buildCatalog } from '../../src/games/catalog.js';
 import { GameRegistry } from '../../src/games/registry.js';
@@ -25,8 +25,18 @@ describe('game registry descriptor validation', () => {
     ['a default below 2', { defaultParticipants: 1 }],
     ['an unknown icon', { art: { icon: 'NOPE', palette: 'SLATE' } }],
     ['an unknown palette', { art: { icon: 'FLASK', palette: 'NOPE' } }],
+    ['an unknown art image', { art: { icon: 'FLASK', palette: 'SLATE', image: 'NOPE' } }],
   ])('rejects %s', (_label, overrides) => {
     expect(() => new GameRegistry([withDescriptor(overrides)])).toThrow();
+  });
+
+  it('accepts a named art image and carries it into the catalog entry', () => {
+    const registry = new GameRegistry([withDescriptor({ id: 'pictured', art: { icon: 'TARGET', palette: 'CRIMSON', image: 'LUDO' } })]);
+    expect(buildCatalog(registry).entries[0]).toMatchObject({ id: 'pictured', art: { icon: 'TARGET', palette: 'CRIMSON', image: 'LUDO' } });
+  });
+
+  it('keeps the SDK and protocol art image names identical', () => {
+    expect([...ART_IMAGES]).toEqual([...artImages]);
   });
 
   it('rejects duplicate ids', () => {
@@ -58,9 +68,9 @@ describe('catalog assembly', () => {
   });
 
   it('lets a registered game take over the roadmap entry with the same id', () => {
-    const { entries } = buildCatalog(new GameRegistry([withDescriptor({ id: 'ludo', name: 'Ludo' })]));
-    expect(entries.filter((entry) => entry.id === 'ludo')).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ id: 'ludo', status: 'PLAYABLE' });
+    const { entries } = buildCatalog(new GameRegistry([withDescriptor({ id: 'tambola', name: 'Tambola' })]));
+    expect(entries.filter((entry) => entry.id === 'tambola')).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ id: 'tambola', status: 'PLAYABLE' });
   });
 
   it('defaults the participant count to the game default, else the maximum capped at 100', () => {

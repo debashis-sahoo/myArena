@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Clock, GameAction } from '@myarena/game-sdk';
+import type { Clock, GameAction, JsonValue } from '@myarena/game-sdk';
 import type { ClientIntent, RoomEvent, ServerMessage } from '@myarena/protocol';
 import { systemClock } from '../config/clock.js';
 import { hashToken, issueToken, verifyToken } from '../auth/tokens.js';
@@ -14,7 +14,7 @@ import { emptyCatalog, type GameCatalog } from './catalog.js';
 import { sendChat } from './chat.js';
 import { removeMember, selectGame, setReady, updateSettings } from './lobby.js';
 import { pickSuccessor, transferHost } from './handoff.js';
-import { MatchManager } from './match.js';
+import { MatchManager, type MatchLifecycleEvent } from './match.js';
 import { ok, type Context, type EventData, type Outcome } from './outcome.js';
 import { RecoveryManager } from './recovery.js';
 import type { RoomSetup } from './room-setup.js';
@@ -31,6 +31,10 @@ export interface RoomServiceOptions {
 }
 
 export type SeatRelease = 'left' | 'removed' | 'expired';
+const GAME_ACTION_DETAILS: Record<string, string> = {
+  NOT_IN_MATCH: 'There is no match in progress for you.',
+  NO_ACTIONS: 'This game does not take actions.',
+};
 export const DEFAULT_RECOVERY_WINDOW_MS = 10 * 60 * 1000;
 
 export interface Entry { room: Room; participant: Participant; token: string; }
@@ -42,6 +46,10 @@ export class RoomService {
   publish: (roomId: string, event: RoomEvent, except?: string) => void = () => {};
   onSeatReleased: (roomId: string, participantId: string, reason: SeatRelease) => void = () => {};
   onHostChanged: (roomId: string, hostParticipantId: string) => void = () => {};
+  // Delivers one game update; each recipient's own view comes from `gameView`.
+  publishGame: (roomId: string, update: { matchId: string; seq: number; events: readonly JsonValue[] }) => void = () => {};
+  /** Start and end of each match (game, seat count, duration); the HTTP layer logs it without any player or game content. */
+  onMatchLifecycle: (event: MatchLifecycleEvent) => void = () => {};
   onRoomClosed: (roomId: string, participantIds: string[]) => void = () => {};
   private readonly clock: Clock;
   private readonly matches: MatchManager;
@@ -53,7 +61,7 @@ export class RoomService {
     this.store = options.store ?? new MemoryRoomStore<Room>();
     this.clock = options.clock ?? systemClock;
     this.games = options.games ?? emptyCatalog;
-    this.matches = new MatchManager(this.clock);
+    this.matches = new MatchManager(this.clock, (roomId, events) => this.publishGameFor(roomId, events), (event) => this.onMatchLifecycle(event));
     this.recovery = new RecoveryManager(this.clock, options.config.recoveryWindowMs ?? DEFAULT_RECOVERY_WINDOW_MS, (roomId, participantId) => this.expire(roomId, participantId));
     this.limits = options.config;
   }
@@ -75,7 +83,7 @@ export class RoomService {
         maxParticipants: setup?.maxParticipants ?? DEFAULT_MAX_PARTICIPANTS,
         gameSettings: (defaults?.success ? defaults.data : {}) as Room['settings']['gameSettings'],
       },
-      matchStatus: 'NONE', createdAt: now, invitation: this.newInvitation(now),
+      matchStatus: 'NONE', matchId: null, gameSeq: 0, createdAt: now, invitation: this.newInvitation(now),
       participants: [participant], chat: [],
     };
     this.store.set(room);
@@ -144,7 +152,25 @@ export class RoomService {
     const participant = room?.participants.find((member) => member.id === identity.participantId);
     if (!room || !participant) return undefined;
     const lobby = lobbyFor(room, participant);
-    return { v: 1, type: 'snapshot', version: room.version, lobby, self: lobby.self };
+    const state = room.matchId ? this.gameView(room.id, participant.id) : null;
+    return {
+      v: 1, type: 'snapshot', version: room.version, lobby, self: lobby.self,
+      game: state === null || !room.matchId ? null : { matchId: room.matchId, seq: room.gameSeq, state },
+    };
+  }
+
+  /** One member's projection of the running or just-ended match, or null when the game has none. */
+  gameView(roomId: string, participantId: string): JsonValue | null {
+    const room = this.store.get(roomId);
+    if (!room || room.matchStatus === 'NONE' || !room.selectedGameId) return null;
+    return this.games.get(room.selectedGameId)?.viewFor?.(roomId, participantId) ?? null;
+  }
+
+  private publishGameFor(roomId: string, events: readonly JsonValue[]): void {
+    const room = this.store.get(roomId);
+    if (!room || !room.matchId) return;
+    room.gameSeq += 1;
+    this.publishGame(roomId, { matchId: room.matchId, seq: room.gameSeq, events });
   }
 
   findParticipant(roomId: string, participantId: string): { room: Room; participant: Participant } | undefined {
@@ -183,6 +209,7 @@ export class RoomService {
     room.participants.splice(room.participants.indexOf(participant), 1);
     this.emit(room, reason === 'removed' ? 'participant.removed' : 'participant.left', { participantId: participant.id });
     this.onSeatReleased(room.id, participant.id, reason);
+    this.matches.participantLeft(room, participant.id, reason, this.games);
     if (room.participants.length === 0) this.closeRoom(room);
     else if (wasHost) this.handOffHost(room, participant.id);
   }
@@ -261,6 +288,7 @@ export class RoomService {
         if (outcome.ok && target) {
           this.recovery.clear(target.id);
           this.onSeatReleased(room.id, target.id, 'removed');
+          this.matches.participantLeft(room, target.id, 'removed', this.games);
         }
         return outcome;
       }
@@ -272,7 +300,15 @@ export class RoomService {
         return outcome;
       }
       case 'room.close': return { ok: true, after: () => this.closeRoom(room) };
+      case 'game.action': return this.gameAction(room, actor, intent.action);
     }
+  }
+
+  private gameAction(room: Room, actor: Participant, action: GameAction): Outcome {
+    const result = this.matches.submitAction(room, actor.id, action, this.games);
+    if (result.accepted) return ok;
+    const detail = result.detail ?? GAME_ACTION_DETAILS[result.reason];
+    return { ok: false, code: 'GAME_ACTION_REJECTED', ...(detail ? { detail } : {}), ...(result.nextStep ? { nextStep: result.nextStep } : {}) };
   }
 
   private regenerateInvitation({ room, now, emit }: Context): Outcome {

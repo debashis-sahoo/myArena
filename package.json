@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "dev": "npm run build:shared && concurrently -k -n server,web \"npm run dev -w @myarena/server\" \"npm run dev -w @myarena/web\"",
-    "build:shared": "npm run build -w @myarena/protocol && npm run build -w @myarena/game-sdk",
+    "build:shared": "npm run build -w @myarena/protocol && npm run build -w @myarena/game-sdk && npm run build -w @myarena/ludo",
     "build": "npm run build:shared && npm run build -w @myarena/web && npm run build -w @myarena/server && npm run build -w @myarena/load",
     "start": "npm run start -w @myarena/server",
     "pretest": "npm run build:shared",

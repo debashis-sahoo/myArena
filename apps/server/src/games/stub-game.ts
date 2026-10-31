@@ -50,3 +50,42 @@ export function createOnlineStubGame(options: { defaultDurationSeconds?: number 
     },
   });
 }
+
+// Exercises the platform's game channel in tests: counts moves, publishes after each, and records hook calls.
+export function createChannelStubGame(): GameLifecycle & { calls: string[] } {
+  const calls: string[] = [];
+  const contexts = new Map<string, MatchContext>();
+  const moves = new Map<string, Map<string, number>>();
+  return {
+    calls,
+    descriptor: {
+      id: 'test-channel', name: 'Test channel game', minParticipants: 2, maxParticipants: 4, defaultParticipants: 2,
+      description: 'A test game that sends its state to the room.', category: 'Testing',
+      durationMinutes: { min: 1, max: 2 }, modes: ['ONLINE'], art: { icon: 'FLASK', palette: 'SLATE' }, test: true,
+      settingsSchema: z.strictObject({}),
+    },
+    onMatchStart(context) {
+      calls.push('start');
+      contexts.set(context.roomId, context);
+      moves.set(context.roomId, new Map());
+      context.publish([{ kind: 'STARTED' }]);
+    },
+    onMatchEnd(roomId) { calls.push('end'); contexts.delete(roomId); },
+    onAction(roomId, participantId, action) {
+      const counts = moves.get(roomId);
+      if (!counts) return { accepted: false, reason: 'NOT_IN_MATCH' };
+      if (action.type === 'finish') { contexts.get(roomId)?.publish([{ kind: 'FINISHED' }]); contexts.get(roomId)?.endMatch(); return { accepted: true }; }
+      if (action.type !== 'move') return { accepted: false, reason: 'UNKNOWN', detail: 'That move is not known.', nextStep: 'Use a move.' };
+      counts.set(participantId, (counts.get(participantId) ?? 0) + 1);
+      contexts.get(roomId)?.publish([{ kind: 'MOVED', by: participantId }]);
+      return { accepted: true };
+    },
+    viewFor(roomId, participantId) {
+      const counts = moves.get(roomId);
+      if (!counts) return null;
+      return { you: participantId, mine: counts.get(participantId) ?? 0, total: Array.from(counts.values()).reduce((sum, count) => sum + count, 0) };
+    },
+    onParticipantLeft(_roomId, participantId, reason) { calls.push(`left:${reason}:${participantId}`); },
+    releaseMatch(roomId) { calls.push('release'); moves.delete(roomId); contexts.delete(roomId); },
+  };
+}

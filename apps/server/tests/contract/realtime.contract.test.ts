@@ -4,8 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { clientIntentSchema, eventSchema, parseClientFrame, rejections, serverMessageSchema } from '@myarena/protocol';
 
 const doc = readFileSync(new URL('../../../../specs/001-base-platform-experience/contracts/realtime-protocol.md', import.meta.url), 'utf8');
+// The 003 game channel adds one intent and one rejection code on top of the 001 documents.
+const channelDoc = readFileSync(new URL('../../../../specs/003-ludo-game/contracts/game-channel.md', import.meta.url), 'utf8');
 const section = (title: string) => doc.split(/^## /m).find((part) => part.startsWith(title)) ?? '';
 const firstColumn = (text: string) => [...text.matchAll(/^\| `([A-Za-z_.]+)` \|/gm)].map((match) => match[1]!).filter((name) => name !== 'type');
+const channelIntents = firstColumn((channelDoc.split(/^### Client to server/m)[1] ?? '').split(/^### /m)[0] ?? '');
+const channelRejections = [...channelDoc.matchAll(/New code `([A-Z_]+)`/g)].map((match) => match[1]!);
 
 const uuid = () => randomUUID();
 const participant = { id: uuid(), displayLabel: 'Sam', role: 'HOST', ready: false, connection: 'CONNECTED' };
@@ -18,6 +22,7 @@ const intents: Record<string, Record<string, unknown>> = {
   'settings.update': { changes: { maxParticipants: 5 } }, 'match.start': {}, 'match.rematch': {},
   'match.returnToLobby': {}, 'invite.regenerate': {}, 'host.transfer': { targetParticipantId: uuid() },
   'member.remove': { targetParticipantId: uuid() }, 'room.close': {}, resync: { lastVersion: 3 }, ping: {},
+  'game.action': { action: { type: 'roll' } },
 };
 const events: Record<string, Record<string, unknown>> = {
   'participant.joined': { participant }, 'participant.left': { participantId: uuid() },
@@ -31,7 +36,7 @@ const events: Record<string, Record<string, unknown>> = {
 
 describe('realtime protocol contract', () => {
   it('documents exactly the intents, events, and rejection codes the schemas accept', () => {
-    const documentedIntents = firstColumn(section('Client to server'));
+    const documentedIntents = [...firstColumn(section('Client to server')), ...channelIntents];
     expect(documentedIntents.sort()).toEqual(Object.keys(intents).sort());
     expect(clientIntentSchema.options.map((option) => option.shape.type.value).sort()).toEqual(documentedIntents);
 
@@ -39,7 +44,7 @@ describe('realtime protocol contract', () => {
     expect(eventSchema.options.map((option) => option.shape.kind.value).sort()).toEqual(kinds.sort());
     expect(kinds.sort()).toEqual(Object.keys(events).sort());
 
-    expect(Object.keys(rejections).sort()).toEqual(firstColumn(section('Rejection codes')).sort());
+    expect(Object.keys(rejections).sort()).toEqual([...firstColumn(section('Rejection codes')), ...channelRejections].sort());
   });
 
   it.each(Object.entries(intents))('accepts a valid %s intent and rejects unknown fields', (type, fields) => {

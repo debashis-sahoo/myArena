@@ -25,6 +25,7 @@ export const rejections = {
   CANNOT_REMOVE_SELF: { detail: 'The host cannot remove themselves.', nextStep: 'Leave or transfer the host role instead.' },
   RATE_LIMITED: problems.RATE_LIMITED,
   ROOM_CLOSED: { detail: 'This room is no longer available.', nextStep: 'Create or join another room.' },
+  GAME_ACTION_REJECTED: { detail: 'That action is not allowed right now.', nextStep: 'Check the game and try again.' },
 } as const;
 
 export type ProblemCode = keyof typeof problems;

@@ -3,11 +3,6 @@ import type { CatalogEntry } from '@myarena/protocol';
 // Planned games with no lifecycle yet. Values are placeholders, not commitments.
 export const roadmap: readonly CatalogEntry[] = [
   {
-    id: 'ludo', name: 'Ludo', description: 'Race your four tokens home and send rivals back to start.', category: 'Classic board',
-    status: 'COMING_SOON', test: false, minParticipants: 2, maxParticipants: 4, defaultParticipants: 4,
-    durationMinutes: { min: 20, max: 45 }, modes: ['SOLO_AI', 'ONLINE'], art: { icon: 'TARGET', palette: 'CRIMSON' },
-  },
-  {
     id: 'snakes-and-ladders', name: 'Snakes & Ladders', description: 'Climb the ladders, dodge the snakes, and reach the final square first.', category: 'Classic board',
     status: 'COMING_SOON', test: false, minParticipants: 2, maxParticipants: 6, defaultParticipants: 4,
     durationMinutes: { min: 10, max: 25 }, modes: ['SOLO_AI', 'ONLINE'], art: { icon: 'SNAKE', palette: 'EMERALD' },

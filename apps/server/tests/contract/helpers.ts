@@ -8,11 +8,12 @@ import { expect } from 'vitest';
 const read = (path: string) => parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
 const base = read('../../../../specs/001-base-platform-experience/contracts/rest-api.openapi.yaml');
 const delta = read('../../../../specs/002-games-landing-page/contracts/catalog-and-room-setup.openapi.yaml');
-// Each path item and component schema in the 002 delta replaces the one of the same name in 001.
+const ludoDelta = read('../../../../specs/003-ludo-game/contracts/catalog-art-image.openapi.yaml');
+// Each path item and component schema in a later delta replaces the one of the same name in the earlier files.
 const contract = {
   ...base,
-  paths: { ...base.paths, ...delta.paths },
-  components: { ...base.components, schemas: { ...base.components.schemas, ...delta.components.schemas } },
+  paths: { ...base.paths, ...delta.paths, ...ludoDelta.paths },
+  components: { ...base.components, schemas: { ...base.components.schemas, ...delta.components.schemas, ...ludoDelta.components.schemas } },
 };
 const ajv = new Ajv2020({ strict: false, allErrors: true });
 const addFormats: FormatsPlugin = createRequire(import.meta.url)('ajv-formats');

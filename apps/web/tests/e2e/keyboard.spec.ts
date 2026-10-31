@@ -107,9 +107,9 @@ test('landing tiles toggle with Enter and Space, dismiss returns focus, and Comi
   await expect(tile).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(tile).toHaveAttribute('aria-pressed', 'true');
-  await tabTo(page, page.getByRole('button', { name: /^Ludo Coming soon/ }));
+  await tabTo(page, page.getByRole('button', { name: /^Snakes & Ladders Coming soon/ }));
   await page.keyboard.press('Enter');
-  await expect(page.getByText('Ludo is not available yet.').first()).toBeVisible();
+  await expect(page.getByText('Snakes & Ladders is not available yet.').first()).toBeVisible();
   await expect(tile).toHaveAttribute('aria-pressed', 'true');
 });
 

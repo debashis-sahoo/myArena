@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useParams } from 'react-router';
 import { ChatPanel } from '../chat/ChatPanel';
 import { apiRequest } from '../../platform/api-client';
+import { onlineGame } from '../games/registry';
 import { ConnectionBanner } from '../recovery/ConnectionBanner';
 import { RecoveryExpired } from '../recovery/RecoveryExpired';
 import { GameSelect, type GameSummary } from './GameSelect';
@@ -31,6 +32,8 @@ export function RoomPage() {
   const isHost = lobby.self.role === 'HOST';
   const self = lobby.participants.find((member) => member.id === lobby.self.id);
   const inLobby = lobby.status === 'LOBBY';
+  const online = onlineGame(lobby.selectedGameId);
+  const showMatch = online !== null && (lobby.status === 'IN_MATCH' || lobby.matchStatus === 'ENDED');
   return (
     <div className="stack">
       <ConnectionBanner status={status} />
@@ -39,6 +42,11 @@ export function RoomPage() {
         <LeaveButton roomId={roomId} />
       </div>
       {lobby.invitation ? <InvitePanel invitation={lobby.invitation} run={run} /> : null}
+      {online && showMatch ? (
+        <Suspense fallback={<p role="status">Preparing the game…</p>}>
+          <online.Match lobby={lobby} game={state.game} run={run} />
+        </Suspense>
+      ) : null}
       <div className="room-grid">
         <div className="stack">
           <MemberList participants={lobby.participants} selfId={lobby.self.id} isHost={isHost} run={run} />
@@ -47,10 +55,16 @@ export function RoomPage() {
         </div>
         <div className="stack">
           <GameSelect games={games} selectedGameId={lobby.selectedGameId} isHost={isHost} editable={inLobby} run={run} />
-          <SettingsPanel settings={lobby.settings} seats={lobby.participants.length} isHost={isHost} editable={inLobby} run={run} />
+          {online ? (
+            <Suspense fallback={<p role="status">Loading the game settings…</p>}>
+              <online.Settings settings={lobby.settings} seats={lobby.participants.length} isHost={isHost} editable={inLobby} run={run} />
+            </Suspense>
+          ) : (
+            <SettingsPanel settings={lobby.settings} seats={lobby.participants.length} isHost={isHost} editable={inLobby} run={run} />
+          )}
           <MatchControls lobby={lobby} run={run} />
         </div>
-        <ChatPanel messages={lobby.chat} run={run} className="room-chat" />
+        {online?.ownsChat && showMatch ? null : <ChatPanel messages={lobby.chat} run={run} className="room-chat" />}
       </div>
     </div>
   );
