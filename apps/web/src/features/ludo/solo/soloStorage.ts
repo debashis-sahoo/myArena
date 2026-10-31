@@ -79,12 +79,35 @@ export function loadSaved(now: number): SavedSolo | null {
   return { savedAt: value.savedAt as number, settings: value.settings, state: value.state };
 }
 
+/** The name the visitor's seat has in a saved match; their real display name is never stored. */
+export const GENERIC_NAME = 'Player 1';
+
+const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** A copy of the match with the visitor's display name replaced by a generic one in the seat and in the log. */
+export function anonymize(state: MatchState): MatchState {
+  const name = state.seats[0]?.label;
+  if (!name || name === GENERIC_NAME) return state;
+  const pattern = new RegExp(`(?<![\\w])${escape(name)}(?![\\w])`, 'g');
+  return {
+    ...state,
+    seats: state.seats.map((seat, index) => (index === 0 ? { ...seat, label: GENERIC_NAME } : seat)),
+    log: state.log.map((entry) => ({ ...entry, text: entry.text.replace(pattern, GENERIC_NAME) })),
+  };
+}
+
+/** The saved match shown under the visitor's current name. */
+export const withVisitorName = (state: MatchState, name: string): MatchState => ({
+  ...state, seats: state.seats.map((seat, index) => (index === 0 ? { ...seat, label: name } : seat)),
+});
+
 export function save(settings: SoloSettings, state: MatchState, now: number): void {
-  let kept = state;
+  const anonymous = anonymize(state);
+  let kept = anonymous;
   let text = JSON.stringify({ savedAt: now, settings, state: kept });
   // The log is the only part that grows; trim it so a save stays small.
   for (let keep = 25; text.length > SAVE_MAX_CHARS && keep >= 0; keep -= 5) {
-    kept = { ...state, log: state.log.slice(-keep) };
+    kept = { ...anonymous, log: anonymous.log.slice(-keep) };
     text = JSON.stringify({ savedAt: now, settings, state: kept });
   }
   try { window.localStorage.setItem(SAVE_KEY, text); } catch { /* storage may be blocked or full */ }

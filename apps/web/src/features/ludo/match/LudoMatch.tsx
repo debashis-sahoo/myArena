@@ -5,7 +5,7 @@ import { useRoomGame } from './useRoomGame';
 
 /** The online match: feeds the shared match view from the room's game channel. */
 export function LudoMatch({ lobby, game, run }: GameMatchProps) {
-  const { view, seq, error, roll, move } = useRoomGame(game, run);
+  const { view, seq, events, error, notice, roll, move, resume } = useRoomGame(game, run);
   // The room page leaves the chat to this screen during a match, so every branch keeps it.
   if (!view) {
     return (
@@ -26,5 +26,5 @@ export function LudoMatch({ lobby, game, run }: GameMatchProps) {
       </div>
     );
   }
-  return <MatchLayout view={view} seq={seq} error={error} messages={lobby.chat} run={run} onRoll={() => void roll()} onMove={(pawn) => void move(pawn)} />;
+  return <MatchLayout view={view} seq={seq} events={events} error={error} notice={notice} onResume={() => void resume()} messages={lobby.chat} run={run} onRoll={() => void roll()} onMove={(pawn) => void move(pawn)} />;
 }

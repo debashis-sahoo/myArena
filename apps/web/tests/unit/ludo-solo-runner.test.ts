@@ -4,7 +4,7 @@ import {
   COMPUTER_PAUSE_MIN_MS, COMPUTER_PAUSE_SPAN_MS, createSoloMatch, createSoloRunner, type Clock, type SoloDice, type SoloUpdate,
 } from '../../src/features/ludo/solo/soloRunner';
 import {
-  SAVE_KEY, SAVE_MAX_AGE_MS, clearSaved, isMatchState, loadSaved, loadSetup, save, saveSetup, type SoloSettings,
+  SAVE_KEY, SAVE_MAX_AGE_MS, anonymize, clearSaved, isMatchState, loadSaved, loadSetup, save, saveSetup, withVisitorName, type SoloSettings,
 } from '../../src/features/ludo/solo/soloStorage';
 
 class FakeClock implements Clock {
@@ -132,7 +132,10 @@ describe('saving and restoring', () => {
   it('restores a saved match exactly', () => {
     save(settings(1), state(), 1000);
     const saved = loadSaved(1000 + 60_000);
-    expect(saved?.state).toEqual(state());
+    // Everything is restored except the display name, which is never stored: the generic name comes back, and the current one is shown on restore.
+    expect(saved?.state).toEqual(anonymize(state()));
+    expect(withVisitorName(saved!.state, 'Pat').seats).toEqual(state().seats);
+    expect(localStorage.getItem(SAVE_KEY)).not.toContain('Pat');
     expect(saved?.settings).toEqual(settings(1));
     const { last } = run({ resume: saved!.state });
     expect(last().view.turn).toMatchObject({ seat: 0, phase: 'MOVE', dice: 6 });

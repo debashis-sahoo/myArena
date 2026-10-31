@@ -83,3 +83,11 @@ Record results in `specs/003-ludo-game/acceptance/` using the acceptance templat
 (`specs/002-games-landing-page/acceptance/TEMPLATE.md`), one row per
 scenario and device. Automated results go in `automated-results.md`. Scenarios 24, 28 and 29 cannot
 be satisfied by automation or emulation.
+
+## Ludo test dice
+
+`LUDO_TEST_DICE` is a comma-separated list of die values from 1 to 6 (for example `6,6,3,4,6,2`). When it is set, the server
+uses the list, in order and repeating, instead of its random die, so rule scenarios and end-to-end tests are repeatable
+(the Playwright server sets one). It is for testing only: start-up is refused with an error whenever `NODE_ENV=production`,
+including on preview deployments, and it must never be set on the real service. With it unset the die is drawn from
+`node:crypto`.

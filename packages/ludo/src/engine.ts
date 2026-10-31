@@ -2,6 +2,7 @@ import {
   BASE, HOME_STEP, PAWNS_PER_SEAT, isProtectedRing, ringIndexOf,
 } from './board.js';
 import { colorsFor, nextSeat } from './seats.js';
+import { AWAY_AFTER_MISSES } from './settings.js';
 import { LOG_LIMIT, type EngineEvent, type MatchState, type SeatKind, type StepResult } from './state.js';
 
 export interface CreateSeat { kind: SeatKind; label: string; participantId?: string; }
@@ -169,6 +170,67 @@ export function move(state: MatchState, pawn: number): StepResult {
     next.dice = null;
     if (captured && roll !== 6) next.sixesInRow = 0;
   } else {
+    passTurn(next, events);
+  }
+  return { state: next, events };
+}
+
+/** Adds a plain-language line to the game log without changing anything else (used for automatic play). */
+export function note(state: MatchState, seat: number, text: string): MatchState {
+  const next = clone(state);
+  addLog(next, text, seat);
+  return next;
+}
+
+/** A decision timed out: one more missed turn, and the third in a row marks the seat away. */
+export function recordMiss(state: MatchState, seat: number): { state: MatchState; away: boolean } {
+  const next = clone(state);
+  const target = next.seats[seat]!;
+  const wasAway = target.away;
+  target.missed = Math.min(AWAY_AFTER_MISSES, target.missed + 1);
+  if (target.missed >= AWAY_AFTER_MISSES) target.away = true;
+  const becameAway = target.away && !wasAway;
+  if (becameAway) addLog(next, `${target.label} is away and will be played for automatically.`, seat);
+  return { state: next, away: becameAway };
+}
+
+/** Clears missed turns and away; used by "I'm back" and by any manual action. `cleared` tells whether the seat was away. */
+export function resume(state: MatchState, seat: number): { state: MatchState; cleared: boolean } {
+  const current = state.seats[seat]!;
+  if (current.missed === 0 && !current.away) return { state, cleared: false };
+  const next = clone(state);
+  const target = next.seats[seat]!;
+  const cleared = target.away;
+  target.missed = 0;
+  target.away = false;
+  if (cleared) addLog(next, `${target.label} is back.`, seat);
+  return { state: next, cleared };
+}
+
+/** A seat leaves for good: its pawns go, the turn passes if it was theirs, and one seat left wins. */
+export function removeSeat(state: MatchState, seat: number): StepResult {
+  const next = clone(state);
+  const gone = next.seats[seat];
+  if (!gone || gone.left || next.phase === 'ENDED') return { state, events: [] };
+  gone.left = true;
+  gone.away = false;
+  gone.pawns = [];
+  const events: EngineEvent[] = [{ kind: 'SEAT_LEFT', seat }];
+  addLog(next, `${gone.label} left the match.`, seat);
+  const remaining = next.seats.flatMap((candidate, index) => (candidate.left ? [] : [index]));
+  if (remaining.length <= 1) {
+    const winner = remaining[0] ?? null;
+    next.winner = winner;
+    next.phase = 'ENDED';
+    next.current = null;
+    next.dice = null;
+    next.sixesInRow = 0;
+    next.forfeit = false;
+    if (winner !== null) {
+      addLog(next, `${next.seats[winner]!.label} wins because everyone else left.`, winner);
+      events.push({ kind: 'WON', seat: winner });
+    }
+  } else if (next.current === seat) {
     passTurn(next, events);
   }
   return { state: next, events };

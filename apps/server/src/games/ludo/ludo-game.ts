@@ -35,5 +35,8 @@ export function createLudoGame(options: { dice?: DiceSource } = {}): GameLifecyc
       matches.get(roomId)?.stop();
       matches.delete(roomId);
     },
+    onParticipantLeft(roomId, participantId) {
+      matches.get(roomId)?.participantLeft(participantId);
+    },
   };
 }

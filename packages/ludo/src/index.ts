@@ -6,3 +6,5 @@ export * from './state.js';
 export * from './view.js';
 export * from './engine.js';
 export * from './strategies.js';
+export * from './auto.js';
+export * from './dice-animation.js';

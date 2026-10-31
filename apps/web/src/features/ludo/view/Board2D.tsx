@@ -1,7 +1,8 @@
 import {
-  LANES, RING, START_INDEX, STAR_INDEXES, cellOf, type Color, type LudoMatchView,
+  LANES, RING, START_INDEX, STAR_INDEXES, type Color, type LudoMatchView,
 } from '@myarena/ludo';
 import { pawnNumber } from '../a11y/describe';
+import { placePawns } from './placement';
 
 const QUADRANTS: Record<Color, { x: number; y: number }> = {
   RED: { x: 0, y: 0 }, GREEN: { x: 9, y: 0 }, YELLOW: { x: 9, y: 9 }, BLUE: { x: 0, y: 9 },
@@ -15,40 +16,7 @@ const MARKS: Record<Color, string> = {
   YELLOW: 'M-0.12 -0.12 L0.12 -0.12 L0.12 0.12 L-0.12 0.12 Z',
   BLUE: 'M0 -0.17 L0.15 0 L0 0.17 L-0.15 0 Z',
 };
-const SPREAD: Record<number, { scale: number; offsets: [number, number][] }> = {
-  1: { scale: 1, offsets: [[0, 0]] },
-  2: { scale: 0.62, offsets: [[-0.25, 0], [0.25, 0]] },
-  3: { scale: 0.55, offsets: [[-0.28, -0.2], [0.28, -0.2], [0, 0.28]] },
-  4: { scale: 0.5, offsets: [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]] },
-};
 const lower = (color: Color) => color.toLowerCase();
-
-interface PlacedPawn { seat: number; pawn: number; color: Color; cx: number; cy: number; scale: number; movable: boolean; }
-
-function placePawns(view: LudoMatchView, movable: ReadonlySet<number>): PlacedPawn[] {
-  const groups = new Map<string, { seat: number; pawn: number; color: Color; col: number; row: number }[]>();
-  for (const seat of view.seats) {
-    seat.pawns.forEach((step, pawn) => {
-      const cell = cellOf(seat.color, pawn, step);
-      const key = `${cell.col},${cell.row}`;
-      const list = groups.get(key) ?? [];
-      list.push({ seat: seat.index, pawn, color: seat.color, col: cell.col, row: cell.row });
-      groups.set(key, list);
-    });
-  }
-  const placed: PlacedPawn[] = [];
-  for (const list of groups.values()) {
-    const layout = SPREAD[Math.min(list.length, 4)]!;
-    list.forEach((item, index) => {
-      const [dx, dy] = layout.offsets[index % layout.offsets.length]!;
-      placed.push({
-        seat: item.seat, pawn: item.pawn, color: item.color, cx: item.col + 0.5 + dx, cy: item.row + 0.5 + dy,
-        scale: layout.scale, movable: item.seat === view.you && movable.has(item.pawn),
-      });
-    });
-  }
-  return placed;
-}
 
 export interface Board2DProps {
   view: LudoMatchView;
@@ -87,7 +55,7 @@ export function Board2D({ view, movable, onChoose }: Board2DProps) {
         <g key={`pawn-${item.seat}-${item.pawn}`} transform={`translate(${item.cx} ${item.cy}) scale(${item.scale})`}>
           {item.movable ? (
             <>
-              <circle className="ludo-hit" r="1.1" onClick={() => onChoose?.(item.pawn)} />
+              <circle className="ludo-hit" r="1.25" onClick={() => onChoose?.(item.pawn)} />
               <circle className="ludo-glow" r="0.46" aria-hidden="true" />
             </>
           ) : null}

@@ -8,7 +8,7 @@ const NAMES = ['Host', 'Alex', 'Sam', 'Pat'];
 const idOf = (index: number) => `p-${index}`;
 
 // A runner wired to a fake clock and a scripted die, with a log of everything it publishes.
-export function setup(options: { players?: number; values?: number[]; first?: number } = {}) {
+export function setup(options: { players?: number; values?: number[]; first?: number; limit?: 0 | 30 | 60 | 90 } = {}) {
   const players = options.players ?? 4;
   const clock = new TestClock();
   const published: unknown[][] = [];
@@ -20,7 +20,7 @@ export function setup(options: { players?: number; values?: number[]; first?: nu
   };
   const scripted = scriptedDice(options.values ?? [6]);
   const dice: DiceSource = { ...scripted, firstSeat: () => options.first ?? 0 };
-  const runner = new MatchRunner(context, { theme: 'classic', turnLimitSeconds: 60 }, dice);
+  const runner = new MatchRunner(context, { theme: 'classic', turnLimitSeconds: options.limit ?? 60 }, dice);
   runner.start();
   const view = (index: number) => runner.view(idOf(index)) as unknown as LudoView;
   const matchView = (index: number) => { const result = view(index); if (result.kind !== 'MATCH') throw new Error('Expected a match view.'); return result; };

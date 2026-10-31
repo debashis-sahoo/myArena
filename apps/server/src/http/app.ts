@@ -110,6 +110,7 @@ export async function buildApp(options: AppOptions = {}) {
     const state = rooms.gameView(roomId, recipient.participantId);
     return state === null ? undefined : { v: 1, type: 'game', matchId, seq, state, events: [...events] };
   });
+  rooms.onMatchLifecycle = (event) => app.log.info({ matchLifecycle: event }, 'Match lifecycle.');
   rooms.onSeatReleased = (roomId, participantId, reason) => {
     const identity = { roomId, participantId };
     limiter.forget(participantId);

@@ -17,11 +17,16 @@ export function startBlockedReason(room: Room, game: GameLifecycle | undefined):
 }
 
 // Drives the game lifecycle through the SDK only; it holds no game rules.
+/** What the platform records about a match: when it started or ended, for which game, with how many seats and how long. */
+export interface MatchLifecycleEvent { kind: 'started' | 'ended'; gameId: string; seats: number; durationMs?: number; }
+
 export class MatchManager {
   private readonly tokens = new Map<string, object>();
+  private readonly startedAt = new Map<string, number>();
   constructor(
     private readonly clock: Clock,
     private readonly publish: (roomId: string, events: readonly JsonValue[]) => void = () => {},
+    private readonly lifecycle: (event: MatchLifecycleEvent) => void = () => {},
   ) {}
 
   start(ctx: Context, kind: 'match.started' | 'match.rematch'): Outcome {
@@ -39,6 +44,8 @@ export class MatchManager {
     room.status = 'IN_MATCH';
     room.matchStatus = 'IN_PROGRESS';
     emit(kind, {});
+    this.startedAt.set(room.id, this.clock.now());
+    this.lifecycle({ kind: 'started', gameId: game.descriptor.id, seats: room.participants.length });
     game.onMatchStart({
       roomId: room.id,
       participantIds: room.participants.map((member) => member.id),
@@ -63,6 +70,7 @@ export class MatchManager {
 
   abort(room: Room, games: GameCatalog): void {
     this.tokens.delete(room.id);
+    this.startedAt.delete(room.id);
     const game = room.selectedGameId ? games.get(room.selectedGameId) : undefined;
     if (room.matchStatus === 'IN_PROGRESS') game?.onMatchEnd(room.id);
     if (room.matchId) game?.releaseMatch?.(room.id);
@@ -92,5 +100,11 @@ export class MatchManager {
     room.matchStatus = 'ENDED';
     game.onMatchEnd(room.id);
     emit('match.ended', {});
+    const started = this.startedAt.get(room.id);
+    this.startedAt.delete(room.id);
+    this.lifecycle({
+      kind: 'ended', gameId: game.descriptor.id, seats: room.participants.length,
+      ...(started === undefined ? {} : { durationMs: this.clock.now() - started }),
+    });
   }
 }

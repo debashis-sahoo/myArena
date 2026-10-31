@@ -4,7 +4,7 @@ import type { SoloGameProps } from '../../solo/registry';
 import { MatchView } from '../match/MatchView';
 import { SoloSetup } from './SoloSetup';
 import { createSoloRunner, type SoloRunner, type SoloUpdate } from './soloRunner';
-import { clearSaved, loadSaved, save, type SoloSettings } from './soloStorage';
+import { GENERIC_NAME, clearSaved, loadSaved, save, withVisitorName, type SoloSettings } from './soloStorage';
 
 interface Session { id: number; settings: SoloSettings; resume: MatchState | null; }
 
@@ -15,7 +15,7 @@ function SoloMatch({ session, visitorLabel, onAgain, onExit }: { session: Sessio
 
   useEffect(() => {
     const created = createSoloRunner({
-      settings: session.settings, visitorLabel, resume: session.resume,
+      settings: session.settings, visitorLabel, resume: session.resume ? withVisitorName(session.resume, visitorLabel) : null,
       onUpdate: setUpdate,
       onState: (state) => (state.phase === 'ENDED' ? clearSaved() : save(session.settings, state, Date.now())),
     });
@@ -31,7 +31,7 @@ function SoloMatch({ session, visitorLabel, onAgain, onExit }: { session: Sessio
     <div className="stack">
       <h1 className="ludo-solo-title">Ludo: you against the computer</h1>
       <MatchView
-        view={update.view} seq={update.seq} error={error}
+        view={update.view} seq={update.seq} events={update.events} error={error}
         onRoll={() => setError(runner.current?.roll() ?? null)}
         onMove={(pawn) => setError(runner.current?.move(pawn) ?? null)}
       />
@@ -59,7 +59,7 @@ export default function LudoSolo({ displayName, onExit }: SoloGameProps) {
   if (!session) return <SoloSetup onStart={start} onBack={onExit} />;
   return (
     <SoloMatch
-      key={session.id} session={session} visitorLabel={displayName.trim() || 'You'}
+      key={session.id} session={session} visitorLabel={displayName.trim() || GENERIC_NAME}
       onAgain={() => start(session.settings)}
       onExit={() => { clearSaved(); onExit(); }}
     />

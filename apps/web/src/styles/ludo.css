@@ -72,3 +72,26 @@
 .ludo-sheet-close { justify-self: end; min-block-size: 44px; }
 .ludo-sheet-body { overflow: auto; min-block-size: 0; }
 .ludo-sheet .chat-log { max-block-size: 18dvh; }
+
+.ludo-status-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4); justify-content: space-between; }
+.ludo-countdown { margin: 0; font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 700; }
+.ludo-notice { margin: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-inline-start: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+.ludo-away { border: 2px solid var(--accent); }
+
+
+.ludo-board { position: relative; }
+.ludo-canvas { display: block; inline-size: 100%; block-size: 100%; touch-action: manipulation; border-radius: var(--radius); }
+.ludo-canvas--pick { cursor: pointer; }
+.ludo-preparing { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; background: var(--surface-raised); border-radius: var(--radius); font-weight: 700; }
+.ludo-view-toggle { position: absolute; inset-inline-end: var(--space-2); inset-block-end: var(--space-2); min-block-size: 44px; background: color-mix(in srgb, var(--surface-raised) 88%, transparent); }
+.ludo-die { inline-size: 3rem; block-size: 3rem; flex: none; }
+.ludo-die-body { fill: #f6efde; stroke: #8a7a5a; stroke-width: 3; }
+.ludo-die-pip { fill: #1a1520; }
+.ludo-die-unknown { fill: #6a5a40; font-weight: 700; font-family: system-ui, sans-serif; }
+@media (prefers-reduced-motion: no-preference) {
+  .ludo-die--rolling { animation: ludo-shake 0.5s ease-in-out infinite; }
+}
+@keyframes ludo-shake { 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
+
+.ludo-match { padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); }
+.ludo-quality summary { display: flex; align-items: center; min-block-size: 44px; cursor: pointer; font-weight: 700; }

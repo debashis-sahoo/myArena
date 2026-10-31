@@ -37,6 +37,10 @@ owner decisions are recorded in the spec's Clarifications section.
   is placed on a surface with guaranteed contrast rather than on top of the art.
 - **Alternatives**: Generated images (rejected: no assets to supply, per the owner). Emoji
   (rejected: renders differently per device and fails the "professional" goal).
+  *Update (feature 003, research R14): a game's tile may now show one named, shipped, original
+  picture (`art.image`, currently `LUDO`) from a fixed enum. It is a small local file loaded as an
+  `<img>`, falls back to the icon art, and the text on the tile never depends on it. Every other
+  game keeps the icon and palette art described here.*
 
 ## R4. Room creation API
 

@@ -82,6 +82,7 @@ test.describe('a Ludo match in a room', () => {
     const lateContext = await browser.newContext();
     const late = await lateContext.newPage();
     try {
+      for (const page of [host, player]) await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
       const code = await createRoom(host, 'Hosty', { game: 'Ludo', players: 3 });
       await joinByCode(player, code, 'Pat');
       await player.getByRole('button', { name: 'I am ready' }).click();

@@ -155,6 +155,9 @@ participants, with up to 100 in one room.
   complement manual keyboard, screen-reader, and reduced-motion acceptance.
 - **Babylon.js**: Not used in this feature. It will be code-split and lazy-loaded by game
   features so it never loads for entry or lobby.
+  *Update (feature 003, research R7): the 3D engine for Ludo is Three.js, not Babylon.js; the rule
+  is unchanged: it is lazy-loaded by the game feature and the build fails if any 3D engine reaches
+  an initial chunk.*
 - **Alternatives considered**: Component kit (extra weight, still needs a11y verification);
   Next.js (server rendering not needed for a private-room SPA).
 

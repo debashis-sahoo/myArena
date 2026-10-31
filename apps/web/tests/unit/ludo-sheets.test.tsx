@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatMessage } from '@myarena/protocol';
 import { createMatch, legalPawns, toMatchView, type LudoMatchView } from '@myarena/ludo';
@@ -48,7 +48,7 @@ describe('game log and chat sheets on a narrow screen', () => {
   it('shows the game log entries oldest first in their own sheet', () => {
     render(ui(viewWith(2), []));
     fireEvent.click(screen.getByRole('button', { name: /Game log/ }));
-    const items = screen.getAllByRole('listitem').map((item) => item.textContent);
+    const items = within(screen.getByRole('region', { name: 'Game log sheet' })).getAllByRole('listitem').map((item) => item.textContent);
     expect(items.slice(-2)).toEqual(['Event 0', 'Event 1']);
     expect(items[0]).toContain('The match starts');
   });

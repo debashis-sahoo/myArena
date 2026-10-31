@@ -104,7 +104,7 @@ describe('status line', () => {
   it('announces the winner and shows the result with pawns home', () => {
     const won = move(roll(put(base(), 0, [56, 56, 56, 53]), 3).state, 3).state;
     show(viewOf(won, 1));
-    expect(screen.getByRole('status')).toHaveTextContent('Alex wins the match.');
+    expect(document.querySelector('.ludo-status')).toHaveTextContent('Alex wins the match.');
     expect(screen.getByRole('heading', { name: 'Alex wins!' })).toBeInTheDocument();
     expect(screen.getByText('Sam: 0 of 4 pawns home')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Roll the die' })).toBeNull();
@@ -119,7 +119,7 @@ describe('the flat board', () => {
     expect(container.querySelectorAll('.ludo-pawn-number')).toHaveLength(8);
     const paths = new Set(Array.from(container.querySelectorAll('.ludo-pawn-mark')).map((mark) => mark.getAttribute('d')));
     expect(paths.size).toBe(2);
-    expect(container.querySelector('svg')).toHaveAttribute('role', 'img');
+    expect(container.querySelector('svg.ludo-board-svg')).toHaveAttribute('role', 'img');
     expect(container.querySelector('[style]')).toBeNull();
   });
 

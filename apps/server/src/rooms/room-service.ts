@@ -14,7 +14,7 @@ import { emptyCatalog, type GameCatalog } from './catalog.js';
 import { sendChat } from './chat.js';
 import { removeMember, selectGame, setReady, updateSettings } from './lobby.js';
 import { pickSuccessor, transferHost } from './handoff.js';
-import { MatchManager } from './match.js';
+import { MatchManager, type MatchLifecycleEvent } from './match.js';
 import { ok, type Context, type EventData, type Outcome } from './outcome.js';
 import { RecoveryManager } from './recovery.js';
 import type { RoomSetup } from './room-setup.js';
@@ -48,6 +48,8 @@ export class RoomService {
   onHostChanged: (roomId: string, hostParticipantId: string) => void = () => {};
   // Delivers one game update; each recipient's own view comes from `gameView`.
   publishGame: (roomId: string, update: { matchId: string; seq: number; events: readonly JsonValue[] }) => void = () => {};
+  /** Start and end of each match (game, seat count, duration); the HTTP layer logs it without any player or game content. */
+  onMatchLifecycle: (event: MatchLifecycleEvent) => void = () => {};
   onRoomClosed: (roomId: string, participantIds: string[]) => void = () => {};
   private readonly clock: Clock;
   private readonly matches: MatchManager;
@@ -59,7 +61,7 @@ export class RoomService {
     this.store = options.store ?? new MemoryRoomStore<Room>();
     this.clock = options.clock ?? systemClock;
     this.games = options.games ?? emptyCatalog;
-    this.matches = new MatchManager(this.clock, (roomId, events) => this.publishGameFor(roomId, events));
+    this.matches = new MatchManager(this.clock, (roomId, events) => this.publishGameFor(roomId, events), (event) => this.onMatchLifecycle(event));
     this.recovery = new RecoveryManager(this.clock, options.config.recoveryWindowMs ?? DEFAULT_RECOVERY_WINDOW_MS, (roomId, participantId) => this.expire(roomId, participantId));
     this.limits = options.config;
   }

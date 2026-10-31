@@ -63,11 +63,11 @@ test.describe('Ludo against the computer', () => {
     await page.goto('/play/ludo/solo');
     const chooser = page.getByRole('group', { name: 'Choose a pawn' });
     await chooser.getByRole('button').first().click();
-    await expect(page.getByRole('heading', { name: 'Pat wins!' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Player 1 wins!' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Roll the die' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Play again' }).click();
     await expect(page.getByRole('region', { name: 'Ludo match' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Pat wins!' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Player 1 wins!' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Leave match' }).click();
     await page.goto('/');
     await page.evaluate(([key, saved]) => localStorage.setItem(key!, JSON.stringify({ ...(saved as object), savedAt: Date.now() })), [SAVE_KEY, nearlyWon] as const);
