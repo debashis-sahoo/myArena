@@ -1,4 +1,5 @@
-import { cellOf, type Color, type LudoMatchView } from '@myarena/ludo';
+import { BASE, cellOf, type Color, type LudoMatchView } from '@myarena/ludo';
+import { centreOf, slotCentres } from './geometry';
 
 /** Where several pawns that share a square stand, as offsets in square units, and how much smaller they are drawn. */
 export const SPREAD: Record<number, { scale: number; offsets: [number, number][] }> = {
@@ -8,17 +9,19 @@ export const SPREAD: Record<number, { scale: number; offsets: [number, number][]
   4: { scale: 0.5, offsets: [[-0.25, -0.25], [0.25, -0.25], [-0.25, 0.25], [0.25, 0.25]] },
 };
 
-export interface PlacedPawn { seat: number; pawn: number; color: Color; cx: number; cy: number; scale: number; movable: boolean; }
+export interface PlacedPawn { seat: number; pawn: number; color: Color; cx: number; cy: number; scale: number; movable: boolean; highlighted: boolean; }
 
-/** Every pawn's centre on the 15 by 15 grid (squares are 1 by 1), spread out when they share a square. */
-export function placePawns(view: LudoMatchView, movable: ReadonlySet<number>): PlacedPawn[] {
-  const groups = new Map<string, { seat: number; pawn: number; color: Color; col: number; row: number }[]>();
+export const pawnKey = (seat: number, pawn: number): string => `${seat}:${pawn}`;
+
+/** Every pawn's centre on the 15 by 15 grid (squares are 1 by 1), spread out when they share a square. `highlight` is the viewer's pawn whose move button is pointed at. */
+export function placePawns(view: LudoMatchView, movable: ReadonlySet<number>, highlight: number | null = null): PlacedPawn[] {
+  const groups = new Map<string, { seat: number; pawn: number; color: Color; x: number; y: number }[]>();
   for (const seat of view.seats) {
     seat.pawns.forEach((step, pawn) => {
-      const cell = cellOf(seat.color, pawn, step);
-      const key = `${cell.col},${cell.row}`;
+      const point = step === BASE ? slotCentres(seat.color)[pawn]! : centreOf(cellOf(seat.color, pawn, step));
+      const key = `${point.x},${point.y}`;
       const list = groups.get(key) ?? [];
-      list.push({ seat: seat.index, pawn, color: seat.color, col: cell.col, row: cell.row });
+      list.push({ seat: seat.index, pawn, color: seat.color, x: point.x, y: point.y });
       groups.set(key, list);
     });
   }
@@ -28,8 +31,9 @@ export function placePawns(view: LudoMatchView, movable: ReadonlySet<number>): P
     list.forEach((item, index) => {
       const [dx, dy] = layout.offsets[index % layout.offsets.length]!;
       placed.push({
-        seat: item.seat, pawn: item.pawn, color: item.color, cx: item.col + 0.5 + dx, cy: item.row + 0.5 + dy,
+        seat: item.seat, pawn: item.pawn, color: item.color, cx: item.x + dx, cy: item.y + dy,
         scale: layout.scale, movable: item.seat === view.you && movable.has(item.pawn),
+        highlighted: item.seat === view.you && highlight === item.pawn,
       });
     });
   }

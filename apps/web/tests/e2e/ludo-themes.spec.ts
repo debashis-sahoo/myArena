@@ -14,7 +14,6 @@ test.describe('Ludo themes', () => {
   test('the host chooses Diwali, everyone sees it, and the match wears it', async ({ browser }) => {
     const { host, player, close } = await roomContexts(browser);
     try {
-      for (const page of [host, player]) await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
       await ludoRoom(host, player);
       await expect(player.getByText('Theme: Classic')).toBeVisible();
       await expect(player.getByRole('radio', { name: /Diwali/ })).toHaveCount(0);

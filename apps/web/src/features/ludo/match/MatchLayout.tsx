@@ -6,7 +6,8 @@ import { GameLog } from '../view/GameLog';
 import { MatchView, type MatchViewProps } from './MatchView';
 import { useUnread } from './useUnread';
 
-const WIDE = '(min-width: 900px)';
+// Wide and tall enough for the game log and chat to sit beside the board; a phone on its side is too short, so it uses sheets.
+const WIDE = '(min-width: 900px) and (min-height: 521px)';
 
 function useWide(): boolean {
   return useSyncExternalStore(
@@ -39,8 +40,8 @@ export interface MatchLayoutProps extends MatchViewProps {
 }
 
 /**
- * The online match with the room's chat. From 900 px wide the game log sits above the chat beside the board;
- * narrower, two buttons open them as sheets of about half the height, so the board stays in view.
+ * The online match with the room's chat. On wide screens the game log sits above the chat in the right column under the
+ * die and controls; otherwise two buttons open them as sheets of about half the height, so the board stays in view.
  */
 export function MatchLayout({ messages, run, ...match }: MatchLayoutProps) {
   const wide = useWide();
@@ -55,12 +56,13 @@ export function MatchLayout({ messages, run, ...match }: MatchLayoutProps) {
 
   if (wide) {
     return (
-      <div className="ludo-layout ludo-layout--wide">
-        <MatchView {...match} />
-        <div className="ludo-side stack">
-          <GameLog view={match.view} />
-          <ChatPanel messages={messages} run={run} className="ludo-chat" />
-        </div>
+      <div className="ludo-layout">
+        <MatchView {...match}>
+          <div className="ludo-side stack">
+            <GameLog view={match.view} />
+            <ChatPanel messages={messages} run={run} className="ludo-chat" />
+          </div>
+        </MatchView>
       </div>
     );
   }
@@ -69,11 +71,12 @@ export function MatchLayout({ messages, run, ...match }: MatchLayoutProps) {
   );
   return (
     <div className="ludo-layout">
-      <MatchView {...match} />
-      <div className="cluster ludo-sheet-buttons">
-        <button type="button" className="btn-secondary" aria-expanded={open === 'log'} onClick={(event) => toggle('log', event.currentTarget)}>{label('Game log', unreadLog)}</button>
-        <button type="button" className="btn-secondary" aria-expanded={open === 'chat'} onClick={(event) => toggle('chat', event.currentTarget)}>{label('Chat', unreadChat)}</button>
-      </div>
+      <MatchView {...match}>
+        <div className="cluster ludo-sheet-buttons">
+          <button type="button" className="btn-secondary" aria-expanded={open === 'log'} onClick={(event) => toggle('log', event.currentTarget)}>{label('Game log', unreadLog)}</button>
+          <button type="button" className="btn-secondary" aria-expanded={open === 'chat'} onClick={(event) => toggle('chat', event.currentTarget)}>{label('Chat', unreadChat)}</button>
+        </div>
+      </MatchView>
       {open === 'log' ? <Sheet label="Game log" onClose={close}><GameLog view={match.view} /></Sheet> : null}
       {open === 'chat' ? <Sheet label="Chat" onClose={close}><ChatPanel messages={messages} run={run} className="ludo-chat" /></Sheet> : null}
     </div>

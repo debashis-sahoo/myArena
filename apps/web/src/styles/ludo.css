@@ -1,49 +1,15 @@
-/* Ludo match layout and the flat board. Shapes use attributes, so nothing here needs an inline style. */
+/* Ludo shared pieces: colours, controls, set-up cards, log, sheets and notices. The board, die and layout have their own files. */
 :root {
-  --ludo-red: #d63a2f;
-  --ludo-green: #2e9e4f;
-  --ludo-yellow: #e0b100;
-  --ludo-blue: #2f6fd6;
+  --ludo-red: #e3242b;
+  --ludo-green: #0d9f55;
+  --ludo-yellow: #ffd60a;
+  --ludo-blue: #29a8f0;
 }
 
-.ludo-match { inline-size: min(100%, 46rem); margin-inline: auto; min-inline-size: 0; }
 .ludo-status { margin: 0; font-weight: 700; min-block-size: 1.5em; overflow-wrap: anywhere; }
-.ludo-board { inline-size: min(100%, calc(100dvh - 16rem)); min-inline-size: min(100%, 18rem); margin-inline: auto; aspect-ratio: 1; }
-.ludo-board-svg { display: block; inline-size: 100%; block-size: 100%; }
-.ludo-board-bg { fill: var(--ludo-board, var(--surface-raised)); stroke: var(--ludo-line, var(--line)); stroke-width: 0.05; }
-
-.ludo-base { fill-opacity: 0.35; stroke: var(--ludo-line, var(--line)); stroke-width: 0.05; }
-.ludo-base--red { fill: var(--ludo-red); }
-.ludo-base--green { fill: var(--ludo-green); }
-.ludo-base--yellow { fill: var(--ludo-yellow); }
-.ludo-base--blue { fill: var(--ludo-blue); }
-.ludo-base--unused { fill-opacity: 0.1; }
-
-.ludo-cell { fill: var(--ludo-cell, var(--surface)); stroke: var(--ludo-line, var(--line)); stroke-width: 0.04; }
-.ludo-cell--red { fill: var(--ludo-red); }
-.ludo-cell--green { fill: var(--ludo-green); }
-.ludo-cell--yellow { fill: var(--ludo-yellow); }
-.ludo-cell--blue { fill: var(--ludo-blue); }
-.ludo-cell--lane { fill-opacity: 0.6; }
-.ludo-home { fill-opacity: 0.85; stroke: var(--ludo-line, var(--line)); stroke-width: 0.04; }
-.ludo-mark { fill: var(--ludo-ink, var(--text)); pointer-events: none; }
-
-.ludo-pawn { stroke: #111; stroke-width: 0.05; }
-.ludo-pawn--red { fill: var(--ludo-red); }
-.ludo-pawn--green { fill: var(--ludo-green); }
-.ludo-pawn--yellow { fill: var(--ludo-yellow); }
-.ludo-pawn--blue { fill: var(--ludo-blue); }
-.ludo-pawn-mark { fill: #fff; stroke: #111; stroke-width: 0.04; }
-.ludo-pawn-number { fill: #fff; stroke: #111; stroke-width: 0.05; paint-order: stroke; font-weight: 700; font-family: system-ui, sans-serif; }
-.ludo-hit { fill: transparent; cursor: pointer; }
-.ludo-glow { fill: none; stroke: var(--accent); stroke-width: 0.09; pointer-events: none; }
-@media (prefers-reduced-motion: no-preference) {
-  .ludo-glow { animation: ludo-pulse 1.2s ease-in-out infinite; }
-}
-@keyframes ludo-pulse { 50% { stroke-opacity: 0.35; } }
-
 .ludo-controls { align-items: stretch; }
 .ludo-controls > button { min-block-size: 44px; }
+.ludo-controls > [data-ludo-roll] { min-block-size: 3.25rem; font-size: 1.1rem; }
 .ludo-chooser { display: grid; gap: var(--space-2); }
 .ludo-chooser > button { min-block-size: 44px; white-space: normal; text-align: start; }
 
@@ -59,9 +25,6 @@
 .ludo-card-title { font-weight: 700; }
 .ludo-solo-title { font-family: var(--font-display); margin: 0; }
 
-.ludo-layout { display: grid; gap: var(--space-4); min-inline-size: 0; }
-.ludo-layout--wide { grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem); align-items: start; gap: var(--space-6); }
-.ludo-layout--wide > .ludo-match { inline-size: 100%; }
 .ludo-side { min-inline-size: 0; }
 .ludo-log ol { margin: 0; padding-inline-start: var(--space-4); }
 .ludo-log li { overflow-wrap: anywhere; }
@@ -73,25 +36,6 @@
 .ludo-sheet-body { overflow: auto; min-block-size: 0; }
 .ludo-sheet .chat-log { max-block-size: 18dvh; }
 
-.ludo-status-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-4); justify-content: space-between; }
 .ludo-countdown { margin: 0; font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 700; }
 .ludo-notice { margin: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-inline-start: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
 .ludo-away { border: 2px solid var(--accent); }
-
-
-.ludo-board { position: relative; }
-.ludo-canvas { display: block; inline-size: 100%; block-size: 100%; touch-action: manipulation; border-radius: var(--radius); }
-.ludo-canvas--pick { cursor: pointer; }
-.ludo-preparing { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; background: var(--surface-raised); border-radius: var(--radius); font-weight: 700; }
-.ludo-view-toggle { position: absolute; inset-inline-end: var(--space-2); inset-block-end: var(--space-2); min-block-size: 44px; background: color-mix(in srgb, var(--surface-raised) 88%, transparent); }
-.ludo-die { inline-size: 3rem; block-size: 3rem; flex: none; }
-.ludo-die-body { fill: #f6efde; stroke: #8a7a5a; stroke-width: 3; }
-.ludo-die-pip { fill: #1a1520; }
-.ludo-die-unknown { fill: #6a5a40; font-weight: 700; font-family: system-ui, sans-serif; }
-@media (prefers-reduced-motion: no-preference) {
-  .ludo-die--rolling { animation: ludo-shake 0.5s ease-in-out infinite; }
-}
-@keyframes ludo-shake { 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
-
-.ludo-match { padding-inline: env(safe-area-inset-left) env(safe-area-inset-right); }
-.ludo-quality summary { display: flex; align-items: center; min-block-size: 44px; cursor: pointer; font-weight: 700; }

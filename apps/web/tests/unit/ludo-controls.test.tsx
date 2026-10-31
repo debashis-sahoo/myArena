@@ -112,15 +112,15 @@ describe('status line', () => {
 });
 
 describe('the flat board', () => {
-  it('draws every pawn with its colour, a distinct mark and its number', () => {
+  it('draws every pawn as a pin with its colour and a distinct mark, and no number', () => {
     const { container } = show(viewOf(base(), 0));
-    expect(container.querySelectorAll('.ludo-pawn')).toHaveLength(8);
-    expect(container.querySelectorAll('.ludo-pawn-mark')).toHaveLength(8);
-    expect(container.querySelectorAll('.ludo-pawn-number')).toHaveLength(8);
-    const paths = new Set(Array.from(container.querySelectorAll('.ludo-pawn-mark')).map((mark) => mark.getAttribute('d')));
+    expect(container.querySelectorAll('.ludo-pin')).toHaveLength(8);
+    expect(container.querySelectorAll('.ludo-pin-mark')).toHaveLength(8);
+    expect(container.querySelector('.ludo-pin text')).toBeNull();
+    const paths = new Set(Array.from(container.querySelectorAll('.ludo-pin-mark')).map((mark) => mark.getAttribute('d')));
     expect(paths.size).toBe(2);
     expect(container.querySelector('svg.ludo-board-svg')).toHaveAttribute('role', 'img');
-    expect(container.querySelector('[style]')).toBeNull();
+    expect(container.querySelector('svg.ludo-board-svg [style]')).toBeNull();
   });
 
   it('lets the viewer press a movable pawn on the board and exposes state for tests', () => {

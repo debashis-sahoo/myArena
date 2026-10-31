@@ -1,5 +1,7 @@
 # Contract: Ludo UI
 
+> **Superseded by feature 004 (Ludo visual redesign):** sections 3 (board and die presentation), 6 (3D motion detail), 7 (visual quality) and the 3D parts of 9 (themes) are replaced by `specs/004-ludo-visual-redesign/contracts/ui-contract.md`.
+
 States, semantics and storage for the screens this feature adds or changes. Visual design (exact
 colours, materials, art) is decided during implementation and judged by the review in spec SC-005
 and SC-016; this contract fixes only what tests and assistive technology rely on.

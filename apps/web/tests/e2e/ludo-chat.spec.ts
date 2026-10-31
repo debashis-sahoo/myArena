@@ -2,7 +2,6 @@ import { test, expect, roomContexts, createRoom, joinByCode } from './helpers';
 import type { Page } from '@playwright/test';
 
 async function startMatch(host: Page, player: Page) {
-  for (const page of [host, player]) await page.addInitScript(() => localStorage.setItem('myarena-ludo-quality', 'lite'));
   const code = await createRoom(host, 'Hosty', { game: 'Ludo', players: 2 });
   await joinByCode(player, code, 'Pat');
   await player.getByRole('button', { name: 'I am ready' }).click();
