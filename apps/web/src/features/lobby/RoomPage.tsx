@@ -64,7 +64,7 @@ export function RoomPage() {
           )}
           <MatchControls lobby={lobby} run={run} />
         </div>
-        <ChatPanel messages={lobby.chat} run={run} className="room-chat" />
+        {online?.ownsChat && showMatch ? null : <ChatPanel messages={lobby.chat} run={run} className="room-chat" />}
       </div>
     </div>
   );

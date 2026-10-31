@@ -11,6 +11,7 @@ import './styles/art.css';
 import './styles/focus.css';
 import './styles/motion.css';
 import './styles/ludo.css';
+import './styles/ludo-themes.css';
 import './features/lobby/RoomPage.css';
 import './features/landing/landing.css';
 

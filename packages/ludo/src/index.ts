@@ -5,3 +5,4 @@ export * from './settings.js';
 export * from './state.js';
 export * from './view.js';
 export * from './engine.js';
+export * from './strategies.js';

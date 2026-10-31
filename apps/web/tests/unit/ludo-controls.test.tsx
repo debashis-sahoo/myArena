@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createMatch, legalPawns, move, roll, toMatchView, type LudoMatchView, type MatchState } from '@myarena/ludo';
 import { describePawnMove, statusText } from '../../src/features/ludo/a11y/describe';
 import { LudoMatch } from '../../src/features/ludo/match/LudoMatch';
@@ -136,9 +136,11 @@ describe('the flat board', () => {
 describe('the online match', () => {
   const run = vi.fn(async () => null);
   const game = (state: unknown) => ({ matchId: 'm', seq: 1, state, events: [] });
+  beforeEach(() => { vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined })); });
+  afterEach(() => { vi.unstubAllGlobals(); });
 
   it('shows only a waiting message, with no board, to a member without a seat', () => {
-    const { container } = render(<LudoMatch lobby={{} as never} game={game({ kind: 'WAITING' })} run={run} />);
+    const { container } = render(<LudoMatch lobby={{ chat: [] } as never} game={game({ kind: 'WAITING' })} run={run} />);
     expect(screen.getByRole('heading', { name: 'A Ludo match is in progress' })).toBeInTheDocument();
     expect(screen.getByText('You will be able to join the next one.')).toBeInTheDocument();
     expect(container.querySelector('svg')).toBeNull();
@@ -146,20 +148,20 @@ describe('the online match', () => {
   });
 
   it('prepares the match until the first game message arrives', () => {
-    render(<LudoMatch lobby={{} as never} game={null} run={run} />);
+    render(<LudoMatch lobby={{ chat: [] } as never} game={null} run={run} />);
     expect(screen.getByRole('status')).toHaveTextContent('Preparing the match');
   });
 
   it('sends game actions through the room connection', async () => {
     const send = vi.fn(async () => null);
-    render(<LudoMatch lobby={{} as never} game={game(viewOf(base(), 0))} run={send} />);
+    render(<LudoMatch lobby={{ chat: [] } as never} game={game(viewOf(base(), 0))} run={send} />);
     fireEvent.click(screen.getByRole('button', { name: 'Roll the die' }));
     expect(send).toHaveBeenCalledWith({ type: 'game.action', action: { type: 'roll' } });
   });
 
   it('shows the server\'s plain-language refusal', async () => {
     const send = vi.fn(async () => 'It is not your turn. Wait for your turn.');
-    render(<LudoMatch lobby={{} as never} game={game(viewOf(base(), 0))} run={send} />);
+    render(<LudoMatch lobby={{ chat: [] } as never} game={game(viewOf(base(), 0))} run={send} />);
     fireEvent.click(screen.getByRole('button', { name: 'Roll the die' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('It is not your turn. Wait for your turn.');
   });

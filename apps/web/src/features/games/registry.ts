@@ -31,9 +31,13 @@ export const onlineGameRegistry: Record<string, OnlineGameLoader> = {
 };
 
 interface OnlineGameComponents {
+  /** True when the game's match screen shows the room chat itself, so the room page must not repeat it. */
+  ownsChat: boolean;
   Settings: LazyExoticComponent<ComponentType<GameSettingsProps>>;
   Match: LazyExoticComponent<ComponentType<GameMatchProps>>;
 }
+
+const gamesWithOwnChat: ReadonlySet<string> = new Set(['ludo']);
 
 const cache = new Map<string, OnlineGameComponents>();
 
@@ -46,6 +50,7 @@ export function onlineGame(gameId: string | null): OnlineGameComponents | null {
     let pending: ReturnType<OnlineGameLoader> | undefined;
     const once = () => (pending ??= load());
     entry = {
+      ownsChat: gamesWithOwnChat.has(gameId),
       Settings: lazy(async () => ({ default: (await once()).default.Settings })),
       Match: lazy(async () => ({ default: (await once()).default.Match })),
     };
