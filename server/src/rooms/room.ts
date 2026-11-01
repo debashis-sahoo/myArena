@@ -12,7 +12,8 @@ import {
   type RoomState,
   type SystemCode,
 } from '@myarena/shared';
-import { getEngine, type GameEngine } from '../games/registry.js';
+import { getEngine, type ActionResult, type GameContext, type GameEngine } from '../games/registry.js';
+import { logger } from '../logger.js';
 import { ChatBuffer, sanitizeChatText } from './chat.js';
 
 export class RoomError extends Error {
@@ -29,6 +30,10 @@ export interface RoomEvents {
   stateChanged(room: Room): void;
   chat(room: Room, message: ChatMessage): void;
   closed(room: Room, reason: ClosedReason): void;
+  /** A game event for everyone in the room. */
+  gameEvent(room: Room, event: unknown): void;
+  /** A still-connected human was released for inactivity: tell them and detach their socket. */
+  removedInactive(room: Room, socketId: string): void;
 }
 
 export interface RoomOptions {
@@ -90,6 +95,9 @@ export class Room {
   private readonly removed = new Map<string, number>();
   private readonly engine: GameEngine;
   private match: unknown = null;
+  /** Timers owned by the running match; cleared when the room closes. */
+  private readonly matchTimers = new Set<NodeJS.Timeout>();
+  private readonly lastSaid = new Map<string, number>();
 
   constructor(
     roomId: string,
@@ -282,15 +290,38 @@ export class Room {
       throw new RoomError('NOT_ENOUGH_PLAYERS', `At least ${this.game.minPlayers} players are needed to start.`);
     }
     this.state = 'in_progress';
+    // Slot order: the host first, then the other players by seat order.
+    const ordered = this.seats
+      .flatMap((s) => (s.occupant ? [{ seat: s, p: s.occupant }] : []))
+      .sort((a, b) => Number(b.p.playerId === this.hostPlayerId) - Number(a.p.playerId === this.hostPlayerId) || a.seat.index - b.seat.index);
+    const colors = this.engine.assignColors?.(
+      ordered.map(({ seat, p }) => ({ playerId: p.playerId, seatIndex: seat.index, kind: p.kind })),
+    );
+    if (colors) this.applyColors(colors);
     this.match = this.engine.createMatch(
-      this.seats.flatMap((s) =>
-        s.occupant
-          ? [{ playerId: s.occupant.playerId, displayName: s.occupant.displayName, color: s.color, kind: s.occupant.kind }]
-          : [],
-      ),
+      ordered.map(({ p }) => ({ playerId: p.playerId, displayName: p.displayName, color: p.color, kind: p.kind })),
+      this.buildContext(),
     );
     this.announce('match_started', 'The match has started');
     this.changed();
+  }
+
+  /** A game intent from a seated player. Rules and turn order are enforced by the engine. */
+  action(socketId: string, action: unknown): void {
+    const p = this.findBySocket(socketId);
+    if (!p) throw new RoomError('NOT_IN_ROOM', 'You are not in this room.');
+    if (this.state !== 'in_progress' || this.match === null) {
+      throw new RoomError('INVALID_STATE', 'The match has not started.');
+    }
+    this.lastActivityAt = Date.now();
+    const result: ActionResult = this.engine.onAction(this.match, p.playerId, action);
+    if (!result.ok) throw new RoomError('INVALID_STATE', result.reason ?? 'That is not allowed right now.');
+  }
+
+  /** The game snapshot for a join, create, or resume acknowledgement while a match is running. */
+  gameView(playerId: string): unknown {
+    if (this.state !== 'in_progress' || this.match === null) return undefined;
+    return this.engine.getView(this.match, playerId);
   }
 
   // ---------- chat ----------
@@ -314,23 +345,85 @@ export class Room {
     for (const s of this.seats) if (s.occupant) this.clearTimer(s.occupant);
     if (this.match !== null) this.engine.dispose(this.match);
     this.match = null;
+    for (const t of this.matchTimers) clearTimeout(t);
+    this.matchTimers.clear();
     this.events.closed(this, reason);
   }
 
   // ---------- internals ----------
 
-  private releaseSeat(playerId: string, reason: 'left' | 'timeout' | 'removed'): void {
+  private buildContext(): GameContext {
+    return {
+      schedule: (ms, fn) => {
+        const timer = setTimeout(() => {
+          this.matchTimers.delete(timer);
+          if (this.state === 'closed') return;
+          try {
+            fn();
+          } catch (err) {
+            logger.error({ err, roomId: this.roomId }, 'match timer failed');
+          }
+        }, ms);
+        this.matchTimers.add(timer);
+        return () => {
+          clearTimeout(timer);
+          this.matchTimers.delete(timer);
+        };
+      },
+      emit: (event) => {
+        this.lastActivityAt = Date.now();
+        this.events.gameEvent(this, event);
+      },
+      say: (playerId, text) => this.say(playerId, text),
+      releaseSeat: (playerId, reason) => this.releaseSeat(playerId, reason),
+      now: () => Date.now(),
+      log: (level, fields, message) => logger[level]({ roomId: this.roomId, ...fields }, message),
+    };
+  }
+
+  /** Chat as a participant (a bot), at most one message per second each. */
+  private say(playerId: string, text: string): void {
+    const p = this.seats.find((s) => s.occupant?.playerId === playerId)?.occupant;
+    if (!p) return;
+    const now = Date.now();
+    if (now - (this.lastSaid.get(playerId) ?? 0) < 1000) return;
+    const clean = sanitizeChatText(text);
+    if (clean === null) return;
+    this.lastSaid.set(playerId, now);
+    this.events.chat(this, this.chat.player(p.playerId, p.displayName, p.color, clean));
+  }
+
+  /** Applies the game's colours to occupied seats; empty seats take whatever colours are left. */
+  private applyColors(colors: Record<string, string>): void {
+    const used = new Set<string>();
+    for (const s of this.seats) {
+      const c = s.occupant ? colors[s.occupant.playerId] : undefined;
+      if (s.occupant && c) {
+        s.occupant.color = c;
+        s.color = c;
+        used.add(c);
+      }
+    }
+    const spare = this.game.seatColors.filter((c) => !used.has(c));
+    for (const s of this.seats) if (!s.occupant) s.color = spare.shift() ?? s.color;
+  }
+
+  private releaseSeat(playerId: string, reason: 'left' | 'timeout' | 'removed' | 'inactive'): void {
     const seat = this.seats.find((s) => s.occupant?.playerId === playerId);
     const p = seat?.occupant;
     if (!seat || !p) return;
     this.clearTimer(p);
+    const socketId = p.socketId;
     seat.occupant = null;
     const wasHost = this.hostPlayerId === p.playerId;
     const inMatch = this.state === 'in_progress';
 
     if (reason === 'removed') this.announce('removed', `${p.displayName} was removed by the host`);
+    else if (reason === 'inactive') this.announce('seat_released', `${p.displayName} was removed for inactivity`);
     else if (reason === 'timeout' && inMatch) this.announce('seat_released', `${p.displayName}'s seat was released`);
     else this.announce('left', `${p.displayName} left the room`);
+
+    if (reason === 'inactive' && socketId) this.events.removedInactive(this, socketId);
 
     if (inMatch && this.match !== null) this.engine.onSeatReleased(this.match, p.playerId);
 

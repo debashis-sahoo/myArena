@@ -1,4 +1,4 @@
-import type { ActionResult, GameEngine, MatchSeat } from './registry.js';
+import type { ActionResult, GameContext, GameEngine, MatchSeat } from './registry.js';
 
 interface PlaceholderMatch {
   seats: MatchSeat[];
@@ -9,7 +9,7 @@ interface PlaceholderMatch {
 export function placeholderEngine(id: string): GameEngine {
   return {
     id,
-    createMatch(seats: MatchSeat[]): PlaceholderMatch {
+    createMatch(seats: MatchSeat[], _ctx?: GameContext): PlaceholderMatch {
       return { seats: seats.map((s) => ({ ...s })), released: [] };
     },
     getView(match: unknown): unknown {

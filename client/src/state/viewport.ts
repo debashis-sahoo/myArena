@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-function useQuery(query: string): boolean {
+export function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
     (cb) => {
       const mq = window.matchMedia(query);
@@ -20,12 +20,12 @@ export interface LayoutMode {
 }
 
 export function useLayoutMode(): LayoutMode {
-  const landscape = useQuery('(orientation: landscape)');
-  const minWidth560 = useQuery('(min-width: 560px)');
-  const minWidth700 = useQuery('(min-width: 700px) and (min-height: 540px)');
+  const landscape = useMediaQuery('(orientation: landscape)');
+  const minWidth560 = useMediaQuery('(min-width: 560px)');
+  const minWidth700 = useMediaQuery('(min-width: 700px) and (min-height: 540px)');
   return { side: landscape && minWidth560, dockedChat: minWidth700 };
 }
 
 export function useReducedMotion(): boolean {
-  return useQuery('(prefers-reduced-motion: reduce)');
+  return useMediaQuery('(prefers-reduced-motion: reduce)');
 }

@@ -12,6 +12,8 @@ export class RoomStore {
     this.events = {
       stateChanged: (room) => events.stateChanged(room),
       chat: (room, message) => events.chat(room, message),
+      gameEvent: (room, event) => events.gameEvent(room, event),
+      removedInactive: (room, socketId) => events.removedInactive(room, socketId),
       closed: (room, reason) => {
         this.rooms.delete(room.roomId);
         events.closed(room, reason);

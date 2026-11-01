@@ -1,4 +1,5 @@
 /** Wire protocol. Authoritative description: specs/001-platform-hub-rooms/contracts/realtime-events.md */
+import type { LudoState } from './ludo/types.js';
 
 export const EVENTS = {
   // client -> server (all use acknowledgements)
@@ -15,8 +16,9 @@ export const EVENTS = {
   PLAYER_REMOVED: 'player:removed',
   ROOM_CLOSED: 'room:closed',
   SERVER_RESTARTING: 'server:restarting',
-  // reserved for game modules (not used by the platform core)
+  // game channel: actions up, events and snapshots down
   GAME_ACTION: 'game:action',
+  GAME_EVENT: 'game:event',
   GAME_STATE: 'game:state',
 } as const;
 
@@ -139,6 +141,8 @@ export interface JoinedData {
   chat: ChatMessage[];
   invitePath: string | null;
   resumed: boolean;
+  /** Current game snapshot when a match is in progress. */
+  game?: LudoState;
 }
 export interface RoomData {
   room: RoomState;
@@ -148,6 +152,7 @@ export interface ChatSentData {
 }
 export interface RemovedData {
   cooldownMs: number;
+  reason?: 'host' | 'inactive';
 }
 export interface ClosedData {
   reason: ClosedReason;

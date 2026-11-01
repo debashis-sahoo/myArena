@@ -9,6 +9,7 @@ import {
   type Ack,
   type ChatMessage,
   type JoinedData,
+  type LudoState,
 } from '@myarena/shared';
 import { config } from '../config.js';
 import { logger } from '../logger.js';
@@ -19,6 +20,7 @@ import {
   chatSendSchema,
   createRoomSchema,
   emptySchema,
+  gameActionSchema,
   joinRoomSchema,
   kickSchema,
   setCapacitySchema,
@@ -29,6 +31,7 @@ interface SocketData {
   roomId?: string;
   joinBucket?: TokenBucket;
   chatBucket?: TokenBucket;
+  actionBucket?: TokenBucket;
 }
 
 function dataOf(socket: Socket): SocketData {
@@ -59,6 +62,15 @@ export function createRealtime(io: Server): { store: RoomStore } {
       logger.info({ roomId: room.roomId, gameId: room.game.id, reason }, 'room closed');
       io.to(room.roomId).emit(EVENTS.ROOM_CLOSED, { reason });
       io.in(room.roomId).socketsLeave(room.roomId);
+    },
+    gameEvent: (room, event) => {
+      io.to(room.roomId).emit(EVENTS.GAME_EVENT, event);
+    },
+    removedInactive: (_room, socketId) => {
+      const target = io.sockets.sockets.get(socketId);
+      if (!target) return;
+      detach(target);
+      target.emit(EVENTS.PLAYER_REMOVED, { cooldownMs: 0, reason: 'inactive' });
     },
   };
   const store = new RoomStore(events);
@@ -121,6 +133,7 @@ export function createRealtime(io: Server): { store: RoomStore } {
     const d = dataOf(socket);
     d.joinBucket = new TokenBucket(10, 1);
     d.chatBucket = new TokenBucket(CHAT_BURST, CHAT_REFILL_PER_SEC);
+    d.actionBucket = new TokenBucket(10, 5);
 
     handler(socket, EVENTS.ROOM_CREATE, createRoomSchema, (p) => {
       enforce(createLimiter.take(clientIp(socket)), 'You are creating rooms too quickly.');
@@ -134,6 +147,7 @@ export function createRealtime(io: Server): { store: RoomStore } {
         chat: room.history(),
         invitePath: room.inviteEnabled ? invitePathFor(room.game.id, room.roomId) : null,
         resumed: false,
+        game: room.gameView(playerId) as LudoState | undefined,
       };
       return data;
     });
@@ -163,6 +177,7 @@ export function createRealtime(io: Server): { store: RoomStore } {
         chat: room.history(),
         invitePath: room.inviteEnabled ? invitePathFor(room.game.id, room.roomId) : null,
         resumed: result.resumed,
+        game: room.gameView(result.playerId) as LudoState | undefined,
       };
       return data;
     });
@@ -204,6 +219,13 @@ export function createRealtime(io: Server): { store: RoomStore } {
       enforce(d.chatBucket!.take(), 'You are sending messages too quickly.');
       const message: ChatMessage = room.sendChat(socket.id, p.text);
       return { message };
+    });
+
+    handler(socket, EVENTS.GAME_ACTION, gameActionSchema, (p) => {
+      const room = roomOf(socket);
+      enforce(d.actionBucket!.take(), 'You are acting too quickly.');
+      room.action(socket.id, p);
+      return {};
     });
 
     socket.on('disconnect', (reason) => {

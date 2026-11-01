@@ -16,6 +16,11 @@ const COPY: Record<RoomStatus['kind'], { emoji: string; title: string; body: str
     body: 'This match has already started, so new players cannot join. Ask your friend to create a new room.',
   },
   removed: { emoji: '✋', title: 'You were removed', body: 'The host removed you from this room.' },
+  inactive: {
+    emoji: '💤',
+    title: 'You were removed for inactivity',
+    body: 'You missed three turns in a row, so your seat was released.',
+  },
   ended: { emoji: '🏁', title: 'This room has ended', body: 'The room closed, or the server restarted. Head back to the Hub to start a new one.' },
   taken_over: { emoji: '🪟', title: 'Open in another tab', body: 'You joined this room from another window, so this one has been disconnected.' },
   error: { emoji: '⚠️', title: 'Something went wrong', body: 'We could not reach the room.' },

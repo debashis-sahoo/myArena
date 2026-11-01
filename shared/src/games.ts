@@ -24,7 +24,7 @@ export const GAMES: readonly GameDefinition[] = [
     maxPlayers: 4,
     defaultCapacity: 4,
     supportsAi: true,
-    seatColors: ['red', 'green', 'yellow', 'blue'],
+    seatColors: ['yellow', 'green', 'blue', 'red'],
     theme: { accent: '#3dff9a', accent2: '#8a5cff' },
   },
   {

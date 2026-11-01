@@ -6,6 +6,9 @@ import {
   type ClosedData,
   type ClosedReason,
   type JoinedData,
+  type LudoAction,
+  type LudoEvent,
+  type LudoState,
   type RemovedData,
   type RoomData,
   type RoomState,
@@ -14,7 +17,7 @@ import { sfx } from '../audio/sfx';
 import { guestInfo } from './guest';
 import { connectSocket, disconnectSocket, emitWithAck, socketInstance, type ClientAck, type ClientErrorCode } from './socket';
 
-export type StatusKind = 'not_found' | 'full' | 'in_progress' | 'removed' | 'ended' | 'taken_over' | 'error';
+export type StatusKind = 'not_found' | 'full' | 'in_progress' | 'removed' | 'inactive' | 'ended' | 'taken_over' | 'error';
 
 export interface RoomStatus {
   kind: StatusKind;
@@ -33,7 +36,18 @@ export interface RoomView {
   unread: number;
   drawerOpen: boolean;
   status: RoomStatus | null;
+  game: GameSlice;
 }
+
+/** The game channel: the state currently shown, plus events waiting to be animated in order. */
+export interface GameSlice {
+  state: LudoState | null;
+  queue: LudoEvent[];
+  /** Highest event seq received (or the snapshot's matchRev); older or duplicate events are ignored. */
+  lastSeq: number;
+}
+
+const NO_GAME: GameSlice = { state: null, queue: [], lastSeq: 0 };
 
 const IDLE: RoomView = {
   phase: 'idle',
@@ -44,6 +58,7 @@ const IDLE: RoomView = {
   unread: 0,
   drawerOpen: false,
   status: null,
+  game: NO_GAME,
 };
 
 let view: RoomView = IDLE;
@@ -109,7 +124,7 @@ function endSession(status: RoomStatus): void {
   if (session) markRoom(session.roomId, false);
   session = null;
   joinedOnce = false;
-  set({ phase: 'status', status, room: null, you: null, invitePath: null, chat: [], unread: 0, drawerOpen: false });
+  set({ phase: 'status', status, room: null, you: null, invitePath: null, chat: [], unread: 0, drawerOpen: false, game: NO_GAME });
   disconnectSocket();
 }
 
@@ -124,6 +139,8 @@ function applyJoined(gameId: string, data: JoinedData): void {
     you: data.you.playerId,
     invitePath: data.invitePath,
     chat: data.chat,
+    // A fresh snapshot replaces whatever was queued: joins and reconnects never replay a backlog.
+    game: data.game ? { state: data.game, queue: [], lastSeq: data.game.matchRev } : NO_GAME,
   });
 }
 
@@ -152,9 +169,15 @@ function wire(): void {
     });
   });
 
+  s.on(EVENTS.GAME_EVENT, (event: LudoEvent) => {
+    if (view.phase !== 'in_room' || event.seq <= view.game.lastSeq) return;
+    set({ game: { ...view.game, queue: [...view.game.queue, event], lastSeq: event.seq } });
+  });
+
   s.on(EVENTS.PLAYER_REMOVED, (d: RemovedData) => {
     sfx.error();
-    endSession({ kind: 'removed', retryUntil: Date.now() + d.cooldownMs });
+    if (d.reason === 'inactive') endSession({ kind: 'inactive' });
+    else endSession({ kind: 'removed', retryUntil: Date.now() + d.cooldownMs });
   });
 
   s.on(EVENTS.ROOM_CLOSED, (d: ClosedData) => {
@@ -262,6 +285,23 @@ export async function sendChat(text: string): Promise<SimpleResult> {
 
 export function setDrawerOpen(open: boolean): void {
   set({ drawerOpen: open, unread: open ? 0 : view.unread });
+}
+
+/** Sends a game intent (never an outcome); the server decides everything. */
+export function sendGameAction(action: LudoAction): Promise<SimpleResult> {
+  return emitWithAck<object>(EVENTS.GAME_ACTION, action, 8000).then((res) => simple(res));
+}
+
+/** The animation layer reports the state it now shows and how many queued events it consumed. */
+export function commitGame(state: LudoState, consumed: number): void {
+  set({ game: { ...view.game, state, queue: view.game.queue.slice(consumed) } });
+}
+
+/** Drop the backlog and show the newest known state at once (tab was hidden, slow device). */
+export function skipGameToLatest(): void {
+  const last = view.game.queue[view.game.queue.length - 1];
+  if (!last) return;
+  set({ game: { ...view.game, state: last.state, queue: [] } });
 }
 
 /** Leave the terminal status screen and clear it. */

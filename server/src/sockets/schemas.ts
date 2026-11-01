@@ -45,3 +45,9 @@ export const setCapacitySchema = z.object({ capacity: z.number() }).strict();
 export const kickSchema = z.object({ playerId: z.string().min(1).max(40) }).strict();
 
 export const chatSendSchema = z.object({ text: z.string().max(2000) }).strict();
+
+/** Ludo intents: a roll or a pawn choice. There is deliberately no field for a die value. */
+export const gameActionSchema = z.union([
+  z.object({ type: z.literal('roll') }).strict(),
+  z.object({ type: z.literal('move'), pawn: z.number().int().min(0).max(3) }).strict(),
+]);
