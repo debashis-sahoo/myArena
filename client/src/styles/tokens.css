@@ -1,0 +1,120 @@
+/* Design tokens and base styles: neon arcade theme (dark, high contrast, saturated). */
+:root {
+  --bg-0: #0a051d;
+  --bg-1: #160b3f;
+  --surface: rgba(255, 255, 255, 0.07);
+  --surface-2: rgba(255, 255, 255, 0.12);
+  --line: rgba(255, 255, 255, 0.16);
+  --text: #f8f5ff;
+  --muted: #c3baf0;
+
+  --pink: #ff3dac;
+  --cyan: #27e0ff;
+  --lime: #b6ff3b;
+  --yellow: #ffd93d;
+  --purple: #8b5cf6;
+  --orange: #ff9a3d;
+  --danger: #ff5d73;
+
+  --seat-red: #ff4d6d;
+  --seat-green: #2ee59d;
+  --seat-yellow: #ffd93d;
+  --seat-blue: #4da3ff;
+
+  --radius: 18px;
+  --radius-lg: 26px;
+  --glow-cyan: 0 0 18px rgba(39, 224, 255, 0.55);
+  --glow-pink: 0 0 18px rgba(255, 61, 172, 0.55);
+  --glow-lime: 0 0 18px rgba(182, 255, 59, 0.5);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --pad: clamp(10px, 2.4vmin, 24px);
+
+  font-family: 'Trebuchet MS', 'Segoe UI Rounded', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--bg-0);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.4;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Fixed glow backdrop (a pseudo-element avoids fixed-attachment jank on phones). */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60vmax 40vmax at 12% -8%, rgba(139, 92, 246, 0.55), transparent 60%),
+    radial-gradient(50vmax 36vmax at 100% 10%, rgba(255, 61, 172, 0.34), transparent 60%),
+    radial-gradient(60vmax 40vmax at 50% 115%, rgba(39, 224, 255, 0.28), transparent 60%),
+    linear-gradient(180deg, var(--bg-1), var(--bg-0));
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+img,
+svg {
+  display: block;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  line-height: 1;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+
+body.modal-open {
+  overflow: hidden;
+}

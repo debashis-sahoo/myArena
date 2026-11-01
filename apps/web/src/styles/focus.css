@@ -1,8 +1,0 @@
-:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-:focus:not(:focus-visible) { outline: none; }
-
-/* Standalone links get the same 44px touch target as buttons; links inside sentences keep their natural size. */
-.touch-link { display: inline-flex; align-items: center; min-block-size: 44px; min-inline-size: 44px; }
-
-main:focus { outline: none; }
-dialog:focus-visible, [role="alert"]:focus-visible, [role="log"]:focus-visible { outline-offset: 2px; }

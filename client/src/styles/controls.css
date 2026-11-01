@@ -1,0 +1,125 @@
+/* Shared tactile controls: hover, pressed and visible keyboard focus for touch, pointer and keyboard (FR-034). */
+.btn {
+  --btn-a: #7c3aed;
+  --btn-b: #c026a3;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55em;
+  min-height: 44px;
+  padding: 0.55em 1.2em;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+  background: linear-gradient(135deg, var(--btn-a), var(--btn-b));
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -4px 0 rgba(0, 0, 0, 0.22),
+    0 6px 18px rgba(0, 0, 0, 0.4);
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease,
+    filter 0.14s ease;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.12) saturate(1.1);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(2px) scale(0.98);
+  box-shadow:
+    inset 0 2px 6px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+  filter: brightness(0.95);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7) brightness(0.8);
+  opacity: 0.7;
+}
+
+.btn.ghost {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--line);
+  text-shadow: none;
+}
+
+.btn.ghost:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 2px var(--cyan), var(--glow-cyan);
+}
+
+.btn.cyan {
+  --btn-a: #0a72b0;
+  --btn-b: #5a34d6;
+}
+
+.btn.lime {
+  --btn-a: #2ee59d;
+  --btn-b: #b6ff3b;
+  color: #05280f;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.btn.danger {
+  --btn-a: #c9304b;
+  --btn-b: #a51c44;
+}
+
+.btn.small {
+  min-height: 36px;
+  padding: 0.35em 0.9em;
+  font-size: 0.85rem;
+}
+
+.btn.icon {
+  width: 44px;
+  padding: 0;
+}
+
+:where(button, a, input, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--yellow);
+  outline-offset: 3px;
+}
+
+.field {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55em 0.9em;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: rgba(8, 3, 28, 0.6);
+  color: var(--text);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.field:focus-visible {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+  outline: none;
+}
+
+.field::placeholder {
+  color: #8f85c9;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.error-text {
+  color: #ff9db0;
+  font-size: 0.88rem;
+}

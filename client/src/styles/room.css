@@ -1,0 +1,420 @@
+/* Room shell: board in the largest square that fits, panel reflows by screen shape (FR-028, FR-033). */
+.room-shell {
+  --head-h: 52px;
+  position: relative;
+  display: grid;
+  gap: var(--pad);
+  max-width: 2200px;
+  margin-inline: auto;
+  padding: calc(var(--pad) + var(--safe-top)) calc(var(--pad) + var(--safe-right)) calc(var(--pad) + var(--safe-bottom))
+    calc(var(--pad) + var(--safe-left));
+}
+
+.room-head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: var(--head-h);
+  min-width: 0;
+}
+
+.room-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: clamp(1.1rem, 2.6vmin + 0.4vw, 1.7rem);
+}
+
+.room-title strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+.stage-area {
+  grid-area: stage;
+  min-width: 0;
+  min-height: 0;
+}
+
+.room-panel {
+  grid-area: panel;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+}
+
+/* ----- landscape: board left, panel right ----- */
+.room-shell.side {
+  --stage: min(
+    calc(100dvh - var(--head-h) - 3 * var(--pad) - var(--safe-top) - var(--safe-bottom)),
+    calc(100vw - 300px - 3 * var(--pad) - var(--safe-left) - var(--safe-right))
+  );
+  height: 100dvh;
+  overflow: hidden;
+  justify-content: center;
+  grid-template-columns: var(--stage) minmax(260px, 520px);
+  grid-template-rows: var(--head-h) minmax(0, 1fr);
+  grid-template-areas:
+    'head head'
+    'stage panel';
+}
+
+.room-shell.side .panel-scroll {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.room-shell.side.drawer-mode .panel-scroll {
+  flex: 1 1 auto;
+}
+
+/* The collapsed chat drawer floats over the bottom of the panel: keep the lobby clear of it. */
+.room-shell.side.drawer-mode .room-panel {
+  padding-bottom: 60px;
+}
+
+.room-shell.side .docked-chat {
+  flex: 1 1 190px;
+  min-height: 190px;
+}
+
+/* ----- portrait or narrow: board on top, panel below ----- */
+.room-shell.stack {
+  min-height: 100dvh;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    'head'
+    'stage'
+    'panel';
+  align-content: start;
+}
+
+.room-shell.stack .stage-area {
+  width: min(100%, 58dvh);
+  aspect-ratio: 1;
+  justify-self: center;
+}
+
+.room-shell.stack.docked .room-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.room-shell.stack.docked .docked-chat {
+  height: min(62dvh, 560px);
+}
+
+.room-shell.stack.drawer-mode {
+  padding-bottom: calc(var(--pad) + var(--safe-bottom) + 64px);
+}
+
+/* ----- stage and placeholder board ----- */
+.stage {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+}
+
+.stage-inner {
+  display: grid;
+}
+
+.placeholder-board {
+  --u: 5px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--u) * 1.6);
+  padding: calc(var(--u) * 3);
+  border-radius: calc(var(--u) * 5);
+  overflow: hidden;
+  background:
+    radial-gradient(70% 60% at 50% 30%, rgba(139, 92, 246, 0.4), transparent 70%),
+    linear-gradient(170deg, rgba(38, 18, 95, 0.95), rgba(14, 6, 44, 0.95));
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.16),
+    0 0 40px rgba(139, 92, 246, 0.35),
+    0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+.pb-art {
+  width: calc(var(--u) * 58);
+  height: calc(var(--u) * 58);
+  animation: float 5s ease-in-out infinite;
+}
+
+.pb-art svg {
+  width: 100%;
+  height: 100%;
+}
+
+.placeholder-board.still .pb-art {
+  animation: none;
+}
+
+.pb-status {
+  display: grid;
+  justify-items: center;
+  gap: calc(var(--u) * 0.4);
+  text-align: center;
+}
+
+.pb-state {
+  font-size: max(16px, calc(var(--u) * 4.4));
+  font-weight: 1000;
+  letter-spacing: 0.02em;
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 2.4);
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6d3be0, #b01a72);
+  box-shadow: 0 0 20px rgba(255, 61, 172, 0.5);
+}
+
+.placeholder-board.live .pb-state {
+  background: linear-gradient(135deg, #2ee59d, #b6ff3b);
+  color: #06301a;
+  box-shadow: 0 0 22px rgba(46, 229, 157, 0.6);
+}
+
+.pb-sub {
+  font-size: max(11px, calc(var(--u) * 2.2));
+  color: var(--muted);
+}
+
+.pb-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(var(--u) * 1.2);
+}
+
+.pb-players li {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--u) * 1);
+  padding: calc(var(--u) * 0.5) calc(var(--u) * 1.8) calc(var(--u) * 0.5) calc(var(--u) * 0.6);
+  border-radius: 999px;
+  font-size: max(11px, calc(var(--u) * 2.3));
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 2px var(--c);
+}
+
+/* ----- lobby ----- */
+.lobby {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.panel-title .count {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.invite,
+.host-controls {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.invite-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.invite-field {
+  flex: 1 1 160px;
+  min-height: 38px;
+  font-size: 0.82rem;
+}
+
+.player-list {
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: inset 3px 0 0 var(--c), inset 0 0 0 1px var(--line);
+  animation: slide-in 0.25s ease both;
+}
+
+.player.open {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.player.away {
+  opacity: 0.7;
+}
+
+.seat-dot {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 10px var(--c);
+}
+
+.player-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.player .you {
+  font-weight: 600;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--surface-2);
+}
+
+.host-badge {
+  background: linear-gradient(135deg, #ffd93d, #ff9a3d);
+  color: #3a2300;
+  animation: host-glow 1.8s ease-in-out infinite;
+}
+
+.bot-tag {
+  background: linear-gradient(135deg, #0a72b0, #5a34d6);
+}
+
+.away-tag {
+  background: rgba(255, 154, 61, 0.25);
+  color: #ffc58f;
+}
+
+.mode-tag {
+  background: linear-gradient(135deg, #6d3be0, #b01a72);
+}
+
+.capacity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+}
+
+.host-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.host-row .start-btn {
+  flex: 1 1 130px;
+}
+
+/* The host's Start button stays reachable while the lobby scrolls (short landscape screens). */
+.room-shell.side .host-controls {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: #21115a;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stepper-value {
+  min-width: 1.6em;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 1000;
+}
+
+.start-btn {
+  min-height: 48px;
+  font-size: 1.05rem;
+}
+
+.waiting {
+  text-align: center;
+  padding: 6px;
+}
+
+/* very short screens (small landscape phones): tighten everything */
+@media (max-height: 520px) {
+  .room-shell {
+    --head-h: 44px;
+  }
+
+  .invite,
+  .host-controls {
+    padding: 8px;
+  }
+
+  .player {
+    padding: 3px 8px;
+  }
+}

@@ -1,125 +1,150 @@
-<!--
-Sync Impact Report (temporary; remove before commit)
-- Version change: template (unversioned) -> 0.1.0 (initial DRAFT)
-- Modified principles: none renamed; all five template slots replaced by 11 principles
-- Added sections: Core Principles I-XI, Delivery Features, Platform & Experience Standards,
-  Development Quality Gates, Governance (amendments, versioning, exceptions)
-- Removed sections: none (template placeholder sections replaced)
-- Deferred: TODO(RATIFICATION_DATE) - draft is not ratified
-- Note: resolve-template.ps1 could not run (execution policy); the on-disk template was used.
--->
-# myArena Hub Constitution
-
-**Status: DRAFT. Not ratified, approved, implemented, or tested.**
-
-myArena Hub is a browser-based multiplayer gaming platform for friends and families.
+# myArena Platform Constitution & Visual-First Governance
 
 ## Core Principles
 
-### I. Account-Free Play
-Players MUST be able to join and play using only a display name plus a private room code or
-invite link. The platform MUST NOT require registration, email, or phone number to play.
-Room codes and invite links MUST be unguessable enough to keep rooms private.
-Rationale: friends and families want to start a game in seconds.
+### I. Repository and Render-Ready Hosting
 
-### II. Browser-First, Mixed-Device Support
-The platform MUST work in current browsers on laptops, Android phones, and iPhones, and rooms
-MUST support any mix of these devices at once. Native mobile apps are NOT required and MUST
-NOT be needed for any feature.
+The canonical source repository MUST be `https://github.com/debashis-sahoo/myArena.git`.
+Production MUST target a Render.com Web Service with WebSocket support. Repository paths,
+deployment configuration, build and start scripts, and environment-variable contracts MUST
+work on Render without source edits or developer-machine assumptions. Deployment design MUST
+support zero-downtime builds and readiness-gated replacement of the running service.
 
-### III. Two Room Roles, No Global Admin
-Every room has exactly two roles: host/admin and player. The host manages the room (invites,
-start, removal, settings) but MUST remain subject to the same game rules as every player.
-A global or platform-wide administrator role MUST NOT be introduced. Host handoff MUST be
-supported when the host leaves or is lost.
+Rationale: A single, explicit hosting contract prevents local-only success and deployment drift.
 
-### IV. Server-Authoritative Gameplay
-For online play the server MUST decide permissions, turn order, random results (dice, draws),
-legal moves, claims, and winners. Clients MUST only submit intents and render server state.
-Client-supplied outcomes MUST NOT be trusted. Solo modes MAY run locally under game rules.
+### II. Graphics-First Experience
 
-### V. Security and Privacy
-Member authentication, where offered, MUST be secure. Credentials, private information, game
-state, recovery data, and production secrets MUST be protected, MUST NOT be committed to
-source control, and MUST NOT appear in logs. Players MUST see only the information their
-role and game rules permit. Secrets MUST be rotatable.
+Aesthetics, responsive styling, and vibrant micro-interactions MUST be Tier-1 architectural
+requirements and part of feature acceptance, not deferred polish. Interfaces MUST use rich,
+saturated palettes, tactile button states, glowing active-turn indicators, and polished 2D game
+boards. Games with dice MUST show animated dice rolls; moving tokens MUST have smooth movement
+transitions. These effects MUST reflect authoritative game events, not determine their outcomes.
 
-### VI. Reliable Reconnection
-The system MUST distinguish temporary disconnection from intentional departure. A
-disconnected participant MUST keep their seat, role, and state for a defined grace period and
-MUST be restored on reconnect without losing game progress. Only an explicit leave action, or
-expiry of the documented grace period, may release a seat.
+The complete experience MUST remain usable on mobile phones, tablets, and desktop browsers
+without layout breakage, unintended overflow, overlapping controls, or obscured game content.
+Interaction feedback MUST work for touch and pointer input. Reduced-motion preferences MUST
+preserve clear turn, dice-result, and token-position feedback without requiring animation.
 
-### VII. Accessible, Responsive Interaction
-All gameplay and room features MUST work with keyboard and touch input, honor reduced-motion
-preferences, handle phone orientation changes, and survive background/resume without lost or
-duplicated actions. Core flows MUST meet WCAG 2.2 AA contrast and focus requirements.
+Layouts MUST make efficient use of the maximum available screen space for the device class
+(laptop, desktop, tablet, or phone) and orientation (portrait or landscape). The game board MUST
+scale to the largest size that fits the viewport without scrolling or clipping, and surrounding
+elements (players, chat, controls, dice) MUST reflow to the remaining space for the current
+orientation. Layouts MUST adapt when the device rotates or the window resizes, MUST respect
+safe-area insets, and MUST NOT leave large unused areas, fixed-size boards, or desktop-only
+layouts on smaller screens.
 
-### VIII. Platform and Game Separation
-The shared platform owns rooms, permissions, lobby, chat, transport, and recovery. Each game
-owns its rules, state, presentation, and solo mode. Games MUST use platform contracts and
-MUST NOT reimplement platform concerns; the platform MUST NOT contain game-specific rules.
+Rationale: Visual clarity, responsive interaction, and full use of the screen are core
+properties of a playable game.
 
-### IX. Evidence-Based Delivery
-Every feature MUST progress through requirements, prioritized user stories, acceptance
-scenarios, traceable tasks, and automated or manual test evidence. Work MUST NOT be
-described as done, tested, or certified without recorded evidence.
+### III. Velocity and Pragmatic Verification
 
-### X. Simple, Maintainable Architecture
-Game rules, room management, transport, and presentation MUST have clear boundaries and be
-testable independently. Complexity MUST be justified in writing; start with the simplest
-design that satisfies the requirements.
+Early development MUST minimize automated unit and integration suites. Heavy mock harnesses,
+blanket coverage targets, and test-first suite mandates MUST NOT block early implementation.
+Each behavior change MUST instead receive a fast manual smoke check, deterministic game-state
+checkpoints for affected rules, and immediate visual verification for affected UI.
 
-### XI. Clean, Intuitive Design
-The interface MUST be clean and immediately understandable, maximize usable screen space,
-and provide both dark and light modes. 3D effects SHOULD be used where they aid clarity and
-delight, but MUST NOT harm performance, legibility, accessibility, or reduced-motion users.
+Verification evidence MUST record the scenario, expected result, and observed result. A
+checkpoint MUST identify a reproducible initial state and action sequence; dice scenarios MUST
+use controlled outcomes in a development-only context without allowing production clients to
+choose outcomes. Focused automated checks MAY be added when they are cheaper than repeated
+manual checks or protect a demonstrated regression; their scope MUST match the affected risk.
 
-## Delivery Features
+Rationale: Lightweight, repeatable evidence preserves iteration speed without making correctness
+or appearance optional.
 
-Each of the following is a separate delivery feature with its own specification, plan,
-tasks, and evidence:
-1. Base platform and experience
-2. Ludo
-3. Snakes & Ladders
-4. 90-ball Tambola
+### IV. Platform and Game Decoupling
 
-Game features depend on the base platform contracts and MUST NOT block each other.
+The platform MUST own the `myArena Hub` landing page, guest player presence, private room
+creation, shareable invite links at `/room/{gameId}/{roomId}`, host controls, and global in-room
+chat shared by the room's participants. A universal room wrapper MUST own these shared room
+capabilities, and game components MUST mount directly inside it.
 
-## Device Acceptance Requirements
+Every game added to myArena MUST use these core platform capabilities, including player and room
+management, presence, invitations, host controls, and the chat engine, through the universal room
+wrapper. A game MUST NOT implement its own parallel room, player-session, or chat mechanism.
+New platform capabilities that benefit multiple games MUST be added to the platform rather than
+to an individual game.
 
-- Each feature MUST be accepted on real hardware: a laptop, an Android phone, and an iPhone.
-- Acceptance MUST cover both host and player roles, mixed-device rooms, and host handoff.
-- Viewport or browser emulation MAY support development but MUST NOT count as mobile-device
-  certification.
-- Evidence MUST record device, OS, browser versions, tester, date, and scenario results.
+Game modules MUST own localized board views, rules engines, turn transitions, and AI opponent
+behavior. They MUST expose their game behavior through an explicit platform-to-game contract
+without duplicating room, presence, invitation, host-control, or chat infrastructure. Backend
+game modules MUST retain rule authority; a client board view MUST NOT become the rules authority.
 
-## Development Quality Gates
+Rationale: New games can reuse the same multiplayer experience without coupling platform
+services to one game's board or rules.
 
-- Specifications MUST contain requirements, prioritized stories, and acceptance scenarios
-  before planning; plans MUST show compliance with this constitution.
-- Tasks MUST trace to requirements and stories.
-- Server-authoritative rules, reconnection, and permissions MUST have automated tests where
-  practicable; remaining behavior MUST have documented manual evidence.
-- Changes MUST pass review for security (Principle V), accessibility (VII), and boundary
-  integrity (VIII, X).
-- A feature is releasable only when device acceptance evidence exists for all required
-  devices and roles.
+### V. Server-Authoritative Real-Time Play
+
+Real-time room communication MUST use WebSocket or Socket.io and work on Render. The backend
+MUST validate game state, dice outcomes, player turns, and winner determinations. Clients MUST
+submit action intents; they MUST NOT select dice results, advance turns, declare winners, or
+replace authoritative state through unchecked client payloads.
+
+The backend MUST validate room membership, applicable host permissions, turn ownership, and
+move legality before accepting an action. Invalid or repeated actions MUST NOT produce illegal
+state transitions. Accepted changes MUST be ordered and broadcast consistently to room members;
+reconnecting clients MUST receive an authoritative snapshot before resuming play. AI actions
+MUST pass through the same authoritative validation as human actions.
+
+Rationale: One authoritative state prevents divergent boards and client-controlled outcomes.
+
+## Runtime and Deployment Constraints
+
+- Render configuration, such as `render.yaml`, a `Dockerfile`, or build and start scripts,
+  MUST use repository-relative paths and documented environment variables. Required defaults
+  MUST support deployment without modifying source; secrets MUST remain outside source control.
+- The web process MUST bind to Render's supplied `PORT` on `0.0.0.0`. Production browser
+  connections MUST use HTTPS and secure WebSockets, with compatible origin and proxy handling.
+- Builds MUST NOT stop the active service. The replacement MUST pass a readiness check before
+  receiving traffic, and shutdown MUST allow in-flight work to finish within the host's limits.
+- Zero-downtime deployment MUST NOT be interpreted as a guarantee that every existing WebSocket
+  survives service replacement. Clients MUST reconnect and resynchronize; deployment plans MUST
+  document how active room state is recovered or explicitly ended across process replacement.
+- Platform and game boundaries MUST be explicit in feature plans. A game-specific rule change
+  MUST NOT require rewriting the universal room wrapper or shared room services.
+
+## Development Workflow and Quality Gates
+
+- Specifications and plans MUST identify applicable principles, platform versus game ownership,
+  server-authoritative transitions, Render implications, and visual acceptance criteria before
+  implementation begins.
+- Each UI change MUST be inspected immediately in a browser. Before acceptance, affected views
+  MUST be checked at phone, tablet, and desktop sizes, in both portrait and landscape where the
+  device supports them, for readability, board fit, screen-space use, control access, overflow,
+  and required interaction states; screenshots or recorded observations MUST accompany the
+  change evidence.
+- Room-flow changes MUST receive a manual smoke check covering Hub entry, guest presence,
+  private room creation, invite-link joining, host controls, and shared in-room chat as affected.
+- Multiplayer state changes MUST be checked with at least two clients and reproducible
+  checkpoints, covering legal and illegal actions, turn agreement, dice-result agreement where
+  applicable, winner agreement, and disconnect/reconnect synchronization as affected.
+- Deployment changes MUST be verified on Render for startup, readiness, WebSocket connectivity,
+  and replacement/reconnect behavior. Local-only checks MUST NOT be presented as deployment
+  verification; unavailable verification MUST be recorded as pending.
+- Reviews MUST reject unexplained constitutional violations and missing required smoke or visual
+  evidence. Automated test volume MUST NOT substitute for these focused acceptance checks.
 
 ## Governance
 
-- This constitution supersedes other practices. All specs, plans, tasks, and reviews MUST
-  verify compliance.
-- **Amendments**: proposed in writing with rationale and impact on existing artifacts,
-  reviewed by project maintainers, approved by consensus of maintainers, recorded with a
-  version bump and a migration note for affected work.
-- **Versioning**: semantic. MAJOR for incompatible removals or redefinitions of principles or
-  governance; MINOR for new principles/sections or materially expanded guidance; PATCH for
-  clarifications and wording fixes.
-- **Exceptions**: a violation MUST be documented with the principle affected, justification,
-  risk, mitigation, owner, and expiry or review date, and approved by maintainers. Exceptions
-  MUST NOT waive Principles IV, V, or the real-device acceptance requirement without a
-  constitutional amendment.
-- **Compliance review**: performed at spec, plan, and pre-release stages.
+This constitution takes precedence over conflicting project plans, implementation preferences,
+and development guidance. Specifications, plans, tasks, and reviews MUST check compliance;
+dependent templates and commands consume these rules at runtime rather than being rewritten by
+the constitution workflow.
 
-**Version**: 0.1.0-draft | **Ratified**: TODO(RATIFICATION_DATE): pending approval; draft is not ratified | **Last Amended**: 2026-10-09
+Amendments MUST document the proposed rule changes, rationale, affected workflows, and any
+migration or exception requirements. The repository maintainer MUST approve an amendment before
+it is adopted. Temporary exceptions MUST have explicit maintainer approval, a bounded scope, a
+rationale, and an expiry or removal condition; silent exceptions are prohibited.
+
+Constitution versions MUST follow semantic versioning: MAJOR for incompatible principle or
+governance removals or redefinitions, MINOR for new principles or sections or materially expanded
+guidance, and PATCH for non-semantic clarifications or corrections. Initial adoption is version
+1.0.0. Every amendment MUST update the version and last-amended date, preserve the original
+ratification date, and include a temporary Sync Impact Report for review. The report MUST be
+removed before the amendment is committed and is not itself governance content.
+
+Every feature review MUST record compliance with applicable principles and any approved
+exceptions. Compliance MUST also be reviewed when changing game contracts, authoritative state
+handling, deployment topology, or the early-development testing policy.
+
+**Version**: 1.1.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-01

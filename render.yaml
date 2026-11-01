@@ -1,20 +1,17 @@
+# Render Blueprint: one Web Service on the Free plan. Connect the repo and Render applies this file.
 services:
   - type: web
-    name: myarena-hub
+    name: myarena
     runtime: node
-    plan: starter
-    numInstances: 1
+    plan: free
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /healthz
+    autoDeploy: true
     envVars:
-      - key: PORT
-        sync: false
+      - key: NODE_VERSION
+        value: "22"
       - key: NODE_ENV
-        sync: false
-      - key: ALLOWED_ORIGINS
-        sync: false
-      - key: DEPLOY_TARGET
-        sync: false
-      - key: TEST_GAME_SECONDS
-        sync: false
+        value: production
+      # PORT is provided by Render (10000). The server binds 0.0.0.0:$PORT.
+      # No secrets are needed. Optional tunables: LOG_LEVEL, MAX_ROOMS, RECONNECT_WINDOW_MS, REMOVAL_COOLDOWN_MS.
