@@ -1,0 +1,153 @@
+.hzc {
+  min-height: 0;
+  min-width: 0;
+}
+
+.hzc-dock {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.hzc-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.hzc-body[hidden] {
+  display: none;
+}
+
+.hzc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.hzc-head .hz-title {
+  margin: 0;
+}
+
+.hzc-chat.chat {
+  flex: 1 1 auto;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.hzc-chat .panel-title {
+  display: none;
+}
+
+.hzc .hzc-ctl {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 1px solid var(--hz-line);
+  border-radius: 8px;
+  background: var(--hz-panel-2);
+  color: var(--hz-text);
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+
+.hzc .hzc-ctl:hover {
+  filter: brightness(1.2);
+}
+
+.hzc .hzc-ctl:active {
+  transform: translateY(1px) scale(0.96);
+}
+
+.hzc .hzc-ctl:focus-visible,
+.hzc .hzc-bar-btn:focus-visible {
+  outline: 3px solid var(--hz-gold-hi);
+  outline-offset: 2px;
+}
+
+/* Slim bar: minimized dock and the portrait drawer handle. */
+.hzc-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 8px 0 12px;
+  border: 1px solid rgba(201, 151, 47, 0.5);
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--hz-panel), #0a1130);
+  color: var(--hz-text);
+  font-weight: 800;
+  box-sizing: border-box;
+}
+
+.hzc-bar-btn {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.08s ease;
+}
+
+.hzc-bar-btn:hover {
+  filter: brightness(1.2);
+}
+
+.hzc-bar-btn:active {
+  transform: translateY(1px);
+}
+
+.hzc-icon {
+  color: var(--hz-gold);
+  flex: none;
+}
+
+.hzc-spacer {
+  flex: 1;
+}
+
+.hzc-unread {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--hz-danger);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  box-sizing: border-box;
+}
+
+/* Portrait sheet. */
+.hzc-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 60dvh;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px calc(var(--safe-bottom, 0px) + 10px);
+  background: linear-gradient(180deg, var(--hz-panel), var(--hz-bg0));
+  border-top: 2px solid var(--hz-gold);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+}
+
+.hzc-sheet.closed {
+  display: none;
+}

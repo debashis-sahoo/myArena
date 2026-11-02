@@ -14,6 +14,7 @@ import {
   type RoomState,
 } from '@myarena/shared';
 import { sfx } from '../audio/sfx';
+import { getGameFeed, resetGameFeeds } from '../games/feeds';
 import { guestInfo } from './guest';
 import { connectSocket, disconnectSocket, emitWithAck, socketInstance, type ClientAck, type ClientErrorCode } from './socket';
 
@@ -124,6 +125,7 @@ function endSession(status: RoomStatus): void {
   if (session) markRoom(session.roomId, false);
   session = null;
   joinedOnce = false;
+  resetGameFeeds();
   set({ phase: 'status', status, room: null, you: null, invitePath: null, chat: [], unread: 0, drawerOpen: false, game: NO_GAME });
   disconnectSocket();
 }
@@ -132,6 +134,13 @@ function applyJoined(gameId: string, data: JoinedData): void {
   session = { gameId, roomId: data.room.roomId };
   joinedOnce = true;
   markRoom(data.room.roomId, true);
+  // Games with their own feed keep state there; Ludo keeps its slice in this store.
+  const feed = getGameFeed(gameId);
+  if (feed) {
+    if (data.game !== undefined && data.game !== null) feed.onSnapshot(data.game);
+    else feed.reset();
+  }
+  const ludo = !feed && data.game ? (data.game as LudoState) : null;
   set({
     phase: 'in_room',
     status: null,
@@ -140,7 +149,7 @@ function applyJoined(gameId: string, data: JoinedData): void {
     invitePath: data.invitePath,
     chat: data.chat,
     // A fresh snapshot replaces whatever was queued: joins and reconnects never replay a backlog.
-    game: data.game ? { state: data.game, queue: [], lastSeq: data.game.matchRev } : NO_GAME,
+    game: ludo ? { state: ludo, queue: [], lastSeq: ludo.matchRev } : NO_GAME,
   });
 }
 
@@ -155,6 +164,8 @@ function wire(): void {
 
   s.on(EVENTS.ROOM_STATE, (state: RoomState) => {
     if (!view.room || state.roomId !== view.room.roomId || state.rev <= view.room.rev) return;
+    // A match reset to the lobby clears the game's client state.
+    if (view.room.state === 'in_progress' && state.state === 'lobby') resetGameFeeds();
     set({ room: state });
   });
 
@@ -169,9 +180,16 @@ function wire(): void {
     });
   });
 
-  s.on(EVENTS.GAME_EVENT, (event: LudoEvent) => {
-    if (view.phase !== 'in_room' || event.seq <= view.game.lastSeq) return;
-    set({ game: { ...view.game, queue: [...view.game.queue, event], lastSeq: event.seq } });
+  s.on(EVENTS.GAME_EVENT, (event: unknown) => {
+    if (view.phase !== 'in_room') return;
+    const feed = getGameFeed(view.room?.gameId);
+    if (feed) {
+      feed.onEvent(event);
+      return;
+    }
+    const ludo = event as LudoEvent;
+    if (ludo.seq <= view.game.lastSeq) return;
+    set({ game: { ...view.game, queue: [...view.game.queue, ludo], lastSeq: ludo.seq } });
   });
 
   s.on(EVENTS.PLAYER_REMOVED, (d: RemovedData) => {
@@ -198,6 +216,7 @@ function wire(): void {
 // ---------- actions ----------
 
 export async function createRoom(
+  gameId: string,
   mode: 'online' | 'ai',
   botCount?: number,
 ): Promise<{ ok: true; roomId: string } | { ok: false; message: string }> {
@@ -205,14 +224,14 @@ export async function createRoom(
   connectSocket();
   const res = await emitWithAck<JoinedData>(
     EVENTS.ROOM_CREATE,
-    { gameId: 'ludo', mode, ...(mode === 'ai' ? { botCount } : {}), guest: guestInfo() },
+    { gameId, mode, ...(mode === 'ai' ? { botCount } : {}), guest: guestInfo() },
     90_000,
   );
   if (!res.ok) {
     disconnectSocket();
     return { ok: false, message: res.error.message };
   }
-  applyJoined('ludo', res.data);
+  applyJoined(gameId, res.data);
   return { ok: true, roomId: res.data.room.roomId };
 }
 
@@ -229,11 +248,21 @@ export async function joinRoom(gameId: string, roomId: string): Promise<void> {
   applyJoined(gameId, res.data);
 }
 
+/** Takes a fresh server view of the room and game (used when a game feed notices a gap in its events). */
+export function resyncRoom(): void {
+  if (!session) return;
+  const { gameId, roomId } = session;
+  void emitWithAck<JoinedData>(EVENTS.ROOM_JOIN, { gameId, roomId, guest: guestInfo() }).then((res) => {
+    if (res.ok) applyJoined(gameId, res.data);
+  });
+}
+
 export function leaveRoom(): void {
   const wasIn = session !== null;
   if (session) markRoom(session.roomId, false);
   session = null;
   joinedOnce = false;
+  resetGameFeeds();
   set({ ...IDLE });
   if (!wasIn) {
     disconnectSocket();
@@ -288,8 +317,16 @@ export function setDrawerOpen(open: boolean): void {
 }
 
 /** Sends a game intent (never an outcome); the server decides everything. */
-export function sendGameAction(action: LudoAction): Promise<SimpleResult> {
+export function sendGameAction(action: LudoAction | object): Promise<SimpleResult> {
   return emitWithAck<object>(EVENTS.GAME_ACTION, action, 8000).then((res) => simple(res));
+}
+
+/** Host only: end the finished match and return everyone to a fresh lobby. */
+export async function resetRoom(): Promise<SimpleResult> {
+  const res = await emitWithAck<RoomData>(EVENTS.ROOM_RESET, {});
+  return simple(res, (d) => {
+    if (view.room && d.room.rev > view.room.rev) set({ room: d.room });
+  });
 }
 
 /** The animation layer reports the state it now shows and how many queued events it consumed. */

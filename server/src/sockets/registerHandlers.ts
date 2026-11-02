@@ -66,6 +66,9 @@ export function createRealtime(io: Server): { store: RoomStore } {
     gameEvent: (room, event) => {
       io.to(room.roomId).emit(EVENTS.GAME_EVENT, event);
     },
+    gameEventTo: (_room, socketId, event) => {
+      io.to(socketId).emit(EVENTS.GAME_EVENT, event);
+    },
     removedInactive: (_room, socketId) => {
       const target = io.sockets.sockets.get(socketId);
       if (!target) return;
@@ -137,6 +140,9 @@ export function createRealtime(io: Server): { store: RoomStore } {
 
     handler(socket, EVENTS.ROOM_CREATE, createRoomSchema, (p) => {
       enforce(createLimiter.take(clientIp(socket)), 'You are creating rooms too quickly.');
+      if (io.engine.clientsCount > config.maxSockets) {
+        throw new RoomError('SERVER_BUSY', 'The arena is busy right now. Please try again soon.');
+      }
       leaveCurrent(socket);
       const { room, playerId } = store.create(p.gameId, p.mode, p.botCount, p.guest, socket.id);
       attach(socket, room);
@@ -159,6 +165,10 @@ export function createRealtime(io: Server): { store: RoomStore } {
       const roomId = normalizeRoomCode(p.roomId);
       const room = store.get(p.gameId, roomId);
       if (!room) throw new RoomError('ROOM_NOT_FOUND', 'We could not find that room.');
+      // Returning guests (an existing seat) are never turned away: they must always get their snapshot.
+      if (!room.hasGuest(p.guest.guestId) && io.engine.clientsCount > config.maxSockets) {
+        throw new RoomError('SERVER_BUSY', 'The arena is busy right now. Please try again soon.');
+      }
       if (d.roomId && d.roomId !== room.roomId) leaveCurrent(socket);
 
       const result = room.join(p.guest, socket.id);
@@ -211,6 +221,13 @@ export function createRealtime(io: Server): { store: RoomStore } {
       const room = roomOf(socket);
       room.start(socket.id);
       logger.info({ roomId: room.roomId, seated: room.seatedCount() }, 'match started');
+      return { room: room.projection() };
+    });
+
+    handler(socket, EVENTS.ROOM_RESET, emptySchema, () => {
+      const room = roomOf(socket);
+      room.resetToLobby(socket.id);
+      logger.info({ roomId: room.roomId, seated: room.seatedCount() }, 'match reset to lobby');
       return { room: room.projection() };
     });
 

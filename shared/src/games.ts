@@ -12,6 +12,10 @@ export interface GameDefinition {
   /** One color tag per seat, in seat order. */
   seatColors: string[];
   theme: { accent: string; accent2: string };
+  /** Seats are created on demand (any count up to `maxPlayers`) and colours come from ROSTER_COLORS. */
+  roster?: boolean;
+  /** No automatic system chat lines while a match is in progress (the game posts its own notices). */
+  quietChat?: boolean;
 }
 
 export const GAMES: readonly GameDefinition[] = [
@@ -43,13 +47,15 @@ export const GAMES: readonly GameDefinition[] = [
     id: 'housie',
     name: 'Housie',
     tagline: 'Tickets, numbers, and chips. Mark your lines and shout Housie!',
-    status: 'coming_soon',
+    status: 'active',
     minPlayers: 2,
-    maxPlayers: 4,
-    defaultCapacity: 4,
+    maxPlayers: 200,
+    defaultCapacity: 10,
     supportsAi: false,
     seatColors: ['red', 'green', 'yellow', 'blue'],
     theme: { accent: '#ff4f9a', accent2: '#ffb347' },
+    roster: true,
+    quietChat: true,
   },
   {
     id: 'bingo',
@@ -75,4 +81,12 @@ export const COLOR_HEX: Record<string, string> = {
   green: '#2ee59d',
   yellow: '#ffd93d',
   blue: '#4da3ff',
+  orange: '#ff9f43',
+  purple: '#b57bff',
+  pink: '#ff7ad9',
+  teal: '#2dd4c4',
+  lime: '#b8ef4a',
+  sky: '#7fd6ff',
+  coral: '#ff7f6b',
+  indigo: '#7c83ff',
 };

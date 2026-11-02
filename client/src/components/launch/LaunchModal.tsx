@@ -31,7 +31,7 @@ export function LaunchModal({ game, onClose }: Props): ReactElement {
     sfx.tap();
     setBusy(mode);
     setError(null);
-    const res = await createRoom(mode, botCount);
+    const res = await createRoom(game.id, mode, botCount);
     if (res.ok) {
       sfx.success();
       navigate(`/room/${game.id}/${res.roomId}`);
@@ -47,15 +47,21 @@ export function LaunchModal({ game, onClose }: Props): ReactElement {
       {game && step === 'choose' && (
         <div className="launch-step">
           <h2 className="modal-title">Play {game.name}</h2>
-          <p className="hint">Practice against the bots, or invite your friends to a private room.</p>
+          <p className="hint">
+            {game.supportsAi
+              ? 'Practice against the bots, or invite your friends to a private room.'
+              : 'Invite your friends to a private room.'}
+          </p>
           <div className="launch-choices">
-            <button type="button" className="launch-choice ai" onClick={() => setStep('ai')} disabled={busy !== null}>
-              <span className="launch-icon" aria-hidden="true">
-                🤖
-              </span>
-              <span className="launch-label">Play with AI</span>
-              <span className="launch-sub">Start right away, solo</span>
-            </button>
+            {game.supportsAi && (
+              <button type="button" className="launch-choice ai" onClick={() => setStep('ai')} disabled={busy !== null}>
+                <span className="launch-icon" aria-hidden="true">
+                  🤖
+                </span>
+                <span className="launch-label">Play with AI</span>
+                <span className="launch-sub">Start right away, solo</span>
+              </button>
+            )}
             <button type="button" className="launch-choice online" onClick={() => void launch('online')} disabled={busy !== null}>
               <span className="launch-icon" aria-hidden="true">
                 {busy === 'online' ? <span className="spinner small" /> : '🌐'}
@@ -71,7 +77,7 @@ export function LaunchModal({ game, onClose }: Props): ReactElement {
           )}
         </div>
       )}
-      {game && step === 'ai' && (
+      {game && game.supportsAi && step === 'ai' && (
         <>
           <AiOpponentPicker
             max={game.maxPlayers - 1}

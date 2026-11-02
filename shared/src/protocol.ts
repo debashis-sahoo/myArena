@@ -9,6 +9,7 @@ export const EVENTS = {
   ROOM_SET_CAPACITY: 'room:setCapacity',
   ROOM_KICK: 'room:kick',
   ROOM_START: 'room:start',
+  ROOM_RESET: 'room:reset',
   CHAT_SEND: 'chat:send',
   // server -> client
   ROOM_STATE: 'room:state',
@@ -87,6 +88,8 @@ export interface RoomState {
   seats: SeatView[];
   rev: number;
   inviteEnabled: boolean;
+  /** The game's public lobby settings while the room is in the lobby (game-defined plain data). */
+  gameLobby?: unknown;
 }
 
 export type SystemCode =
@@ -98,7 +101,8 @@ export type SystemCode =
   | 'host_changed'
   | 'capacity_changed'
   | 'match_started'
-  | 'seat_released';
+  | 'seat_released'
+  | 'game_notice';
 
 export interface ChatMessage {
   id: number;
@@ -142,7 +146,7 @@ export interface JoinedData {
   invitePath: string | null;
   resumed: boolean;
   /** Current game snapshot when a match is in progress. */
-  game?: LudoState;
+  game?: unknown;
 }
 export interface RoomData {
   room: RoomState;

@@ -1,7 +1,7 @@
 # myArena
 
 myArena is a multiplayer game platform: a colorful **myArena Hub**, private rooms with shareable invite links, a single
-authoritative host per room, real-time presence and chat. Ludo is the first game on the Hub; Snakes & Ladders, Housie and
+authoritative host per room, real-time presence and chat. Ludo and Housie are live on the Hub; Snakes & Ladders and
 Bingo are coming soon.
 
 Repository: https://github.com/debashis-sahoo/myArena.git
@@ -16,6 +16,7 @@ Repository: https://github.com/debashis-sahoo/myArena.git
 | `render.yaml` | Render Blueprint for the production web service |
 | `specs/001-platform-hub-rooms/` | Spec, plan, contracts, tasks and verification notes |
 | `specs/002-ludo-game-module/` | Ludo: spec, plan, contracts, tasks, quickstart and verification notes |
+| `specs/003-housie-tambola-module/` | Housie: spec, plan, contracts, tasks, quickstart, mockups and verification notes |
 
 The server serves the built client from the same origin, so production needs one process, one port and no CORS.
 
@@ -69,6 +70,17 @@ and hopping pawns. The server decides every roll and move; clients only send `ro
 wire protocol are in [specs/002-ludo-game-module](specs/002-ludo-game-module/); the browser verification guide is
 [quickstart.md](specs/002-ludo-game-module/quickstart.md).
 
+## Housie (Tambola)
+
+Play Online from the Hub. The host sets the player limit (2 to 200, counting the host), the most tickets each person may take
+(1 to 4, default 1), whether the host also plays, how balls are called (manual, or automatically every 5, 8 or 10 seconds) and
+which of 40 winning combinations are in play. The server generates valid, unique 3 x 9 tickets, draws every ball and checks every
+claim; players cross numbers by hand and press CLAIM on a combination tile, which is valid only if every cell of that pattern on
+the chosen ticket is both called and crossed. The match screen is two columns in landscape (tickets over combinations; ball
+console over chat) and stacked with a chat drawer in portrait, with no page scrolling. Chat shows only typed messages and one line
+per accepted win during a match. Design, protocol and the browser verification guide are in
+[specs/003-housie-tambola-module](specs/003-housie-tambola-module/).
+
 ## Environment variables
 
 | Variable | Default | Purpose |
@@ -79,6 +91,8 @@ wire protocol are in [specs/002-ludo-game-module](specs/002-ludo-game-module/); 
 | `MAX_ROOMS` | `100` | Cap on live rooms |
 | `RECONNECT_WINDOW_MS` | `60000` | How long a disconnected player keeps their seat |
 | `REMOVAL_COOLDOWN_MS` | `60000` | How long a removed player must wait before rejoining |
+| `HOUSIE_MAX_PLAYERS` | `200` | Optional. The most people a Housie room may hold (2 to 500); raise or lower it without code changes |
+| `MAX_SOCKETS` | `1500` | Optional. New rooms and new seats are refused (`SERVER_BUSY`) above this many connections; returning players are never refused |
 
 No secrets are required.
 
@@ -96,3 +110,14 @@ These make browser verification repeatable. They are read only when `NODE_ENV` i
 ```powershell
 $env:LUDO_DEV_DICE = "6,6,4,6,3,2,6"; npm start
 ```
+
+### Housie development-only variables
+
+Same rule as above: read only outside production, ignored (with a startup warning) in production.
+
+| Variable | Example | Effect |
+|----------|---------|--------|
+| `HOUSIE_DEV_DECK` | `first-ticket` | The call order starts with the first seated ticket holder's first ticket (row by row), so a valid claim is reproducible |
+| `HOUSIE_DEV_BALLS` | `42,7,19` | The call order starts with these numbers |
+| `HOUSIE_DEV_TICKET_AUDIT` | `500` | At start-up, generates N tickets and logs how many are valid and unique |
+| `HOUSIE_CLAIM_PACE_MS` | `300` | Replaces the 2000 ms pause between a player's claims |

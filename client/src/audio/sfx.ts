@@ -39,4 +39,10 @@ export const sfx = {
   message: () => blip([880], 0.08, 'sine', 0.04),
   error: () => blip([220, 160], 0.1, 'sawtooth', 0.04),
   success: () => blip([523, 659, 784, 1046], 0.07, 'triangle'),
+  stamp: () => blip([240], 0.04, 'triangle', 0.035),
+  ballRoll: () => {
+    blip([180, 140, 200, 150, 220, 160, 190, 130, 170, 120], 0.05, 'triangle', 0.05);
+    window.setTimeout(() => blip([420], 0.04, 'square', 0.03), 520);
+  },
+  winChime: () => blip([784, 988, 1175, 1568], 0.11, 'sine', 0.07),
 };

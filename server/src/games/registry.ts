@@ -1,4 +1,5 @@
 import { getGame } from '@myarena/shared';
+import { createHousieEngine } from './housie/engine.js';
 import { createLudoEngine } from './ludo/engine.js';
 import { placeholderEngine } from './placeholderEngine.js';
 
@@ -28,6 +29,12 @@ export interface GameContext {
   releaseSeat(playerId: string, reason: 'inactive'): void;
   now(): number;
   log(level: LogLevel, fields: Record<string, unknown>, message: string): void;
+  /** One game:event to that person's current socket (no-op while they are offline). Private data only travels this way. */
+  emitTo(playerId: string, event: unknown): void;
+  /** The current host's playerId; it changes on host handover, so authorise callers with it at action time. */
+  hostId(): string;
+  /** One system chat line (code game_notice), sanitised and rate limited. The only way a game writes to chat. */
+  notice(text: string): void;
 }
 
 /** Server half of the platform-to-game contract. The engine is the only authority for rules. */
@@ -35,7 +42,15 @@ export interface GameEngine {
   id: string;
   /** Returns playerId -> colour. `seated` is in slot order (host first). Optional. */
   assignColors?(seated: { playerId: string; seatIndex: number; kind: 'human' | 'bot' }[]): Record<string, string>;
-  createMatch(seats: MatchSeat[], ctx: GameContext): unknown;
+  /** Lobby channel (all optional): settings and per-person choices kept before the match starts. */
+  createLobby?(): unknown;
+  /** Public, secret-free data attached to RoomState.gameLobby. */
+  lobbyView?(lobby: unknown): unknown;
+  onLobbyAction?(lobby: unknown, who: { playerId: string; isHost: boolean }, action: unknown): ActionResult;
+  onLobbyLeave?(lobby: unknown, playerId: string): void;
+  /** A returned message blocks Start (after the platform's own minimum-player check). */
+  validateStart?(lobby: unknown, seated: MatchSeat[]): string | null;
+  createMatch(seats: MatchSeat[], ctx: GameContext, lobby?: unknown): unknown;
   getView(match: unknown, playerId: string): unknown;
   onAction(match: unknown, playerId: string, action: unknown): ActionResult;
   onSeatReleased(match: unknown, playerId: string): void;
@@ -43,7 +58,10 @@ export interface GameEngine {
   dispose(match: unknown): void;
 }
 
-const engines = new Map<string, GameEngine>([['ludo', createLudoEngine()]]);
+const engines = new Map<string, GameEngine>([
+  ['ludo', createLudoEngine()],
+  ['housie', createHousieEngine()],
+]);
 
 export function getEngine(gameId: string): GameEngine {
   const engine = engines.get(gameId);

@@ -380,6 +380,36 @@
   background: #21115a;
 }
 
+.roster-capacity {
+  flex-wrap: wrap;
+}
+
+.capacity-input {
+  width: 5.5em;
+  min-height: 40px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 2px solid var(--surface-2);
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  font-weight: 900;
+  text-align: center;
+}
+
+.capacity-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.player-badge {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
 .stepper {
   display: flex;
   align-items: center;

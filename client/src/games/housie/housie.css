@@ -1,0 +1,477 @@
+/* Housie: royal arcade look (deep midnight, gold accents, paper tickets). Scoped under .hz so it never touches other games. */
+.hz {
+  --hz-bg0: #060a22;
+  --hz-bg1: #0d1538;
+  --hz-panel: #101a44;
+  --hz-panel-2: #16225a;
+  --hz-line: #27357c;
+  --hz-gold: #f2b73a;
+  --hz-gold-hi: #fff1b8;
+  --hz-gold-lo: #b87a10;
+  --hz-paper: #f7ecd0;
+  --hz-paper-2: #e8d5a8;
+  --hz-ink: #2b1f0c;
+  --hz-ink-red: #d6283e;
+  --hz-ink-blue: #2b4fd0;
+  --hz-empty: #16204f;
+  --hz-text: #f4efe0;
+  --hz-muted: #aab4e8;
+  --hz-green: #3be08a;
+  --hz-danger: #ff6b81;
+  color: var(--hz-text);
+  background: radial-gradient(70% 50% at 50% 0%, rgba(42, 59, 143, 0.45), transparent 70%), linear-gradient(180deg, var(--hz-bg1), var(--hz-bg0));
+}
+
+.hz button {
+  font: inherit;
+}
+
+.hz .hz-btn {
+  appearance: none;
+  border: 1px solid var(--hz-line);
+  background: var(--hz-panel);
+  color: var(--hz-text);
+  border-radius: 10px;
+  padding: 6px 12px;
+  min-height: 36px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease, background 0.15s ease;
+}
+
+.hz .hz-btn:hover:not(:disabled) {
+  filter: brightness(1.15);
+}
+
+.hz .hz-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+.hz .hz-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hz .hz-btn:focus-visible,
+.hz .hz-seg button:focus-visible,
+.hz .hz-pat:focus-visible {
+  outline: 3px solid var(--hz-gold-hi);
+  outline-offset: 2px;
+}
+
+.hz .hz-btn.gold {
+  background: linear-gradient(180deg, var(--hz-gold-hi), var(--hz-gold) 55%, var(--hz-gold-lo));
+  color: #2a1a00;
+  border-color: var(--hz-gold-hi);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.hz .hz-btn.small {
+  min-height: 30px;
+  padding: 3px 10px;
+  font-size: 0.85rem;
+}
+
+/* Segmented control. */
+.hz .hz-seg {
+  display: inline-flex;
+  border: 1px solid var(--hz-line);
+  border-radius: 10px;
+  background: #0a1030;
+  padding: 2px;
+  gap: 2px;
+}
+
+.hz .hz-seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--hz-muted);
+  border-radius: 8px;
+  min-width: 38px;
+  min-height: 32px;
+  padding: 2px 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.hz .hz-seg button[aria-pressed='true'] {
+  background: linear-gradient(180deg, var(--hz-gold-hi), var(--hz-gold));
+  color: #2a1a00;
+}
+
+.hz .hz-seg button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.hz .hz-panel {
+  background: linear-gradient(180deg, var(--hz-panel), #0a1130);
+  border: 1px solid rgba(201, 151, 47, 0.5);
+  border-radius: 14px;
+  padding: 10px 12px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.hz .hz-title {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--hz-gold);
+  text-transform: uppercase;
+}
+
+.hz .hz-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--hz-line);
+  background: var(--hz-panel);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--hz-muted);
+}
+
+/* ---------- Lobby ---------- */
+.hz-lobby {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 8px) calc(var(--safe-left) + 12px);
+  gap: 8px;
+}
+
+.hz-lobby-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hz-lobby-head h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+}
+
+.hz-lobby-head .spacer {
+  flex: 1;
+}
+
+.hz-lobby-body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+.hz-setup,
+.hz-people {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.hz-setup {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.hz-people {
+  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.hz-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 8px 14px;
+  align-items: center;
+}
+
+.hz-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hz-row label,
+.hz-row .hz-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--hz-muted);
+  white-space: nowrap;
+}
+
+.hz-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Combination chooser. */
+.hz-chooser {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+
+.hz-chooser-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.hz-chooser-scroll {
+  overflow: auto;
+  min-height: 0;
+  padding-right: 4px;
+}
+
+.hz-group {
+  margin-bottom: 8px;
+}
+
+.hz-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: var(--hz-muted);
+  letter-spacing: 0.08em;
+}
+
+.hz-pats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
+}
+
+.hz-pat {
+  appearance: none;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 4px 4px 5px;
+  border: 1px solid var(--hz-line);
+  border-radius: 10px;
+  background: var(--hz-panel);
+  color: var(--hz-muted);
+  cursor: pointer;
+  min-height: 44px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.hz-pat[aria-pressed='true'] {
+  border-color: var(--hz-gold);
+  background: linear-gradient(180deg, #2a2412, #1a1608);
+  color: var(--hz-gold-hi);
+  box-shadow: 0 0 0 1px rgba(242, 183, 58, 0.5) inset;
+}
+
+.hz-pat.static {
+  cursor: default;
+}
+
+/* Roster. */
+.hz-tix {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-weight: 900;
+  color: var(--hz-gold);
+}
+
+.hz-tix small {
+  font-size: 0.65rem;
+  color: var(--hz-muted);
+}
+
+.hz-people .player-list {
+  overflow: auto;
+  min-height: 0;
+  max-height: 100%;
+}
+
+.hz-chatbox {
+  min-height: 0;
+  display: grid;
+}
+
+@media (max-width: 900px), (max-aspect-ratio: 1/1) {
+  .hz-lobby-body {
+    grid-template-columns: minmax(0, 1fr);
+    overflow: auto;
+    grid-auto-rows: min-content;
+  }
+
+  .hz-people {
+    grid-template-rows: auto auto 220px 260px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hz *,
+  .hz *::before,
+  .hz *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Match screen ---------- */
+.hz-match {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 6px;
+  padding: calc(var(--safe-top) + 6px) calc(var(--safe-right) + 8px) calc(var(--safe-bottom) + 6px) calc(var(--safe-left) + 8px);
+  overflow: hidden;
+}
+
+.hz-wait {
+  place-self: center;
+  color: var(--hz-muted);
+  font-weight: 800;
+}
+
+.hz-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hz-brand {
+  letter-spacing: 0.08em;
+  color: var(--hz-gold-hi);
+}
+
+.hz-spacer {
+  flex: 1;
+}
+
+.hz-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.hz-left,
+.hz-right {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.hz-left {
+  grid-template-rows: minmax(0, 1fr) minmax(116px, var(--hz-tiles, 1fr));
+}
+
+.hz-left-top,
+.hz-left-bottom,
+.hz-ball {
+  padding: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.hz-board-wrap {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.hz-chat {
+  min-height: 0;
+  min-width: 0;
+}
+
+.hz-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Landscape: left = tickets over combinations, right = ball (1/3) over chat (2/3). */
+.hz-match.wide .hz-main {
+  grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
+}
+
+.hz-match.wide .hz-right {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
+}
+
+.hz-match.wide.chat-min .hz-right {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+/* Portrait or narrow: one column (ball row, tickets, combinations) and a chat drawer. */
+.hz-match.narrow .hz-main {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(76px, 14dvh) minmax(0, 1fr) minmax(168px, var(--hz-tiles-n, 1fr));
+  padding-bottom: 44px;
+}
+
+.hz-match.narrow.is-host .hz-main {
+  grid-template-rows: minmax(150px, 24dvh) minmax(0, 1fr) minmax(168px, var(--hz-tiles-n, 1fr));
+}
+
+.hz-match.narrow .hz-brand,
+.hz-match.narrow .hz-head .hz-chip[title='Room code'] {
+  display: none;
+}
+
+/* Very narrow screens: trim outer padding so tickets keep 32px cells. */
+.hz-match.narrow {
+  padding-left: calc(var(--safe-left) + 4px);
+  padding-right: calc(var(--safe-right) + 4px);
+}
+
+.hz-match.narrow .hz-left-top {
+  padding: 2px;
+}
+
+.hz-head .hz-chip,
+.hz-head .hz-seg button,
+.hz-head .hz-btn {
+  white-space: nowrap;
+}
+
+.hz-match.narrow .hz-left,
+.hz-match.narrow .hz-right {
+  display: contents;
+}
+
+.hz-match.narrow .hz-ball {
+  order: 1;
+}
+
+.hz-match.narrow .hz-left-top {
+  order: 2;
+}
+
+.hz-match.narrow .hz-left-bottom {
+  order: 3;
+}

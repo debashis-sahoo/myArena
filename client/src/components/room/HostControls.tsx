@@ -1,5 +1,5 @@
-import { useState, type ReactElement } from 'react';
-import type { RoomState } from '@myarena/shared';
+import { useEffect, useState, type ReactElement } from 'react';
+import { getGame, type RoomState } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
 import { setCapacity, startMatch } from '../../state/roomStore';
 
@@ -10,6 +10,12 @@ export function HostControls({ room }: { room: RoomState }): ReactElement {
   const seated = room.seats.filter((s) => s.occupant).length;
   const canStart = seated >= room.minPlayers;
   const online = room.inviteEnabled;
+  const roster = getGame(room.gameId)?.roster === true;
+  const [draft, setDraft] = useState(String(room.capacity));
+
+  useEffect(() => {
+    setDraft(String(room.capacity));
+  }, [room.capacity]);
 
   const change = async (capacity: number): Promise<void> => {
     sfx.tap();
@@ -32,6 +38,19 @@ export function HostControls({ room }: { room: RoomState }): ReactElement {
     }
   };
 
+  const commitDraft = (): void => {
+    const n = Number.parseInt(draft, 10);
+    if (!Number.isFinite(n)) {
+      setDraft(String(room.capacity));
+      return;
+    }
+    const clamped = Math.min(room.maxPlayers, Math.max(room.minPlayers, n));
+    setDraft(String(clamped));
+    if (clamped !== room.capacity) void change(clamped);
+  };
+
+  const presets = [10, 25, 50, 100, 200].filter((p) => p <= room.maxPlayers);
+
   const minusBlocked = room.capacity <= room.minPlayers;
   const plusBlocked = room.capacity >= room.maxPlayers;
   const shrinkBlockedByPlayers = room.capacity - 1 < seated;
@@ -42,7 +61,43 @@ export function HostControls({ room }: { room: RoomState }): ReactElement {
         <span aria-hidden="true">👑</span> Host controls
       </h3>
       <div className="host-row">
-        {online && (
+        {online && roster && (
+          <div className="capacity roster-capacity">
+            <label htmlFor="cap-input">Players</label>
+            <input
+              id="cap-input"
+              className="capacity-input"
+              type="number"
+              inputMode="numeric"
+              aria-label="Player limit"
+              min={room.minPlayers}
+              max={room.maxPlayers}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={commitDraft}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  commitDraft();
+                }
+              }}
+            />
+            <div className="capacity-presets" role="group" aria-label="Player limit presets">
+              {presets.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  className={`btn small ${room.capacity === p ? 'lime' : 'ghost'}`}
+                  aria-pressed={room.capacity === p}
+                  onClick={() => void change(p)}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {online && !roster && (
           <div className="capacity">
             <span id="cap-label">Players</span>
             <div className="stepper" role="group" aria-labelledby="cap-label">
@@ -74,7 +129,7 @@ export function HostControls({ room }: { room: RoomState }): ReactElement {
           {busy ? 'Starting...' : 'Start match'}
         </button>
       </div>
-      {online && shrinkBlockedByPlayers && !minusBlocked && (
+      {online && !roster && shrinkBlockedByPlayers && !minusBlocked && (
         <p className="hint">To lower the player count below {seated}, remove a player first.</p>
       )}
       {!canStart && (

@@ -1,0 +1,78 @@
+.hz-ta {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hz-ta__stack,
+.hz-ta__grid,
+.hz-ta__tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.hz-ta__stack {
+  flex-direction: column;
+}
+
+.hz-ta__grid {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  justify-items: center;
+  align-items: center;
+  align-content: center;
+}
+
+.hz-ta__tabs {
+  flex-direction: column;
+}
+
+.hz-ta__item {
+  flex: none;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.hz-ta__strip {
+  display: flex;
+  gap: 6px;
+  height: 30px;
+  flex: none;
+}
+
+.hz-ta__tab {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--hz-line, #27357c);
+  background: var(--hz-panel, #101a44);
+  color: var(--hz-muted, #aab4e8);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hz-ta__tab:hover {
+  color: var(--hz-text, #f4efe0);
+}
+
+.hz-ta__tab.is-active {
+  background: linear-gradient(180deg, var(--hz-gold-hi, #fff1b8), var(--hz-gold, #f2b73a));
+  border-color: var(--hz-gold-hi, #fff1b8);
+  color: #2b1f0c;
+}
+
+.hz-ta__tab:focus-visible {
+  outline: 3px solid var(--hz-gold-hi, #fff1b8);
+  outline-offset: 2px;
+}

@@ -9,6 +9,10 @@ function intFromEnv(name: string, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function clampedIntFromEnv(name: string, fallback: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, intFromEnv(name, fallback)));
+}
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 export const config = {
@@ -19,6 +23,10 @@ export const config = {
   maxRooms: intFromEnv('MAX_ROOMS', MAX_ROOMS),
   reconnectWindowMs: intFromEnv('RECONNECT_WINDOW_MS', RECONNECT_WINDOW_MS),
   removalCooldownMs: intFromEnv('REMOVAL_COOLDOWN_MS', REMOVAL_COOLDOWN_MS),
+  /** Housie seat cap (env HOUSIE_MAX_PLAYERS), clamped to 2..500. */
+  housieMaxPlayers: clampedIntFromEnv('HOUSIE_MAX_PLAYERS', 200, 2, 500),
+  /** Maximum concurrent sockets (env MAX_SOCKETS). */
+  maxSockets: intFromEnv('MAX_SOCKETS', 1500),
   /** server/dist/<file>.js -> repo/client/dist. Same relative hop from server/src when run with tsx. */
   clientDist: path.resolve(here, '../../client/dist'),
 };

@@ -1,7 +1,10 @@
 import crypto from 'node:crypto';
 import {
   AVATAR_KEYS,
+  COALESCE_ABOVE,
   DISPLAY_NAME_MAX,
+  ROSTER_COLORS,
+  STATE_COALESCE_MS,
   type ChatMessage,
   type ClosedReason,
   type ErrorCode,
@@ -32,6 +35,8 @@ export interface RoomEvents {
   closed(room: Room, reason: ClosedReason): void;
   /** A game event for everyone in the room. */
   gameEvent(room: Room, event: unknown): void;
+  /** A private game event for one socket. */
+  gameEventTo(room: Room, socketId: string, event: unknown): void;
   /** A still-connected human was released for inactivity: tell them and detach their socket. */
   removedInactive(room: Room, socketId: string): void;
 }
@@ -39,6 +44,8 @@ export interface RoomEvents {
 export interface RoomOptions {
   reconnectWindowMs: number;
   removalCooldownMs: number;
+  /** Player ceiling for this room; defaults to the game's maxPlayers. */
+  maxPlayers?: number;
 }
 
 interface Participant {
@@ -83,6 +90,7 @@ export class Room {
   readonly mode: RoomMode;
   state: Phase = 'lobby';
   capacity: number;
+  readonly maxPlayers: number;
   hostPlayerId = '';
   rev = 1;
   readonly createdAt = Date.now();
@@ -98,6 +106,12 @@ export class Room {
   /** Timers owned by the running match; cleared when the room closes. */
   private readonly matchTimers = new Set<NodeJS.Timeout>();
   private readonly lastSaid = new Map<string, number>();
+  /** Game lobby state (settings and choices before the match), when the engine has a lobby channel. */
+  private lobby: unknown = null;
+  private nextSeatIndex = 0;
+  private stateTimer: NodeJS.Timeout | null = null;
+  private statePending = false;
+  private noticeTimes: number[] = [];
 
   constructor(
     roomId: string,
@@ -111,10 +125,16 @@ export class Room {
     this.game = game;
     this.mode = mode;
     this.capacity = capacity;
+    this.maxPlayers = options.maxPlayers ?? game.maxPlayers;
     this.engine = getEngine(game.id);
-    for (let i = 0; i < capacity; i++) {
-      this.seats.push({ index: i, color: game.seatColors[i] ?? 'blue', occupant: null });
+    this.lobby = this.engine.createLobby?.() ?? null;
+    // Roster games create seats on demand when people join.
+    if (!game.roster) {
+      for (let i = 0; i < capacity; i++) {
+        this.seats.push({ index: i, color: game.seatColors[i] ?? 'blue', occupant: null });
+      }
     }
+    this.nextSeatIndex = this.seats.length;
   }
 
   // ---------- creation ----------
@@ -144,6 +164,16 @@ export class Room {
     return this.seats.filter((s) => s.occupant).length;
   }
 
+  /** Whether this guest already holds a seat (a reconnect rather than a new join). */
+  hasGuest(guestId: string): boolean {
+    return this.findByGuest(guestId) !== undefined;
+  }
+
+  private hasOpenSeat(): boolean {
+    if (this.game.roster) return this.seatedCount() < this.capacity;
+    return this.seats.some((s) => !s.occupant);
+  }
+
   humans(): Participant[] {
     return this.seats.flatMap((s) => (s.occupant && s.occupant.kind === 'human' ? [s.occupant] : []));
   }
@@ -160,15 +190,20 @@ export class Room {
       state: this.state === 'closed' ? 'lobby' : this.state,
       capacity: this.capacity,
       minPlayers: this.game.minPlayers,
-      maxPlayers: this.game.maxPlayers,
+      maxPlayers: this.maxPlayers,
       hostPlayerId: this.hostPlayerId,
-      seats: this.seats.map((s) => ({
-        index: s.index,
-        color: s.color,
-        occupant: s.occupant ? this.view(s.occupant) : null,
-      })),
+      seats: this.seats
+        .filter((s) => !this.game.roster || s.occupant)
+        .map((s) => ({
+          index: s.index,
+          color: s.color,
+          occupant: s.occupant ? this.view(s.occupant) : null,
+        })),
       rev: this.rev,
       inviteEnabled: this.inviteEnabled,
+      ...(this.state === 'lobby' && this.lobby !== null && this.engine.lobbyView
+        ? { gameLobby: this.engine.lobbyView(this.lobby) }
+        : {}),
     };
   }
 
@@ -204,7 +239,7 @@ export class Room {
       this.removed.delete(hashGuest(guest.guestId));
     }
     if (this.state === 'in_progress') throw new RoomError('MATCH_IN_PROGRESS', 'This match has already started.');
-    if (!this.seats.some((s) => !s.occupant)) throw new RoomError('ROOM_FULL', 'This room is full.');
+    if (!this.hasOpenSeat()) throw new RoomError('ROOM_FULL', 'This room is full.');
 
     const participant = this.addParticipant('human', guest.displayName, guest.avatar, guest.guestId, socketId);
     this.announce('joined', `${participant.displayName} joined`);
@@ -235,10 +270,10 @@ export class Room {
     if (this.mode !== 'online' || this.state !== 'lobby') {
       throw new RoomError('INVALID_STATE', 'Capacity can only be changed in an online lobby.');
     }
-    if (!Number.isInteger(capacity) || capacity < this.game.minPlayers || capacity > this.game.maxPlayers) {
+    if (!Number.isInteger(capacity) || capacity < this.game.minPlayers || capacity > this.maxPlayers) {
       throw new RoomError(
         'CAPACITY_OUT_OF_RANGE',
-        `Choose between ${this.game.minPlayers} and ${this.game.maxPlayers} players.`,
+        `Choose between ${this.game.minPlayers} and ${this.maxPlayers} players.`,
       );
     }
     if (capacity < this.seatedCount()) {
@@ -246,7 +281,9 @@ export class Room {
     }
     if (capacity === this.capacity) return;
 
-    if (capacity > this.capacity) {
+    if (this.game.roster) {
+      // Seats are created on demand, so only the limit changes.
+    } else if (capacity > this.capacity) {
       for (let i = this.capacity; i < capacity; i++) {
         this.seats.push({ index: i, color: this.game.seatColors[i] ?? 'blue', occupant: null });
       }
@@ -289,11 +326,21 @@ export class Room {
     if (this.seatedCount() < this.game.minPlayers) {
       throw new RoomError('NOT_ENOUGH_PLAYERS', `At least ${this.game.minPlayers} players are needed to start.`);
     }
-    this.state = 'in_progress';
     // Slot order: the host first, then the other players by seat order.
     const ordered = this.seats
       .flatMap((s) => (s.occupant ? [{ seat: s, p: s.occupant }] : []))
       .sort((a, b) => Number(b.p.playerId === this.hostPlayerId) - Number(a.p.playerId === this.hostPlayerId) || a.seat.index - b.seat.index);
+    const seatsForMatch = ordered.map(({ p }) => ({
+      playerId: p.playerId,
+      displayName: p.displayName,
+      color: p.color,
+      kind: p.kind,
+    }));
+    if (this.engine.validateStart && this.lobby !== null) {
+      const problem = this.engine.validateStart(this.lobby, seatsForMatch);
+      if (problem) throw new RoomError('INVALID_STATE', problem);
+    }
+    this.state = 'in_progress';
     const colors = this.engine.assignColors?.(
       ordered.map(({ seat, p }) => ({ playerId: p.playerId, seatIndex: seat.index, kind: p.kind })),
     );
@@ -301,8 +348,24 @@ export class Room {
     this.match = this.engine.createMatch(
       ordered.map(({ p }) => ({ playerId: p.playerId, displayName: p.displayName, color: p.color, kind: p.kind })),
       this.buildContext(),
+      this.lobby ?? undefined,
     );
     this.announce('match_started', 'The match has started');
+    this.changed();
+  }
+
+  /** Host only: ends a running match and returns everyone to a fresh lobby (seats stay). */
+  resetToLobby(socketId: string): void {
+    this.requireHost(socketId);
+    if (this.state !== 'in_progress') throw new RoomError('INVALID_STATE', 'There is no match to end.');
+    if (this.match !== null) this.engine.dispose(this.match);
+    this.match = null;
+    for (const t of this.matchTimers) clearTimeout(t);
+    this.matchTimers.clear();
+    this.state = 'lobby';
+    this.lobby = this.engine.createLobby?.() ?? null;
+    this.lastSaid.clear();
+    this.lastActivityAt = Date.now();
     this.changed();
   }
 
@@ -310,6 +373,17 @@ export class Room {
   action(socketId: string, action: unknown): void {
     const p = this.findBySocket(socketId);
     if (!p) throw new RoomError('NOT_IN_ROOM', 'You are not in this room.');
+    if (this.state === 'lobby' && this.engine.onLobbyAction && this.lobby !== null) {
+      const lobbyResult = this.engine.onLobbyAction(
+        this.lobby,
+        { playerId: p.playerId, isHost: p.playerId === this.hostPlayerId },
+        action,
+      );
+      if (!lobbyResult.ok) throw new RoomError('INVALID_STATE', lobbyResult.reason ?? 'That is not allowed right now.');
+      this.lastActivityAt = Date.now();
+      this.changed();
+      return;
+    }
     if (this.state !== 'in_progress' || this.match === null) {
       throw new RoomError('INVALID_STATE', 'The match has not started.');
     }
@@ -342,6 +416,8 @@ export class Room {
   close(reason: ClosedReason): void {
     if (this.state === 'closed') return;
     this.state = 'closed';
+    if (this.stateTimer) clearTimeout(this.stateTimer);
+    this.stateTimer = null;
     for (const s of this.seats) if (s.occupant) this.clearTimer(s.occupant);
     if (this.match !== null) this.engine.dispose(this.match);
     this.match = null;
@@ -375,10 +451,27 @@ export class Room {
         this.events.gameEvent(this, event);
       },
       say: (playerId, text) => this.say(playerId, text),
+      emitTo: (playerId, event) => {
+        const target = this.seats.find((s) => s.occupant?.playerId === playerId)?.occupant;
+        if (target?.socketId) this.events.gameEventTo(this, target.socketId, event);
+      },
+      hostId: () => this.hostPlayerId,
+      notice: (text) => this.notice(text),
       releaseSeat: (playerId, reason) => this.releaseSeat(playerId, reason),
       now: () => Date.now(),
       log: (level, fields, message) => logger[level]({ roomId: this.roomId, ...fields }, message),
     };
+  }
+
+  /** A game's own system chat line (the only automatic line in quiet-chat games), at most 5 per second per room. */
+  private notice(text: string): void {
+    const now = Date.now();
+    this.noticeTimes = this.noticeTimes.filter((t) => now - t < 1000);
+    if (this.noticeTimes.length >= 5) return;
+    const clean = sanitizeChatText(text);
+    if (clean === null) return;
+    this.noticeTimes.push(now);
+    this.events.chat(this, this.chat.system('game_notice', clean));
   }
 
   /** Chat as a participant (a bot), at most one message per second each. */
@@ -414,9 +507,11 @@ export class Room {
     if (!seat || !p) return;
     this.clearTimer(p);
     const socketId = p.socketId;
-    seat.occupant = null;
+    if (this.game.roster) this.seats = this.seats.filter((s) => s !== seat);
+    else seat.occupant = null;
     const wasHost = this.hostPlayerId === p.playerId;
     const inMatch = this.state === 'in_progress';
+    if (this.state === 'lobby' && this.lobby !== null) this.engine.onLobbyLeave?.(this.lobby, p.playerId);
 
     if (reason === 'removed') this.announce('removed', `${p.displayName} was removed by the host`);
     else if (reason === 'inactive') this.announce('seat_released', `${p.displayName} was removed for inactivity`);
@@ -458,7 +553,7 @@ export class Room {
     guestId: string | null,
     socketId: string | null,
   ): Participant {
-    const seat = this.seats.find((s) => !s.occupant);
+    const seat = this.seats.find((s) => !s.occupant) ?? this.openRosterSeat();
     if (!seat) throw new RoomError('ROOM_FULL', 'This room is full.');
     const p: Participant = {
       playerId: crypto.randomBytes(5).toString('hex'),
@@ -515,11 +610,42 @@ export class Room {
 
   private announce(code: SystemCode, text: string): void {
     this.lastActivityAt = Date.now();
+    // Quiet-chat games write no automatic lines while a match is running.
+    if (this.game.quietChat && this.state === 'in_progress') return;
     this.events.chat(this, this.chat.system(code, text));
   }
 
   private changed(): void {
     this.rev++;
+    if (this.capacity <= COALESCE_ABOVE) {
+      this.events.stateChanged(this);
+      return;
+    }
+    // Big rooms: send now, then at most one more broadcast per STATE_COALESCE_MS carrying the latest state.
+    if (this.stateTimer) {
+      this.statePending = true;
+      return;
+    }
     this.events.stateChanged(this);
+    this.armStateTimer();
+  }
+
+  private armStateTimer(): void {
+    this.stateTimer = setTimeout(() => {
+      this.stateTimer = null;
+      if (!this.statePending || this.state === 'closed') return;
+      this.statePending = false;
+      this.events.stateChanged(this);
+      this.armStateTimer();
+    }, STATE_COALESCE_MS);
+  }
+
+  /** Roster rooms add a seat when someone joins and there is still room under the limit. */
+  private openRosterSeat(): Seat | undefined {
+    if (!this.game.roster || this.seats.filter((s) => s.occupant).length >= this.capacity) return undefined;
+    const color = ROSTER_COLORS[this.joinCounter % ROSTER_COLORS.length] ?? 'blue';
+    const seat: Seat = { index: this.nextSeatIndex++, color, occupant: null };
+    this.seats.push(seat);
+    return seat;
   }
 }

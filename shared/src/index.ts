@@ -4,3 +4,8 @@ export * from './protocol.js';
 export * from './ludo/board.js';
 export * from './ludo/timing.js';
 export * from './ludo/types.js';
+export * from './housie/timing.js';
+export * from './housie/ticket.js';
+export * from './housie/patterns.js';
+export * from './housie/evaluate.js';
+export * from './housie/types.js';

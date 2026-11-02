@@ -46,8 +46,47 @@ export const kickSchema = z.object({ playerId: z.string().min(1).max(40) }).stri
 
 export const chatSendSchema = z.object({ text: z.string().max(2000) }).strict();
 
-/** Ludo intents: a roll or a pawn choice. There is deliberately no field for a die value. */
+const autoInterval = z.union([z.literal(5000), z.literal(8000), z.literal(10000)]); // mirrors AUTO_INTERVALS_MS
+
+/**
+ * Game intents. Ludo: a roll or a pawn choice. Housie: host settings, calling and player marks/claims.
+ * There is deliberately no field for a die value, a ball number, ticket contents or a result.
+ */
 export const gameActionSchema = z.union([
   z.object({ type: z.literal('roll') }).strict(),
   z.object({ type: z.literal('move'), pawn: z.number().int().min(0).max(3) }).strict(),
+  z.object({ type: z.literal('setCeiling'), value: z.number().int().min(1).max(4) }).strict(),
+  z.object({ type: z.literal('setHostPlays'), value: z.boolean() }).strict(),
+  z
+    .object({ type: z.literal('setPatterns'), ids: z.array(z.string().min(1).max(40)).max(40) })
+    .strict(),
+  z
+    .object({ type: z.literal('setCaller'), mode: z.enum(['manual', 'auto']), intervalMs: autoInterval.optional() })
+    .strict(),
+  z.object({ type: z.literal('setTickets'), count: z.number().int().min(1).max(4) }).strict(),
+  z.object({ type: z.literal('draw') }).strict(),
+  z.object({ type: z.literal('auto'), intervalMs: autoInterval }).strict(),
+  z.object({ type: z.literal('manual') }).strict(),
+  z.object({ type: z.literal('pause') }).strict(),
+  z.object({ type: z.literal('resume') }).strict(),
+  z
+    .object({
+      type: z.literal('marks'),
+      changes: z
+        .array(
+          z
+            .object({
+              t: z.number().int().min(0).max(3),
+              c: z.number().int().min(0).max(26),
+              on: z.boolean(),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(30),
+    })
+    .strict(),
+  z
+    .object({ type: z.literal('claim'), combo: z.string().min(1).max(40), ticket: z.number().int().min(0).max(3) })
+    .strict(),
 ]);

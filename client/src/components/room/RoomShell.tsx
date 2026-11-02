@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { formatRoomCode, getGame } from '@myarena/shared';
-import { getMatchScreen } from '../../games/registry';
+import { getLobbyScreen, getMatchScreen } from '../../games/registry';
 import { leaveRoom, useRoom } from '../../state/roomStore';
 import { useLayoutMode } from '../../state/viewport';
 import { ChatDrawer } from './ChatDrawer';
@@ -22,6 +22,8 @@ export function RoomShell(): ReactElement | null {
 
   const MatchScreen = room.state === 'in_progress' ? getMatchScreen(room.gameId) : undefined;
   if (MatchScreen) return <MatchScreen room={room} youId={you} invitePath={invitePath} chat={chat} />;
+  const LobbyScreen = room.state === 'lobby' ? getLobbyScreen(room.gameId) : undefined;
+  if (LobbyScreen) return <LobbyScreen room={room} youId={you} invitePath={invitePath} chat={chat} />;
 
   const game = getGame(room.gameId);
   const leave = (): void => {

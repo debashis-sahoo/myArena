@@ -23,3 +23,23 @@ export const PING_TIMEOUT_MS = 4000;
 
 export const AVATAR_KEYS = ['fox', 'panda', 'tiger', 'frog', 'owl', 'koala', 'lion', 'robot'] as const;
 export type AvatarKey = (typeof AVATAR_KEYS)[number];
+
+/** Colour tags for rooms with on-demand seats (games flagged `roster`), assigned by join order and cycled. */
+export const ROSTER_COLORS = [
+  'red',
+  'green',
+  'yellow',
+  'blue',
+  'orange',
+  'purple',
+  'pink',
+  'teal',
+  'lime',
+  'sky',
+  'coral',
+  'indigo',
+] as const;
+
+/** Rooms with a capacity above this send `room:state` at most every STATE_COALESCE_MS (trailing edge). */
+export const COALESCE_ABOVE = 12;
+export const STATE_COALESCE_MS = 250;

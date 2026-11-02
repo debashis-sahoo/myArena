@@ -1,0 +1,246 @@
+.hz-combos {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.hz-combos-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hz-combos-title {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--hz-gold, #f2b73a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hz-combos-chip {
+  flex: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--hz-gold, #f2b73a);
+  background: rgba(242, 183, 58, 0.14);
+  color: var(--hz-gold-hi, #fff1b8);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.hz-combos-region {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.hz-combos-grid {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  max-height: 100%;
+  align-content: start;
+}
+
+.hz-combo {
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 5px 7px;
+  border-radius: 10px;
+  border: 1px solid var(--hz-line, #27357c);
+  background: var(--hz-panel, #101a44);
+  color: var(--hz-text, #f4efe0);
+  cursor: pointer;
+  user-select: none;
+  transition: filter 0.15s ease, border-color 0.15s ease;
+}
+
+.hz-combo:hover {
+  filter: brightness(1.12);
+  border-color: var(--hz-gold-lo, #b87a10);
+}
+
+.hz-combo:focus-visible {
+  outline: 3px solid var(--hz-gold-hi, #fff1b8);
+  outline-offset: 2px;
+}
+
+.hz-combo.claimed {
+  background: linear-gradient(180deg, rgba(242, 183, 58, 0.22), rgba(184, 122, 16, 0.18));
+  border-color: rgba(242, 183, 58, 0.45);
+}
+
+.hz-combo.claimed .hz-combo-name {
+  opacity: 0.75;
+}
+
+.hz-combo.bogus {
+  border-color: var(--hz-danger, #ff6b81);
+}
+
+.hz-combo-name {
+  min-width: 0;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hz-combo-claim.hz-btn {
+  flex: none;
+  min-height: 0;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.hz-combo-open {
+  align-self: flex-start;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--hz-line, #27357c);
+  color: var(--hz-muted, #aab4e8);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.hz-combo-by {
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hz-combo-bogus {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--hz-danger, #ff6b81);
+  color: #2a0008;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  animation: hz-bogus-in 0.18s ease-out;
+}
+
+/* Density tiers. */
+.hz-combos-grid.tier-large .hz-combo {
+  min-height: 44px;
+  padding: 8px 10px;
+}
+
+.hz-combos-grid.tier-large .hz-combo-name {
+  font-size: 1.05rem;
+}
+
+.hz-combos-grid.tier-large .hz-combo-claim.hz-btn {
+  height: 34px;
+  font-size: 0.95rem;
+}
+
+.hz-combos-grid.tier-medium .hz-combo-name {
+  font-size: 0.88rem;
+}
+
+.hz-combos-grid.tier-compact .hz-combo {
+  padding: 3px 5px;
+  border-radius: 8px;
+}
+
+/* Short tiles put the name and the button side by side so both stay visible. */
+.hz-combos-grid.flat .hz-combo {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.hz-combos-grid.flat .hz-combo-name {
+  flex: 1 1 auto;
+}
+
+.hz-combos-grid.flat .hz-combo-claim.hz-btn {
+  height: 28px;
+  padding: 0 7px;
+}
+
+.hz-combos-grid.flat .hz-combo.claimed {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+}
+
+.hz-combos-grid.tier-compact .hz-combo-name {
+  font-size: 0.72rem;
+}
+
+.hz-combos-grid.tier-compact .hz-combo-claim.hz-btn {
+  height: 22px;
+  padding: 0 4px;
+  font-size: 0.7rem;
+  border-radius: 6px;
+}
+
+.hz-combos-grid.tier-compact .hz-combo-by,
+.hz-combos-grid.tier-compact .hz-combo-open {
+  font-size: 0.66rem;
+}
+
+.hz-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes hz-bogus-in {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hz-combo,
+  .hz-combo-bogus {
+    transition: none;
+    animation: none;
+  }
+}

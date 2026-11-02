@@ -1,0 +1,150 @@
+.hz-cc {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.hz-cc-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.hz-cc-ball {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.hz-cc-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--hz-muted);
+  white-space: nowrap;
+}
+
+.hz-cc-side {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.hz-cc-drawwrap {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.hz .hz-btn.hz-cc-draw {
+  width: 100%;
+  min-height: 40px;
+  font-size: clamp(0.85rem, 1.6vw, 1.25rem);
+  white-space: nowrap;
+}
+
+.hz-cc-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: #3be08a;
+  transform-origin: left center;
+  transform: scaleX(var(--from));
+  animation-name: hz-cc-drain;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  pointer-events: none;
+}
+
+@keyframes hz-cc-drain {
+  from {
+    transform: scaleX(var(--from));
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.hz-cc-reason {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--hz-danger);
+}
+
+.hz-cc-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.hz-cc-row.recent {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.hz-cc-label {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hz-muted);
+}
+
+.hz-cc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  max-height: calc(var(--chip) * 2 + 4px);
+  overflow: hidden;
+}
+
+.hz-cc-chip {
+  display: grid;
+  place-items: center;
+  min-width: calc(var(--chip) * 1.3);
+  height: var(--chip);
+  border-radius: 999px;
+  border: 1px solid var(--hz-line);
+  background: #1b2766;
+  color: #b9c3f5;
+  font-weight: 800;
+  font-size: calc(var(--chip) * 0.5);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.hz-cc-chip:first-child {
+  background: linear-gradient(180deg, #7a4f0e, #5a3a08);
+  border-color: var(--hz-gold-lo);
+  color: #fff4d6;
+}
+
+.hz-cc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

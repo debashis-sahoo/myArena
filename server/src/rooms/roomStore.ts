@@ -13,6 +13,7 @@ export class RoomStore {
       stateChanged: (room) => events.stateChanged(room),
       chat: (room, message) => events.chat(room, message),
       gameEvent: (room, event) => events.gameEvent(room, event),
+      gameEventTo: (room, socketId, event) => events.gameEventTo(room, socketId, event),
       removedInactive: (room, socketId) => events.removedInactive(room, socketId),
       closed: (room, reason) => {
         this.rooms.delete(room.roomId);
@@ -61,6 +62,8 @@ export class RoomStore {
     const room = new Room(this.newRoomId(), game, mode, capacity, this.events, {
       reconnectWindowMs: config.reconnectWindowMs,
       removalCooldownMs: config.removalCooldownMs,
+      // Roster games take their player ceiling from the operator setting (HOUSIE_MAX_PLAYERS, default 200).
+      maxPlayers: game.roster ? config.housieMaxPlayers : game.maxPlayers,
     });
     const playerId = room.seedCreator(guest, socketId, bots);
     this.rooms.set(room.roomId, room);
