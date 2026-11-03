@@ -69,17 +69,18 @@
   min-height: 40px;
   padding: 5px 7px;
   border-radius: 10px;
-  border: 1px solid var(--hz-line, #27357c);
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--hz-line, #27357c);
   background: var(--hz-panel, #101a44);
   color: var(--hz-text, #f4efe0);
   cursor: pointer;
   user-select: none;
-  transition: filter 0.15s ease, border-color 0.15s ease;
+  transition: filter 0.15s ease, box-shadow 0.15s ease;
 }
 
 .hz-combo:hover {
   filter: brightness(1.12);
-  border-color: var(--hz-gold-lo, #b87a10);
+  box-shadow: inset 0 0 0 1px var(--hz-gold-lo, #b87a10);
 }
 
 .hz-combo:focus-visible {
@@ -89,7 +90,7 @@
 
 .hz-combo.claimed {
   background: linear-gradient(180deg, rgba(242, 183, 58, 0.22), rgba(184, 122, 16, 0.18));
-  border-color: rgba(242, 183, 58, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(242, 183, 58, 0.45);
 }
 
 .hz-combo.claimed .hz-combo-name {
@@ -97,20 +98,29 @@
 }
 
 .hz-combo.bogus {
-  border-color: var(--hz-danger, #ff6b81);
+  box-shadow: inset 0 0 0 1px var(--hz-danger, #ff6b81);
 }
 
+/* Titles wrap to two lines; the font size comes from the fit (inline), the clamp is only a safety net. */
 .hz-combo-name {
+  flex: 0 1 auto;
   min-width: 0;
+  min-height: 0;
   font-weight: 800;
   font-size: 0.95rem;
   line-height: 1.15;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: balance;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .hz-combo-claim.hz-btn {
+  position: relative;
   flex: none;
   min-height: 0;
   height: 30px;
@@ -118,6 +128,18 @@
   border-radius: 8px;
   font-size: 0.85rem;
   white-space: nowrap;
+  --hit-up: 5px;
+  --hit-down: 5px;
+}
+
+/* Transparent extension so the tap target is at least 40 px tall without changing the visible button. */
+.hz-combo-claim.hz-btn::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(-1px - var(--hit-up));
+  bottom: calc(-1px - var(--hit-down));
 }
 
 .hz-combo-open {
@@ -167,6 +189,8 @@
 .hz-combos-grid.tier-large .hz-combo-claim.hz-btn {
   height: 34px;
   font-size: 0.95rem;
+  --hit-up: 0px;
+  --hit-down: 6px;
 }
 
 .hz-combos-grid.tier-medium .hz-combo-name {
@@ -193,6 +217,8 @@
 .hz-combos-grid.flat .hz-combo-claim.hz-btn {
   height: 28px;
   padding: 0 7px;
+  --hit-up: 6px;
+  --hit-down: 6px;
 }
 
 .hz-combos-grid.flat .hz-combo.claimed {
@@ -200,6 +226,10 @@
   align-items: flex-start;
   justify-content: center;
   gap: 0;
+}
+
+.hz-combos-grid.flat .hz-combo.claimed .hz-combo-name {
+  flex: 0 1 auto;
 }
 
 .hz-combos-grid.tier-compact .hz-combo-name {
@@ -211,11 +241,76 @@
   padding: 0 4px;
   font-size: 0.7rem;
   border-radius: 6px;
+  --hit-up: 15px;
+  --hit-down: 3px;
+}
+
+.hz-combos-grid.tier-compact.flat .hz-combo-claim.hz-btn {
+  --hit-up: 9px;
+  --hit-down: 9px;
 }
 
 .hz-combos-grid.tier-compact .hz-combo-by,
 .hz-combos-grid.tier-compact .hz-combo-open {
   font-size: 0.66rem;
+}
+
+/* Short tiles (under 78 px): tighter padding and smaller buttons so the title gets the room. Row layout keeps its own button size. */
+.hz-combos-grid.snug .hz-combo {
+  padding: 4px 6px;
+}
+
+.hz-combos-grid.snug.tier-medium .hz-combo {
+  padding: 3px 5px;
+}
+
+.hz-combos-grid.snug.tier-compact .hz-combo {
+  padding: 2px 3px;
+}
+
+.hz-combos-grid.snug .hz-combo-claim.hz-btn {
+  height: 28px;
+  --hit-up: 8px;
+  --hit-down: 4px;
+}
+
+.hz-combos-grid.snug.tier-medium .hz-combo-claim.hz-btn {
+  height: 26px;
+  --hit-up: 11px;
+  --hit-down: 3px;
+}
+
+.hz-combos-grid.snug.tier-compact .hz-combo-claim.hz-btn {
+  height: 22px;
+  --hit-up: 16px;
+  --hit-down: 2px;
+}
+
+.hz-combos-grid.snug.flat .hz-combo-claim.hz-btn {
+  height: 28px;
+  --hit-up: 6px;
+  --hit-down: 6px;
+}
+
+.hz-combos-grid.snug.flat.tier-compact .hz-combo-claim.hz-btn {
+  height: 22px;
+  --hit-up: 9px;
+  --hit-down: 9px;
+}
+
+/* Tight: the fit could not show titles with the normal snug button, so the button shrinks to the dense size. */
+.hz-combos-grid.snug.tight .hz-combo {
+  padding: 2px 4px;
+  gap: 1px;
+}
+
+.hz-combos-grid.snug.tight .hz-combo-claim.hz-btn {
+  height: 22px;
+  padding: 0 4px;
+  font-size: 0.7rem;
+  border-radius: 6px;
+  --hit-up: 16px;
+  --hit-down: 2px;
 }
 
 .hz-sr-only {

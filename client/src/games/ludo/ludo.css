@@ -390,7 +390,7 @@ html.ludo-active body {
   pointer-events: none;
 }
 
-button.pawn.eligible {
+.pawn.eligible {
   pointer-events: auto;
   cursor: pointer;
   touch-action: manipulation;
@@ -696,31 +696,35 @@ button.pawn.eligible {
 .slab {
   position: absolute;
   inset: 0;
-  border-radius: 24%;
-  background: linear-gradient(145deg, #fffdf4, #e9e1cc);
+  border-radius: 32%;
+  background: linear-gradient(145deg, #ffffff, #e6ebf3);
 }
 
 .slab.s0 {
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   padding: 15%;
+  background:
+    radial-gradient(ellipse 62% 50% at 27% 21%, #ffffff 0%, rgba(255, 255, 255, 0.85) 35%, rgba(255, 255, 255, 0) 72%),
+    linear-gradient(145deg, #ffffff 30%, #e6ebf3);
   box-shadow:
-    inset 0 0 calc(var(--die) * 0.14) rgba(110, 85, 45, 0.5),
-    inset 0 0 0 1px rgba(90, 70, 40, 0.22);
+    inset 0 0 calc(var(--die) * 0.09) rgba(95, 115, 150, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+    inset 0 0 0 2px rgba(120, 140, 175, 0.14);
 }
 
 .slab.s1 {
   inset: 3.5%;
-  border-radius: 30%;
-  background: linear-gradient(145deg, #f2ebd8, #d9cfb4);
-  transform: translateZ(calc(var(--die) * -0.04));
+  border-radius: 40%;
+  background: linear-gradient(145deg, #f3f6fb, #dfe5ef);
+  transform: translateZ(calc(var(--die) * -0.045));
 }
 
 .slab.s2 {
   inset: 8%;
-  border-radius: 38%;
-  background: #cfc4a6;
-  transform: translateZ(calc(var(--die) * -0.09));
+  border-radius: 48%;
+  background: #c9d1df;
+  transform: translateZ(calc(var(--die) * -0.1));
 }
 
 .face.f1 {
@@ -756,8 +760,10 @@ button.pawn.eligible {
 }
 
 .slab i.pip {
-  background: radial-gradient(circle at 35% 30%, #5a5a66, #12121a 70%);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.85);
+  background: radial-gradient(circle at 35% 30%, #4a4a58, #0a0a12 70%);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.95),
+    0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .countdown {

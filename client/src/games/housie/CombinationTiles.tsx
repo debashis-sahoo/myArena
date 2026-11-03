@@ -1,15 +1,112 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, ReactElement } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { KeyboardEvent, ReactElement, ReactNode } from 'react';
 import { COLOR_HEX, getPattern } from '@myarena/shared';
 import type { ComboState } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
 import { useReducedMotion } from '../../state/viewport';
 import { celebrate as playCelebration } from './anim/celebrate';
 import { PatternPopover } from './PatternPopover';
-import { planTiles, useRegionSize } from './useFit';
+import { shortNameOf } from './shortNames';
+import { fitTitle, planTiles, useRegionSize } from './useFit';
+import type { TileTier, TitleFit } from './useFit';
 import './CombinationTiles.css';
 
 const BOGUS_MS = 2000;
+
+/** Title base font per density tier, px (1.05rem, 0.88rem, 0.72rem at a 16 px root). */
+const BASE_FONT_PX: Record<TileTier, number> = { large: 16.8, medium: 14.08, compact: 11.52 };
+type Layout = 'stack' | 'row' | 'tight';
+
+/** Tile geometry per layout (mirrors CombinationTiles.css): padding x/y per side, CLAIM height, CLAIM font and x padding, gap. */
+interface Geo {
+  padX: number;
+  padY: number;
+  btnH: number;
+  btnFont: number;
+  btnPadX: number;
+  gap: number;
+}
+
+const GEO_FULL: Record<TileTier, Geo> = {
+  large: { padX: 10, padY: 8, btnH: 34, btnFont: 15.2, btnPadX: 8, gap: 2 },
+  medium: { padX: 7, padY: 5, btnH: 30, btnFont: 13.6, btnPadX: 8, gap: 2 },
+  compact: { padX: 5, padY: 3, btnH: 22, btnFont: 11.2, btnPadX: 4, gap: 2 },
+};
+const GEO_SNUG: Record<TileTier, Geo> = {
+  large: { padX: 6, padY: 4, btnH: 28, btnFont: 15.2, btnPadX: 8, gap: 2 },
+  medium: { padX: 5, padY: 3, btnH: 26, btnFont: 13.6, btnPadX: 8, gap: 2 },
+  compact: { padX: 3, padY: 2, btnH: 22, btnFont: 11.2, btnPadX: 4, gap: 2 },
+};
+const GEO_ROW: Record<TileTier, Geo> = {
+  large: { ...GEO_SNUG.large, btnH: 28, btnPadX: 7, gap: 6 },
+  medium: { ...GEO_SNUG.medium, btnH: 28, btnPadX: 7, gap: 6 },
+  compact: { ...GEO_SNUG.compact, gap: 6 },
+};
+const GEO_TIGHT: Geo = { padX: 4, padY: 2, btnH: 22, btnFont: 11.2, btnPadX: 4, gap: 1 };
+
+const BY_LINE_FALLBACK: Record<TileTier, number> = { large: 17, medium: 17, compact: 14 };
+const SNUG_BELOW_H = 78;
+const TILE_GAP = 6;
+
+function geoOf(layout: Layout, snug: boolean, tier: TileTier): Geo {
+  if (!snug) return GEO_FULL[tier];
+  if (layout === 'row') return GEO_ROW[tier];
+  return layout === 'tight' ? GEO_TIGHT : GEO_SNUG[tier];
+}
+
+/** Real measurements that the title box depends on; read from the DOM after render. */
+interface FitEnv {
+  family: string;
+  weight: string;
+  /** Widest CLAIM label width per px of font size (letter-spacing included). */
+  claimPerPx: number;
+  /** Width and height of the Open chip, 0 when none is rendered. */
+  chipW: number;
+  chipH: number;
+  /** Height of the "Claimed by" line, 0 when no tile is claimed. */
+  byH: number;
+  gridW: number;
+}
+
+const sameEnv = (a: FitEnv, b: FitEnv): boolean =>
+  a.family === b.family &&
+  a.weight === b.weight &&
+  a.claimPerPx === b.claimPerPx &&
+  a.chipW === b.chipW &&
+  a.chipH === b.chipH &&
+  a.byH === b.byH &&
+  a.gridW === b.gridW;
+
+function readEnv(grid: HTMLElement): FitEnv | null {
+  const name = grid.querySelector<HTMLElement>('.hz-combo-name');
+  if (!name) return null;
+  const ns = getComputedStyle(name);
+  const range = document.createRange();
+  let claimPerPx = 0;
+  for (const el of grid.querySelectorAll<HTMLElement>('.hz-combo-claim')) {
+    range.selectNodeContents(el);
+    const font = parseFloat(getComputedStyle(el).fontSize) || 1;
+    claimPerPx = Math.max(claimPerPx, range.getBoundingClientRect().width / font);
+  }
+  const chip = grid.querySelector<HTMLElement>('.hz-combo-open');
+  const by = grid.querySelector<HTMLElement>('.hz-combo-by');
+  return {
+    family: ns.fontFamily,
+    weight: ns.fontWeight,
+    claimPerPx: Math.ceil(claimPerPx * 1000) / 1000,
+    chipW: chip ? Math.ceil(chip.offsetWidth) : 0,
+    chipH: chip ? Math.ceil(chip.offsetHeight) : 0,
+    byH: by ? Math.ceil(by.offsetHeight) : 0,
+    gridW: grid.clientWidth,
+  };
+}
+
+/** Lets "Top+Mid" wrap after the plus without changing the text content. */
+function withBreaks(text: string): ReactNode {
+  const parts = text.split('+');
+  if (parts.length === 1) return text;
+  return parts.flatMap((p, i) => (i < parts.length - 1 ? [p, '+', <wbr key={i} />] : [p]));
+}
 
 export interface CombinationTilesProps {
   combos: ComboState[];
@@ -42,11 +139,74 @@ export function CombinationTiles({
   onClaim,
 }: CombinationTilesProps): ReactElement {
   const { ref, width, height } = useRegionSize<HTMLDivElement>();
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [env, setEnv] = useState<FitEnv | null>(null);
   const plan = planTiles(width, height, combos.length);
-  // Short but wide tiles put name and button side by side; narrow tiles keep them stacked.
-  const tileW = plan.cols > 0 ? (width - 6 * (plan.cols - 1)) / plan.cols : 0;
-  const flat = plan.tileHeight < 78 && tileW >= 110;
+  const gridW = env && env.gridW > 0 ? Math.min(width, env.gridW) : width;
+  const tileW = plan.cols > 0 ? (gridW - TILE_GAP * (plan.cols - 1)) / plan.cols : 0;
+  const { tier, tileHeight } = plan;
+  const snug = tileHeight < SNUG_BELOW_H;
   const reduced = useReducedMotion();
+
+  // Titles wrap to two lines and shrink to 10 px; the short name is used only when the full name cannot fit.
+  const { fits, layout } = useMemo(() => {
+    const family = env?.family ?? 'sans-serif';
+    const weight = env?.weight ?? '800';
+    const byH = env && env.byH > 0 ? env.byH : BY_LINE_FALLBACK[tier];
+    const claimPerPx = env && env.claimPerPx > 0 ? env.claimPerPx : 4;
+    const chipW = env && env.chipW > 0 ? env.chipW : 44;
+    const chipH = env && env.chipH > 0 ? env.chipH : 18;
+
+    const run = (layout: Layout): { list: TitleFit[]; unfit: number; short: number } => {
+      const g = geoOf(layout, snug, tier);
+      const sideW = canClaim ? Math.ceil(claimPerPx * g.btnFont) + 2 * g.btnPadX + 3 : chipW;
+      const sideH = canClaim ? g.btnH : chipH;
+      const list = combos.map((c): TitleFit => {
+        const full = getPattern(c.id)?.name ?? c.id;
+        let w = tileW - 2 * g.padX;
+        let h = tileHeight - 2 * g.padY;
+        if (c.status === 'claimed') h -= byH + Math.min(g.gap, 2);
+        else if (layout === 'row') w -= sideW + g.gap;
+        else h -= sideH + g.gap;
+        if (tileW > 0) {
+          w = Math.max(1, w);
+          h = Math.max(1, h);
+        }
+        return fitTitle({
+          full,
+          short: shortNameOf(c.id, full),
+          width: w,
+          height: h,
+          baseFontPx: BASE_FONT_PX[tier],
+          fontFamily: family,
+          fontWeight: weight,
+        });
+      });
+      return { list, unfit: list.filter((t) => !t.fits).length, short: list.filter((t) => t.form === 'short').length };
+    };
+
+    // Preference order; a later layout wins only by showing fewer cut or short titles.
+    const order: Layout[] = snug ? ['stack', 'row', 'tight'] : ['stack'];
+    let best = run('stack');
+    let bestLayout: Layout = 'stack';
+    for (const l of order.slice(1)) {
+      const r = run(l);
+      if (r.unfit < best.unfit || (r.unfit === best.unfit && r.short < best.short)) {
+        best = r;
+        bestLayout = l;
+      }
+    }
+    return { fits: best.list, layout: bestLayout };
+  }, [combos, tier, tileHeight, tileW, snug, canClaim, env]);
+  const flat = layout === 'row';
+  const tight = layout === 'tight';
+
+  // Re-read the font, label widths and line heights after every render; state changes only when a value changes.
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    const next = grid ? readEnv(grid) : null;
+    if (next) setEnv((prev) => (prev && sameEnv(prev, next) ? prev : next));
+  });
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [, setTick] = useState(0);
@@ -113,16 +273,18 @@ export function CombinationTiles({
 
       <div ref={ref} className="hz-combos-region">
         <div
-          className={`hz-combos-grid tier-${plan.tier}${flat ? ' flat' : ''}`}
+          ref={gridRef}
+          className={`hz-combos-grid tier-${plan.tier}${snug ? ' snug' : ''}${flat ? ' flat' : ''}${tight ? ' tight' : ''}`}
           style={{
             gridTemplateColumns: `repeat(${plan.cols}, minmax(0, 1fr))`,
             gridAutoRows: `${plan.tileHeight}px`,
             overflowY: plan.scroll ? 'auto' : 'hidden',
           }}
         >
-          {combos.map((combo) => {
+          {combos.map((combo, i) => {
             const pattern = getPattern(combo.id);
             const name = pattern?.name ?? combo.id;
+            const fit = fits[i];
             const claimed = combo.status === 'claimed';
             const showBogus = now - (bogus[combo.id] ?? -Infinity) < BOGUS_MS;
             const winnerColor = COLOR_HEX[combo.claimedBy?.color ?? ''] ?? 'var(--hz-gold-hi)';
@@ -141,7 +303,13 @@ export function CombinationTiles({
                 onClick={() => toggle(combo.id)}
                 onKeyDown={(e) => onTileKey(e, combo.id)}
               >
-                <span className="hz-combo-name">{name}</span>
+                <span
+                  className="hz-combo-name"
+                  data-form={fit?.form ?? 'full'}
+                  style={fit ? { fontSize: `${fit.fontPx}px` } : undefined}
+                >
+                  {fit ? withBreaks(fit.text) : name}
+                </span>
                 {showBogus && <span className="hz-combo-bogus">Bogus Claim</span>}
                 {claimed ? (
                   <span className="hz-combo-by" style={{ color: winnerColor }}>

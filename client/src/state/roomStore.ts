@@ -189,6 +189,11 @@ function wire(): void {
     }
     const ludo = event as LudoEvent;
     if (ludo.seq <= view.game.lastSeq) return;
+    // An event was missed (seq jumped): every event carries the full snapshot, so show this one's state at once.
+    if (view.game.lastSeq > 0 && ludo.seq > view.game.lastSeq + 1) {
+      set({ game: { state: ludo.state, queue: [], lastSeq: ludo.seq } });
+      return;
+    }
     set({ game: { ...view.game, queue: [...view.game.queue, ludo], lastSeq: ludo.seq } });
   });
 

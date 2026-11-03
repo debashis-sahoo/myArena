@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactElement } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, type CSSProperties, type KeyboardEvent, type ReactElement } from 'react';
 import { HOME_CENTER, HOME_PROGRESS, type LudoState } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
 import { bounceHome, celebrateHome } from './anim/capture';
@@ -6,7 +6,7 @@ import { hopAlong, place, type PawnParts, type Point } from './anim/hop';
 import { spawnPuff } from './anim/puff';
 import { cellKey } from './Board';
 import { PawnArt, PawnDefs } from './Pawn';
-import { centerOf, layoutPawns, pawnKey } from './pawnLayout';
+import { centerOf, layoutPawns, pawnKey, squareKeyOf } from './pawnLayout';
 import type { AnimState } from './useLudo';
 
 export interface Fx {
@@ -65,11 +65,21 @@ export function Pawns({ state, side, youId, eligible, anim, reduced, onMove, onF
     }
   }, [state.matchRev]);
 
+  // Whenever nothing is animating (and when the board size changes), React's layout alone decides where pawns stand.
+  const idle = anim === null;
+  useLayoutEffect(() => {
+    if (!idle) return;
+    for (const el of elements.current.values()) {
+      el.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+    }
+  }, [idle, cell, state.matchRev]);
+
   const animId = anim?.id;
   useEffect(() => {
     const event = anim?.event;
     if (!event || event.type !== 'moved') return;
-    let cancelled = false;
+    const abort = new AbortController();
+    const { signal } = abort;
     const layer = layerRef.current;
     if (!layer) return;
     const byKey = new Map(itemsRef.current.map((i) => [i.key, i]));
@@ -86,23 +96,32 @@ export function Pawns({ state, side, youId, eligible, anim, reduced, onMove, onF
     onFx({ route: new Set(routeKeys), landing: null });
 
     void (async () => {
-      await hopAlong(parts, start.point, squares, cell, anchor, reduced, (p, i) => {
-        if (cancelled) return;
-        if (!reduced) spawnPuff(layer, p.x, p.y, cell);
-        sfx.tap();
-        onFx({ route: new Set(routeKeys.slice(i + 1)), landing: routeKeys[i] ?? null });
-      });
-      if (cancelled) return;
+      await hopAlong(
+        parts,
+        start.point,
+        squares,
+        cell,
+        anchor,
+        reduced,
+        (p, i) => {
+          if (signal.aborted) return;
+          if (!reduced) spawnPuff(layer, p.x, p.y, cell);
+          sfx.tap();
+          onFx({ route: new Set(routeKeys.slice(i + 1)), landing: routeKeys[i] ?? null });
+        },
+        signal,
+      );
+      if (signal.aborted) return;
       await Promise.all(
         event.captured.map((c) => {
           const victim = partsOf(elements.current.get(pawnKey(c.playerId, c.pawn)));
           const from = byKey.get(pawnKey(c.playerId, c.pawn));
           const to = finalByKey.get(pawnKey(c.playerId, c.pawn));
           if (!victim || !from || !to) return Promise.resolve();
-          return bounceHome(victim, layer, from.point, to.point, cell, anchor, reduced);
+          return bounceHome(victim, layer, from.point, to.point, cell, anchor, reduced, signal);
         }),
       );
-      if (cancelled) return;
+      if (signal.aborted) return;
       if (event.reachedHome) {
         const c = centerOf(HOME_CENTER, cell);
         celebrateHome(layer, c.x, c.y, cell, reduced);
@@ -111,7 +130,8 @@ export function Pawns({ state, side, youId, eligible, anim, reduced, onMove, onF
       onFx(NO_FX);
     })();
     return () => {
-      cancelled = true;
+      abort.abort();
+      onFx(NO_FX);
     };
     // The animation is keyed by its id; the other inputs are read from refs or are stable for that event.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -141,6 +161,8 @@ export function Pawns({ state, side, youId, eligible, anim, reduced, onMove, onF
           },
           style,
           'data-color': item.color,
+          'data-pawn': item.key,
+          'data-sq': squareKeyOf(item.color, item.progress),
         };
         const body = (
           <>
@@ -153,24 +175,25 @@ export function Pawns({ state, side, youId, eligible, anim, reduced, onMove, onF
             </span>
           </>
         );
-        return canMove ? (
-          <button
-            {...common}
-            key={item.key}
-            type="button"
-            className={`pawn ${item.color} eligible ${moving ? 'moving' : ''}`}
-            aria-label={`${label(item.color, item.index, item.progress)}. Move this pawn`}
-            onClick={() => onMove(item.index)}
-          >
-            {body}
-          </button>
-        ) : (
+        // One element type for every pawn, so becoming movable never remounts it under a running animation.
+        return (
           <div
             {...common}
             key={item.key}
-            role="img"
-            className={`pawn ${item.color} ${moving ? 'moving' : ''}`}
-            aria-label={label(item.color, item.index, item.progress)}
+            className={`pawn ${item.color}${canMove ? ' eligible' : ''}${moving ? ' moving' : ''}`}
+            {...(canMove
+              ? {
+                  role: 'button',
+                  tabIndex: 0,
+                  'aria-label': `${label(item.color, item.index, item.progress)}. Move this pawn`,
+                  onClick: () => onMove(item.index),
+                  onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => {
+                    if (e.key !== 'Enter' && e.key !== ' ') return;
+                    e.preventDefault();
+                    onMove(item.index);
+                  },
+                }
+              : { role: 'img', 'aria-label': label(item.color, item.index, item.progress) })}
           >
             {body}
           </div>

@@ -12,6 +12,9 @@ import { commitGame, getRoomView, sendGameAction, skipGameToLatest, useRoom } fr
 import { useReducedMotion } from '../../state/viewport';
 import { REDUCED_STEP_MS } from './anim/hop';
 
+/** How long a queued event may wait behind a running animation before the screen jumps to the newest state. */
+const CATCH_UP_MS = 1500;
+
 export interface AnimState {
   id: number;
   event: LudoEvent;
@@ -86,6 +89,14 @@ export function useLudo(youId: string): LudoApi {
 
   if (state && stampRef.current.rev !== state.matchRev) stampRef.current = { rev: state.matchRev, at: Date.now() };
 
+  // Stops the animation in flight without committing it; the caller shows a newer snapshot instead.
+  const abortAnimation = useCallback((): void => {
+    window.clearTimeout(timer.current);
+    timer.current = undefined;
+    busy.current = false;
+    setAnim(null);
+  }, []);
+
   // Event driver: one event at a time, strictly in seq order.
   useEffect(() => {
     if (busy.current || queue.length === 0) return;
@@ -122,19 +133,40 @@ export function useLudo(youId: string): LudoApi {
     [],
   );
 
-  // Coming back to a hidden tab: show the newest state at once instead of replaying a backlog.
+  // Coming back to a hidden tab, a restored page or a returned network: show the newest state at once instead of replaying a backlog.
   useEffect(() => {
-    const onVisible = (): void => {
+    const showNewest = (): void => {
       if (document.hidden) return;
-      window.clearTimeout(timer.current);
-      timer.current = undefined;
-      busy.current = false;
-      setAnim(null);
+      abortAnimation();
       skipGameToLatest();
     };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, []);
+    document.addEventListener('visibilitychange', showNewest);
+    window.addEventListener('pageshow', showNewest);
+    window.addEventListener('online', showNewest);
+    return () => {
+      document.removeEventListener('visibilitychange', showNewest);
+      window.removeEventListener('pageshow', showNewest);
+      window.removeEventListener('online', showNewest);
+    };
+  }, [abortAnimation]);
+
+  // A newer snapshot replaced the board while a move was hopping (reconnect, resync): stop that move.
+  const animSeq = anim?.event.type === 'moved' ? anim.event.seq : null;
+  const shownRev = state?.matchRev;
+  useEffect(() => {
+    if (animSeq !== null && shownRev !== undefined && shownRev >= animSeq) abortAnimation();
+  }, [animSeq, shownRev, abortAnimation]);
+
+  // A screen that is still busy 1.5 s after the next event arrived has fallen behind: jump to the newest state.
+  const pendingSeq = anim ? queue.find((e) => e.seq !== anim.event.seq)?.seq : undefined;
+  useEffect(() => {
+    if (pendingSeq === undefined) return;
+    const id = window.setTimeout(() => {
+      abortAnimation();
+      skipGameToLatest();
+    }, CATCH_UP_MS);
+    return () => window.clearTimeout(id);
+  }, [pendingSeq, abortAnimation]);
 
   // A server event answers the request in flight.
   const rev = state?.matchRev;

@@ -70,9 +70,13 @@ export function planTickets(width: number, height: number, count: number): Ticke
 }
 
 export type TilePlan = { cols: number; tier: 'large' | 'medium' | 'compact'; tileHeight: number; scroll: boolean };
+export type TileTier = TilePlan['tier'];
 
 const TILE_GAP = 6;
 const TILE_MAX_H = 78;
+/** Narrowest tile that still shows a readable title and the whole CLAIM label, and the tile height used when the list scrolls. */
+const READABLE_TILE_W = { large: 70, medium: 70, compact: 54 } as const;
+const SCROLL_TILE_H = { large: 62, medium: 58, compact: 56 } as const;
 
 export function planTiles(width: number, height: number, count: number): TilePlan {
   const n = Math.max(0, Math.floor(count));
@@ -86,12 +90,140 @@ export function planTiles(width: number, height: number, count: number): TilePla
   // Balance the rows (6 tiles on a wide area become 3 + 3, not 5 + 1), then add columns only if the height needs it.
   const balancedRows = Math.max(1, Math.ceil(n / Math.min(maxCols, n || 1)));
   const rowsByHeight = h > 0 ? Math.max(1, Math.floor((h + TILE_GAP) / (tap + TILE_GAP))) : balancedRows;
-  const cols = Math.max(1, Math.min(n || 1, Math.max(Math.ceil(n / balancedRows), Math.ceil(n / rowsByHeight))));
+  let cols = Math.max(1, Math.min(n || 1, Math.max(Math.ceil(n / balancedRows), Math.ceil(n / rowsByHeight))));
+  // Past the readable width the list scrolls inside its own region instead of squeezing titles (the page never scrolls).
+  let readable = false;
+  if (w > 0) {
+    const maxReadable = Math.max(1, Math.floor((w + TILE_GAP) / (READABLE_TILE_W[tier] + TILE_GAP)));
+    if (cols > maxReadable) {
+      cols = Math.min(n || 1, maxReadable);
+      readable = true;
+    }
+  }
   const rows = Math.max(1, Math.ceil(n / cols));
   const avail = (h - TILE_GAP * (rows - 1)) / rows;
-  const tileHeight = Math.max(tap, Math.min(TILE_MAX_H, Math.floor(avail)));
-  const scroll = h > 0 && rows * tap + TILE_GAP * (rows - 1) > h;
+  const tileHeight = readable ? Math.max(tap, SCROLL_TILE_H[tier]) : Math.max(tap, Math.min(TILE_MAX_H, Math.floor(avail)));
+  const scroll = h > 0 && rows * tileHeight + TILE_GAP * (rows - 1) > h;
   return { cols, tier, tileHeight, scroll };
+}
+
+export interface TitleFitInput {
+  full: string;
+  short: string;
+  /** Usable width and height of the name box in px. */
+  width: number;
+  height: number;
+  /** Largest font size to try, px. */
+  baseFontPx: number;
+  fontFamily?: string;
+  fontWeight?: number | string;
+}
+
+export interface TitleFit {
+  text: string;
+  form: 'full' | 'short';
+  fontPx: number;
+  lines: 1 | 2;
+  /** False only for the last-resort short name at the floor that still does not fit. */
+  fits: boolean;
+}
+
+export const TITLE_MIN_PX = 10;
+export const TITLE_LINE_HEIGHT = 1.15;
+const TITLE_STEP_PX = 0.5;
+const TITLE_MAX_LINES = 2;
+const TITLE_SAFETY_PX = 2; // canvas and DOM text widths can differ slightly
+
+const widthCache = new Map<string, number>();
+const fitCache = new Map<string, TitleFit>();
+let measureCtx: CanvasRenderingContext2D | null | undefined;
+
+function textWidth(text: string, px: number, family: string, weight: number | string): number {
+  const font = `${weight} ${px}px ${family}`;
+  const key = `${font}|${text}`;
+  const hit = widthCache.get(key);
+  if (hit !== undefined) return hit;
+  if (measureCtx === undefined) {
+    measureCtx = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
+  }
+  let w: number;
+  if (measureCtx) {
+    measureCtx.font = font;
+    w = measureCtx.measureText(text).width;
+  } else {
+    w = text.length * px * 0.62;
+  }
+  if (widthCache.size > 4000) widthCache.clear();
+  widthCache.set(key, w);
+  return w;
+}
+
+/** Words split after a "+" too (Top+Mid may break as Top+ / Mid); `space` marks a token that follows a blank. */
+function tokenize(text: string): { t: string; space: boolean }[] {
+  const out: { t: string; space: boolean }[] = [];
+  for (const word of text.split(' ')) {
+    (word.match(/[^+]+\+?|\+/g) ?? [word]).forEach((t, i) => out.push({ t, space: i === 0 && out.length > 0 }));
+  }
+  return out;
+}
+
+/** Greedy word wrap; returns the line count, or 0 when a word is wider than `avail` or more than 2 lines are needed. */
+function wrapLines(text: string, px: number, avail: number, family: string, weight: number | string): number {
+  const space = textWidth(' ', px, family, weight);
+  let lines = 1;
+  let cur = -1;
+  for (const { t, space: sp } of tokenize(text)) {
+    const w = textWidth(t, px, family, weight);
+    if (w > avail) return 0;
+    if (cur < 0) cur = w;
+    else if (cur + (sp ? space : 0) + w <= avail) cur += (sp ? space : 0) + w;
+    else {
+      lines += 1;
+      if (lines > TITLE_MAX_LINES) return 0;
+      cur = w;
+    }
+  }
+  return lines;
+}
+
+function tryForm(
+  text: string,
+  base: number,
+  availW: number,
+  height: number,
+  family: string,
+  weight: number | string,
+): { fontPx: number; lines: 1 | 2 } | null {
+  for (let px = Math.floor(base / TITLE_STEP_PX) * TITLE_STEP_PX; px >= TITLE_MIN_PX; px -= TITLE_STEP_PX) {
+    const lines = wrapLines(text, px, availW, family, weight);
+    if (lines > 0 && lines * px * TITLE_LINE_HEIGHT <= height) return { fontPx: px, lines: lines as 1 | 2 };
+  }
+  return null;
+}
+
+/** Picks the title text and size for one tile: full name (2 lines, base size down to 10 px), then the short name, then the short name at 10 px. */
+export function fitTitle(input: TitleFitInput): TitleFit {
+  const { full, short, width, height, baseFontPx } = input;
+  const family = input.fontFamily ?? 'sans-serif';
+  const weight = input.fontWeight ?? 800;
+  if (!(width > 0) || !(height > 0)) return { text: full, form: 'full', fontPx: TITLE_MIN_PX, lines: 1, fits: false };
+
+  const key = `${full}|${short}|${Math.round(width * 2)}|${Math.round(height * 2)}|${baseFontPx}|${family}|${weight}`;
+  const cached = fitCache.get(key);
+  if (cached) return cached;
+
+  const availW = width - TITLE_SAFETY_PX;
+  let result: TitleFit;
+  const f = tryForm(full, baseFontPx, availW, height, family, weight);
+  if (f) result = { text: full, form: 'full', ...f, fits: true };
+  else {
+    const s = short !== full ? tryForm(short, baseFontPx, availW, height, family, weight) : null;
+    if (s) result = { text: short, form: 'short', ...s, fits: true };
+    else result = { text: short, form: 'short', fontPx: TITLE_MIN_PX, lines: 2, fits: false };
+  }
+  if (fitCache.size > 4000) fitCache.clear();
+  fitCache.set(key, result);
+  return result;
 }
 
 export type BallPlan = { ball: number; chip: number };

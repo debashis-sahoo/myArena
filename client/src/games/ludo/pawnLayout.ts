@@ -23,6 +23,13 @@ export interface PawnItem {
 
 export const pawnKey = (playerId: string, index: number): string => `${playerId}:${index}`;
 
+/** Where a pawn stands, as a short key (`base`, `home`, or the grid square `row,col`); shown as data-sq so screens can be compared. */
+export function squareKeyOf(color: LudoColor, progress: number): string {
+  if (progress === BASE_PROGRESS) return 'base';
+  if (progress >= HOME_PROGRESS) return 'home';
+  return cellOf(color, progress).cell.join(',');
+}
+
 /** Centre of a grid square in board pixels. */
 export function centerOf(cell: Cell, cellPx: number): Point {
   return { x: (cell[1] + 0.5) * cellPx, y: (cell[0] + 0.5) * cellPx };

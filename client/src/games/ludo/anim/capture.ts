@@ -9,7 +9,7 @@ function finished(a: Animation): Promise<void> {
   );
 }
 
-/** The captured pawn lifts, spins, and arcs back to its base spot with a burst (reduced motion: a quick fade). */
+/** The captured pawn lifts, spins, and arcs back to its base spot with a burst (reduced motion: a quick fade). Aborting cancels its animations and adds no more. */
 export async function bounceHome(
   parts: PawnParts,
   layer: HTMLElement,
@@ -18,7 +18,11 @@ export async function bounceHome(
   cell: number,
   anchor: number,
   reduced: boolean,
+  signal: AbortSignal,
 ): Promise<void> {
+  if (signal.aborted) return;
+  const live: Animation[] = [];
+  signal.addEventListener('abort', () => live.forEach((a) => a.cancel()), { once: true });
   if (reduced) {
     const fade = parts.outer.animate(
       [
@@ -29,6 +33,7 @@ export async function bounceHome(
       ],
       { duration: 300, fill: 'forwards' },
     );
+    live.push(fade);
     await finished(fade);
     return;
   }
@@ -42,16 +47,20 @@ export async function bounceHome(
     ],
     { duration: CAPTURE_MS, fill: 'forwards' },
   );
-  parts.inner.animate(
-    [
-      { transform: 'rotate(0deg) scale(1.2)' },
-      { transform: 'rotate(360deg) scale(1.1)', offset: 0.5 },
-      { transform: 'rotate(720deg) scale(1.15, 0.85)', offset: 0.9 },
-      { transform: 'rotate(720deg) scale(1)' },
-    ],
-    { duration: CAPTURE_MS, easing: 'ease-in-out' },
+  live.push(move);
+  live.push(
+    parts.inner.animate(
+      [
+        { transform: 'rotate(0deg) scale(1.2)' },
+        { transform: 'rotate(360deg) scale(1.1)', offset: 0.5 },
+        { transform: 'rotate(720deg) scale(1.15, 0.85)', offset: 0.9 },
+        { transform: 'rotate(720deg) scale(1)' },
+      ],
+      { duration: CAPTURE_MS, easing: 'ease-in-out' },
+    ),
   );
   await finished(move);
+  if (signal.aborted) return;
   spawnPuff(layer, to.x, to.y, cell);
 }
 
