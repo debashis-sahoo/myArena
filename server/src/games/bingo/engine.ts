@@ -46,7 +46,6 @@ function createMatch(seats: MatchSeat[], ctx: GameContext, lobbyArg?: unknown): 
       color: seat.color,
       cards,
       daubs: cards.map(() => 0),
-      freeTapped: cards.map(() => false),
       lastClaimAt: 0,
       bogusStreak: 0,
       lockedUntil: 0,
@@ -128,10 +127,10 @@ function onAction(match: Match, playerId: string, action: BingoAction): ActionRe
       for (const change of action.changes) {
         if (!entry.cards[change.card]) continue;
         if (!Number.isInteger(change.cell) || change.cell < 0 || change.cell > 24) continue;
+        if (change.cell === BINGO_FREE_INDEX) continue; // FREE always counts and cannot be toggled
         const bit = 1 << change.cell;
         const current = entry.daubs[change.card] ?? 0;
         entry.daubs[change.card] = change.on ? current | bit : current & ~bit;
-        if (change.cell === BINGO_FREE_INDEX) entry.freeTapped[change.card] = true;
       }
       return { ok: true };
     }

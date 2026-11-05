@@ -3,6 +3,7 @@ import { BINGO_COLUMN_RANGES } from './letters.js';
 /** 25 numbers in row-major order (index `row * 5 + col`); the centre cell (index 12) is 0, meaning FREE. */
 export type BingoCard = number[];
 
+/** The centre cell. It counts as marked and called from the start; nobody daubs it, and it is never stored in a daub mask. */
 export const BINGO_FREE_INDEX = 12;
 
 export function cellIndex(row: number, col: number): number {

@@ -6,10 +6,8 @@ export interface PlayerEntry {
   name: string;
   color: string;
   cards: BingoCard[];
-  /** One 25-bit mask per card: bit `row * 5 + col` is the player's daub (FREE is bit 12). Private. */
+  /** One 25-bit mask per card: bit `row * 5 + col` is the player's daub. The FREE cell (bit 12) is never stored; it always counts. Private. */
   daubs: number[];
-  /** One flag per card: true once its FREE cell has received any toggle. Private. */
-  freeTapped: boolean[];
   lastClaimAt: number;
   bogusStreak: number;
   lockedUntil: number;

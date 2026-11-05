@@ -7,10 +7,8 @@ import { registerGameFeed } from '../feeds';
 /** Bingo client state: the receiver's view plus local-only things (daubs being batched, card selection, notices). */
 export interface BingoState {
   view: BingoView | null;
-  /** Optimistic copy of the player's daubs: one 25-bit mask per card (bit row*5+col, FREE = bit 12). */
+  /** Optimistic copy of the player's daubs: one 25-bit mask per card (bit row*5+col; the FREE bit 12 is never set, FREE always counts). */
   daubs: number[];
-  /** Optimistic copy of the per-card "FREE space was tapped" flag. */
-  freeTapped: boolean[];
   selected: number;
   /** Epoch ms of the latest local "Bogus Bingo" alert (0 = none). */
   bogusAt: number;
@@ -40,7 +38,6 @@ function loadSelected(): number {
 const EMPTY: BingoState = {
   view: null,
   daubs: [],
-  freeTapped: [],
   selected: 0,
   bogusAt: 0,
   tooLateAt: 0,
@@ -121,21 +118,14 @@ export function flushDaubs(): void {
 }
 
 export function toggleDaub(card: number, cell: number): void {
-  if (!state.view?.you.playing) return;
+  if (!state.view?.you.playing || cell === BINGO_FREE_INDEX) return;
   const daubs = [...state.daubs];
   const bit = 1 << cell;
   const mask = daubs[card] ?? 0;
   const on = (mask & bit) === 0;
   daubs[card] = on ? mask | bit : mask & ~bit;
   pending.set(keyOf(card, cell), { card, cell, on });
-
-  const patch: Partial<BingoState> = { daubs };
-  if (cell === BINGO_FREE_INDEX && !state.freeTapped[card]) {
-    const freeTapped = [...state.freeTapped];
-    freeTapped[card] = true;
-    patch.freeTapped = freeTapped;
-  }
-  set(patch);
+  set({ daubs });
   retries = 0;
   arm(MARK_FLUSH_MS);
 }
@@ -184,14 +174,9 @@ function onSnapshot(raw: unknown): void {
     const mask = daubs[c.card] ?? 0;
     daubs[c.card] = c.on ? mask | (1 << c.cell) : mask & ~(1 << c.cell);
   });
-  const freeTapped = Array.from(
-    { length: count },
-    (_, i) => view.you.freeTapped[i] === true || pending.has(keyOf(i, BINGO_FREE_INDEX)),
-  );
   set({
     view,
     daubs,
-    freeTapped,
     selected,
     lockedUntil: view.you.claimsLockedMs ? Date.now() + view.you.claimsLockedMs : 0,
   });

@@ -84,7 +84,7 @@ export function inCatalogueOrder(ids: readonly string[]): string[] {
   return BINGO_PATTERNS.filter((p) => chosen.has(p.id)).map((p) => p.id);
 }
 
-/** The receiver's own view: cards, daubs and FREE flags are theirs only; the deck is never included. */
+/** The receiver's own view: cards and daubs are theirs only; the deck is never included. */
 export function viewFor(match: Match, playerId: string, hostId: string): BingoView {
   const entry: PlayerEntry | undefined = match.players.get(playerId);
   const playing = entry?.status === 'playing';
@@ -100,7 +100,6 @@ export function viewFor(match: Match, playerId: string, hostId: string): BingoVi
       playing,
       cards: playing && entry ? entry.cards.map((c) => [...c]) : [],
       daubs: playing && entry ? [...entry.daubs] : [],
-      freeTapped: playing && entry ? [...entry.freeTapped] : [],
       ...(lockedMs > 0 ? { claimsLockedMs: lockedMs } : {}),
     },
     hostId,

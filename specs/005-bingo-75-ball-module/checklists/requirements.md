@@ -32,6 +32,6 @@
 ## Notes
 
 - Validated in 1 iteration; no [NEEDS CLARIFICATION] markers were needed because every gap has a documented default in Assumptions.
-- Defaults worth confirming in `/speckit-clarify`: card ceiling 1 to 3; one BINGO! press awards every Available pattern the card completes; FREE must be daubed
-  by hand to count toward patterns that include the centre; any number is daubable but only called numbers count; Single Line is one pattern covering any row,
+- Defaults worth confirming in `/speckit-clarify`: card ceiling 1 to 3; one BINGO! press awards every Available pattern the card completes; FREE is marked by
+  default and always counts toward patterns that include the centre (changed on 2026-11-05 from "must be daubed by hand"); any number is daubable but only called numbers count; Single Line is one pattern covering any row,
   column or diagonal; no system lines at all in chat (stricter than Housie, which allows one win line).

@@ -33,10 +33,8 @@ export interface BingoView {
   you: {
     playing: boolean;
     cards: BingoCard[];
-    /** One 25-bit mask per card (bit `row * 5 + col`). */
+    /** One 25-bit mask per card (bit `row * 5 + col`). The FREE cell (bit 12) is never set; it always counts. */
     daubs: number[];
-    /** One flag per card: true once its FREE cell has received any toggle. */
-    freeTapped: boolean[];
     claimsLockedMs?: number;
   };
   hostId: string;

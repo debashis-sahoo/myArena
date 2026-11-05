@@ -2,8 +2,8 @@ import type { BingoPatternDef } from './patterns.js';
 import { BINGO_FREE_INDEX } from './card.js';
 
 /**
- * Whether `card` completes `pattern`. A cell counts only if its daub bit (`1 << index`) is set AND it is the FREE cell or its
- * number was called. Daubs on other cells do not matter.
+ * Whether `card` completes `pattern`. The FREE cell always counts; every other cell counts only if its daub bit (`1 << index`) is set
+ * AND its number was called. Daubs on other cells do not matter.
  */
 export function evaluateBingoPattern(
   pattern: BingoPatternDef,
@@ -12,8 +12,8 @@ export function evaluateBingoPattern(
   called: ReadonlySet<number>,
 ): boolean {
   const satisfied = (index: number): boolean => {
-    if ((daubs & (1 << index)) === 0) return false;
-    return index === BINGO_FREE_INDEX || called.has(card[index] ?? 0);
+    if (index === BINGO_FREE_INDEX) return true;
+    return (daubs & (1 << index)) !== 0 && called.has(card[index] ?? 0);
   };
   return pattern.variants.some((cells) => cells.every(satisfied));
 }

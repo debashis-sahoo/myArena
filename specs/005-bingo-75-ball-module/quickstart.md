@@ -44,12 +44,11 @@ normal play.
 1. With ceiling 3, change a player's card count between 1 and 3: the host sees each change within 1 s.
 2. Start the match; inspect each card: B 1-15, I 16-30, N 31-45 (four numbers plus FREE in the centre), G 46-60, O 61-75, no repeats. With
    `BINGO_DEV_CARD_AUDIT=500` the server log reports 500 of 500 valid and unique. Compare two players' cards and one player's three cards: all different.
-3. Look at the centre of a new card: it reads FREE, is unmarked, and the glowing tooltip "Tap to claim your FREE space!" pulses over it. Tap a number cell
-   under the tooltip: it daubs (the tooltip does not block taps). Tap FREE: the dauber stamps, the tooltip disappears. Lift the FREE dauber, then reload:
-   the tooltip stays gone; on a card whose FREE was never tapped it shows again.
+3. Look at the centre of a new card: it reads FREE and is already stamped with the dauber; nothing is shown over it. Tap FREE (and press Enter and Space on it
+   with the keyboard): nothing changes. Tap a number cell next to it: it daubs as usual. Reload: FREE is still marked on every card.
 4. Draw a ball that is on your card: the cell stays unmarked. Tap it: neon translucent dauber with the stamp animation and the number still readable. Tap
    again: removed. Tap an uncalled number: it daubs with no message. Reload: daubs are restored.
-5. Keyboard: Tab into a card, arrows between cells, Enter and Space toggle (FREE included).
+5. Keyboard: Tab into a card, arrows between cells, Enter and Space toggle number cells (FREE ignores them).
 6. With 2 and 3 cards at 1280 x 720 and 390 x 844: every card reachable (stack, row or tabs), every cell at least 40 px (measure in the browser), the card
    in view named and gold-outlined.
 
@@ -66,13 +65,14 @@ normal play.
 
 ### V4. Claims (US5; SC-008, SC-009)
 
-1. With `BINGO_DEV_DECK=first-card`, as player 1: tap FREE, then after the first five draws (top row) daub those five numbers and press BINGO!. Single Line
+1. With `BINGO_DEV_DECK=first-card`, as player 1: after the first five draws (top row) daub those five numbers and press BINGO!. Single Line
    flips to "Claimed" with your name on every screen with the celebration. Four Corners and Blackout stay Available.
 2. Bogus: press BINGO! with a pattern not complete: only you see "Bogus Bingo"; other screens and the chat are unchanged. Called but not daubed: bogus.
-   Daubed but not called: bogus. A pattern that needs the centre (choose Letter X in the lobby for this check) with all other cells called and daubed but FREE never tapped: bogus.
+   Daubed but not called: bogus. A pattern that needs the centre (choose Letter X in the lobby for this check) with one other cell not yet called: bogus; with every
+   other cell called and daubed and FREE never touched: awarded.
 3. Too late: after Single Line is claimed, press BINGO! again with only the top row: "Too late - already claimed", no penalty, the bogus count is
    unchanged.
-4. Multi-pattern: continue to a full card (24 draws plus FREE) and claim: Four Corners and Blackout are awarded in the one claim and both tiles flip together.
+4. Multi-pattern: continue to a full card (24 draws, FREE needs nothing) and claim: Four Corners and Blackout are awarded in the one claim and both tiles flip together.
 5. Race: two windows press BINGO! for the same open pattern at the same moment (scripted): exactly one `claimed` includes it; the other gets "Too late".
 6. Pace and lock: press BINGO! repeatedly: at most one evaluation per 2 s (default pace). Make three bogus claims in a row: the third starts a 1-minute lock
    with "Paused" and a countdown on that player's button only; claims are refused until it ends; a valid claim before the third bogus one resets the count.
@@ -105,14 +105,14 @@ normal play.
    scroll, no overlap or clipped control, card cells at least 40 px, text at least 11 px, the playing area using at least 90 percent of the viewport apart
    from the header and gaps. Rotate and resize: the layout re-fits within 0.5 s. Record screenshots.
 2. Landscape proportions: ball console about one third and chat about two thirds of the right column; cards above the dashboard on the left.
-3. Quiet state: nothing animates except the ambient background, the ball glow and the BINGO! glow (and the FREE tooltip until tapped).
-4. Reduced motion: every effect has its simple replacement; the FREE tooltip stays visible without pulsing; all information remains.
+3. Quiet state: nothing animates except the ambient background, the ball glow and the BINGO! glow.
+4. Reduced motion: every effect has its simple replacement; all information remains.
 5. Keyboard and focus: every control reachable with visible focus; screen-reader names for cells ("B 7", "FREE"), the ball and badges.
-6. First-time player (someone who has not seen the game) finds a called number, daubs it, taps FREE and claims within 2 minutes without help (SC-013).
+6. First-time player (someone who has not seen the game) finds a called number, daubs it and claims within 2 minutes without help (SC-013).
 
 ### V8. Reconnect and host handover (FR-042, FR-043)
 
-1. Reload a player mid-match: same cards, daubs, tooltip state, call history, current ball, pattern statuses, and a claim lock still counting down.
+1. Reload a player mid-match: same cards, daubs, call history, current ball, pattern statuses, and a claim lock still counting down.
 2. Close a player's tab for more than the reconnect window: the seat is released, their cards stop playing, patterns already won stay claimed, and they
    cannot rejoin that match.
 3. Host disconnects during auto calling: draws continue. Release the host's seat: the platform hands over host; the new host has the caller controls and

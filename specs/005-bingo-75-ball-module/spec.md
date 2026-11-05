@@ -8,11 +8,20 @@
 
 **Input**: User description: "Initialize feature specification: Bingo (75-Ball) Visual-First Game Module, built on the Platform Core room and chat engine and hosted on Render with server-authoritative state. High-contrast royal arcade look, maximum viewport scaling, manual player interactions, no automated test dependencies. Scope: (1) Room configuration and multi-card allocation: the host sets the maximum Bingo cards per participant (for example 1, 2 or 3); players pick how many cards to play within that limit before the match; the server generates authoritative 5x5 cards on the standard American 75-ball distribution (B 1-15, I 16-30, N 31-45, G 46-60, O 61-75); the central space is marked FREE but is NOT auto-daubed. (2) Two-column screen: the left column has the player's card(s) with bold, vibrant B-I-N-G-O headers on top, played by manual daubing only (the FREE space must be tapped by hand, with a glowing pulsing tooltip on first load reading 'Tap to claim your FREE space!'; tapping a number applies a translucent neon dauber with a satisfying physical stamp animation), and below it a compact dashboard of only the host-selected winning patterns with live Available / Claimed badges and a prominent glowing BINGO! button; the right column has a Current Ball console on top (one third: a large 3D sphere showing the letter and number such as 'G-54' plus a compact history grid of previous balls) and pure player-to-player chat below (two thirds: no system-generated logs or bot announcements). (3) Host dashboard: choose winning patterns before the match (Standard: Single Line horizontal/vertical/diagonal, Four Corners, Letter X, Letter L, Blackout/Full House; Custom/Thematic: Postage Stamp 2x2 in a corner, Diamond, Kite, Inner Square), a real-time master 75-ball board (15x5) highlighting drawn numbers under their B-I-N-G-O columns, manual 'Draw Next Ball' or automatic calling every 5, 8 or 10 seconds, and instant server validation of claims (valid claims lock the pattern globally; invalid ones show a local 'Bogus Bingo' alert). (4) Manual verification: correct 5x5 column constraints; FREE space needs a manual tap and shows the tooltip at game start; the current ball shows the right letter-number and previous balls fill the history grid; chat shows only typed player messages; a valid BINGO! updates pattern status on every connected client."
 
+**Change of 2026-11-05**: the input above asked for a FREE space that is not auto-daubed and a "Tap to claim your FREE space!" tooltip. After playtesting (the tooltip
+looked like a button but only passed taps through to the numbers beneath it) the owner decided that the FREE space is **marked by default**; see Clarifications. The
+text below is the current intent.
+
 ## Clarifications
+
+### Session 2026-11-05
+
+- Q: Should the player tap the FREE space, or should it be marked by default? → A: Marked by default, as on a paper card. The FREE space is shown stamped from the
+  start, always counts toward every pattern that includes the centre, cannot be toggled, and has no tooltip.
 
 ### Session 2026-11-04
 
-- Q: Should a player be able to daub a number on their card before that number has been called? → A: Yes. Any number can be daubed at any time with no feedback; only daubs on called numbers (and the FREE space) count in a claim.
+- Q: Should a player be able to daub a number on their card before that number has been called? → A: Yes. Any number can be daubed at any time with no feedback; only daubs on called numbers count in a claim (the FREE space always counts).
 - Q: When a player's card completes several open patterns at the same moment, should one BINGO! press win all of them? → A: Yes. One press wins every open pattern the submitted card completes at that moment.
 - Q: Should "Single Line" be one pattern that any row, column or diagonal can win, or separate patterns for horizontal, vertical and diagonal lines? → A: One "Single Line" pattern; any complete row, column or diagonal wins it, with one winner.
 - Q: Once a player's card completes a pattern, how long do they have to claim it? → A: No deadline. The pattern can be claimed at any time until someone wins it; later balls do not invalidate a completed pattern.
@@ -79,19 +88,19 @@ cards: each has five columns of five cells under B-I-N-G-O, the numbers sit in t
 
 ---
 
-### User Story 3 - Daub Numbers by Hand, Including the FREE Space (Priority: P1)
+### User Story 3 - Daub Numbers by Hand (the FREE Space Is Already Marked) (Priority: P1)
 
 Numbers are never marked for the player. When a ball is called, the player looks for it and taps the cell on their card to stamp a
 vibrant, translucent neon dauber (a highlighter-style blob) with a satisfying physical "stamp" animation. Tapping a daubed cell
-again lifts the dauber. The central FREE space is not marked either: the player must tap it themselves, and the first time they see their card a
-playful, glowing tooltip pulses over it saying "Tap to claim your FREE space!". The daubs are the player's own work: the game never adds or
-removes them, and a claim counts only daubs on numbers that were actually called (and on the FREE space).
+again lifts the dauber. The central FREE space is the one exception: as on a paper card it is already marked from the start, always counts toward every
+pattern that includes the centre, and needs no tap. The daubs are the player's own work: the game never adds or
+removes them (FREE aside), and a claim counts only daubs on numbers that were actually called (and the FREE space).
 
-**Why this priority**: Manual daubing, including the FREE space, is the defining interaction the owner asked for; automatic marking would remove the game.
+**Why this priority**: Manual daubing is the defining interaction the owner asked for; automatic marking of called numbers would remove the game. FREE is marked for
+the player because a tap on it added confusion without adding any skill.
 
 **Independent Test**: Start a match, have the host draw a ball that appears on your card, and confirm the cell stays unmarked until you tap
-it; tap to daub it, tap again to remove it; confirm the FREE space shows the pulsing tooltip, stays unmarked until tapped, and the tooltip
-goes away once you tap it.
+it; tap to daub it, tap again to remove it; confirm the FREE space is already stamped, nothing is shown over it, and tapping it changes nothing.
 
 **Acceptance Scenarios**:
 
@@ -102,14 +111,13 @@ goes away once you tap it.
 3. **Given** a daubed cell, **When** I click or tap it again, **Then** the dauber is removed.
 4. **Given** a number that has not been called, **When** I tap its cell, **Then** the dauber still appears (it is my own mark) and nothing is said or
    flagged, but it cannot help a claim until that number is called.
-5. **Given** the match has just started and I look at my card for the first time, **When** the card appears, **Then** the FREE space is unmarked and a glowing
-   tooltip reading "Tap to claim your FREE space!" pulses over it, without blocking taps on any cell.
-6. **Given** the FREE tooltip is showing, **When** I tap the FREE space, **Then** the dauber stamps onto it, the tooltip disappears, and it does not
-   come back for that card (even if I later lift the dauber).
-7. **Given** I reload the page or reconnect, **When** I return to the match, **Then** my daubs are still there, and the FREE tooltip shows again only
-   on cards whose FREE space I have never tapped.
-8. **Given** I hold a keyboard or use assistive technology, **When** I focus a card cell (including FREE) and press Enter or Space, **Then** it toggles
-   exactly as a tap would.
+5. **Given** the match has just started and I look at my card for the first time, **When** the card appears, **Then** the FREE space is already marked (the
+   dauber is on it), nothing is shown over it, and every number cell is tappable as usual.
+6. **Given** the FREE space is marked, **When** I tap it (or press Enter or Space on it), **Then** nothing changes: it stays marked, it is not toggled, and no
+   other cell is affected.
+7. **Given** I reload the page or reconnect, **When** I return to the match, **Then** my daubs are still there and the FREE space is still marked on every card.
+8. **Given** I hold a keyboard or use assistive technology, **When** I focus a card number cell and press Enter or Space, **Then** it toggles exactly as a tap
+   would; the FREE cell is announced as "FREE", marked and unavailable.
 
 ---
 
@@ -164,7 +172,7 @@ name) on the host's and other players' screens; then press BINGO! on a card that
 2. **Given** I hold more than one card, **When** I select a card, **Then** it is highlighted and named, the BINGO! button says which card it will submit
    (for example "BINGO! - Card 2"), and I see no hint about which patterns are complete.
 3. **Given** the card I am submitting completes one or more Available patterns using numbers that were all called before my claim and that I have
-   daubed (and, where a pattern includes the centre, the FREE space I have tapped), **When** I press BINGO!, **Then** the server accepts it, every such
+   daubed (the FREE space needs no daub), **When** I press BINGO!, **Then** the server accepts it, every such
    pattern shows "Claimed" with my name on every screen, and a gold celebration plays.
 4. **Given** the card I submit completes no Available pattern, **When** I press BINGO!, **Then** only I see a "Bogus Bingo" alert, the badges stay as they
    were, and nothing changes for anyone else.
@@ -172,8 +180,8 @@ name) on the host's and other players' screens; then press BINGO! on a card that
    server received first) and the other is told it was just claimed.
 6. **Given** a pattern is already Claimed, **When** anyone looks at its tile, **Then** it shows "Claimed" with the winner's name and cannot be claimed
    again.
-7. **Given** a pattern needs a number I did not daub, a number that has not been called yet, or the FREE space I did not tap, **When** I claim, **Then** that
-   pattern does not count: every pattern cell must be both called (or FREE) and daubed by me on the submitted card, and daubs elsewhere on the card do not
+7. **Given** a pattern needs a number I did not daub or a number that has not been called yet, **When** I claim, **Then** that
+   pattern does not count: every pattern cell must be FREE, or both called and daubed by me on the submitted card, and daubs elsewhere on the card do not
    matter.
 8. **Given** the card I submit completes only patterns that someone else has already claimed, **When** I press BINGO!, **Then** I see a private "Too late -
    already claimed" notice instead of "Bogus Bingo", and no penalty applies.
@@ -212,14 +220,14 @@ confirm none of that appears in chat.
 
 The screen has two columns that fill the available space: cards and patterns on the left; ball console and chat on the right (one third and two thirds of the
 column height). The look is high-contrast royal arcade: deep midnight and royal backgrounds, gold accents, bold vivid B-I-N-G-O headers, a glossy 3D ball and a
-glowing neon dauber. Effects are saved for the moments that matter (a ball arriving, a dauber stamp, the FREE tooltip, a claim being won) and everything else
+glowing neon dauber. Effects are saved for the moments that matter (a ball arriving, a dauber stamp, a claim being won) and everything else
 stays quiet: no extra panels, no log streams, no decoration that competes with the numbers. On narrow or portrait screens the layout restacks (ball console on
 top, then cards, then patterns, with chat in a drawer) so everything stays usable without page scrolling.
 
 **Why this priority**: The owner's priority is visual quality with maximum screen use, but the game logic must work first.
 
 **Independent Test**: Open a match on a large desktop, a laptop, a tablet and a phone in both orientations; confirm the layout, that cards and pattern tiles stay
-legible and tappable, that nothing scrolls the page, and that effects play only on ball reveals, daubs, the FREE tooltip and claims.
+legible and tappable, that nothing scrolls the page, and that effects play only on ball reveals, daubs and claims.
 
 **Acceptance Scenarios**:
 
@@ -230,9 +238,9 @@ legible and tappable, that nothing scrolls the page, and that effects play only 
 3. **Given** any screen from 320 to 2560 px wide, **When** I view my card, **Then** every number is readable and every cell is at least 40 px across so it can
    be tapped reliably.
 4. **Given** the match is quiet (no draw, no claim), **When** I look at the screen, **Then** nothing is animating except a very subtle ambient background, the
-   active-ball glow, the glowing BINGO! button, and (until tapped) the FREE tooltip.
-5. **Given** a viewer has asked for reduced motion, **When** effects would play, **Then** they are replaced by brief, simple transitions (the tooltip stays
-   visible but does not pulse) and all information remains available.
+   active-ball glow and the glowing BINGO! button.
+5. **Given** a viewer has asked for reduced motion, **When** effects would play, **Then** they are replaced by brief, simple transitions
+   and all information remains available.
 6. **Given** all text and numbers, **When** compared with their backgrounds, **Then** they are high contrast and easy to read.
 7. **Given** any supported screen, **When** I view the match, **Then** every panel is sized to its content and the screen, with tight but comfortable spacing,
    compact controls and short labels, so the cards, ball console and pattern tiles are as large as the screen allows and no area is left empty or filled with
@@ -273,7 +281,7 @@ that when both patterns are claimed the match ends with a results screen for eve
   continues for the rest.
 - Every card holder leaves or loses their seat while the match runs (only a non-playing host remains): the match ends at once and everyone still present
   sees the results screen (won patterns stay won, the rest show "No winner"); the host can start a new round.
-- A player disconnects and returns within the reconnect window: they see the same cards, daubs, FREE-tooltip state, call history, current ball and pattern
+- A player disconnects and returns within the reconnect window: they see the same cards, daubs, call history, current ball and pattern
   statuses, and can claim again.
 - The host's seat is released: the platform's host handover applies, the new host takes over calling and the master board, and automatic calling continues at
   the same setting (or pauses if the new host prefers).
@@ -284,8 +292,8 @@ that when both patterns are claimed the match ends with a results screen for eve
 - People cannot join once the match has started, and nobody can change card counts or the patterns after the start.
 - A claim names a card the player does not own: it is refused with a short message to that player only (not counted as a bogus claim) and changes nothing.
 - A claim arrives for a number called a moment after the claim was submitted: only numbers called before the server received the claim count.
-- The player never taps the FREE space: patterns that include the centre (any line through it, Letter X, Kite, Inner Square, Blackout) cannot be completed
-  on that card; patterns that do not touch the centre are unaffected.
+- A pattern includes the centre (any line through it, Letter X, Kite, Inner Square, Blackout): the FREE space already counts, so the player needs only the other
+  cells of the pattern; patterns that do not touch the centre are unaffected.
 - A submitted card completes several Available patterns at once (for example Blackout also completes lines and corners that nobody has claimed yet): all of
   them are awarded to that claimant in one claim.
 - Several players complete different open patterns on the same draw: each pattern is awarded to the first valid claim that completes it, and the rest receive
@@ -328,14 +336,14 @@ that when both patterns are claimed the match ends with a results screen for eve
 
 **Manual Daubing and the FREE Space**
 
-- **FR-012**: Called numbers and the FREE space MUST NEVER be marked on a card by the game; the player alone marks cells.
-- **FR-013**: Clicking, tapping, or pressing Enter or Space on a card cell (including FREE) MUST toggle a translucent neon dauber with a brief physical
+- **FR-012**: Called numbers MUST NEVER be marked on a card by the game; the player alone marks number cells. The FREE space is the only cell the game marks.
+- **FR-013**: Clicking, tapping, or pressing Enter or Space on a number cell MUST toggle a translucent neon dauber with a brief physical
   stamp effect that leaves the number readable; tapping again removes it.
 - **FR-014**: Any number MUST be daubable whether or not it has been called, with no warning, cue or feedback about correctness; only daubs on called
   numbers (and the FREE space) count in a claim (FR-024).
-- **FR-015**: When a card first appears, a glowing, pulsing tooltip reading "Tap to claim your FREE space!" MUST sit over that card's FREE space without
-  blocking taps on any cell (every cell stays tappable through it); it MUST disappear when the FREE space is first tapped and MUST NOT return for that card, and MUST be shown without pulsing when
-  reduced motion is on.
+- **FR-015**: The FREE space MUST be shown marked (with the same dauber as any other mark) on every card from the moment the card appears, and MUST count as
+  marked and called for every pattern. It MUST NOT be toggleable (a tap, Enter or Space on it changes nothing, and the server MUST ignore any attempt to change
+  it), and nothing (no tooltip, callout or prompt) is shown over it.
 - **FR-016**: Daubs MUST be remembered for the player across reloads and reconnects and are private to that player (never shown to others); the server MUST
   hold each player's daubs so claims can be checked against them (FR-024).
 
@@ -360,7 +368,7 @@ that when both patterns are claimed the match ends with a results screen for eve
   card MUST be clearly highlighted and named, with one card selected automatically, and the button MUST name the card it submits when the player holds more
   than one); no separate claim dialog is needed.
 - **FR-024**: The server MUST validate every claim immediately. A pattern counts as completed by the submitted card only if every cell the pattern requires
-  is daubed by the claimant and either holds a number that was called before the claim was received or is the FREE space; the card MUST belong to the
+  is the FREE space (which always counts) or is daubed by the claimant and holds a number that was called before the claim was received; the card MUST belong to the
   claimant. Daubs on other cells do not matter, and a required cell that is called but not daubed, or daubed but not called, does not count. A claim has no
   deadline: a completed pattern can be claimed at any time until someone wins it, however many balls have been called since.
 - **FR-025**: When the submitted card completes one or more Available patterns, the server MUST award every such pattern to the claimant in that single
@@ -402,7 +410,7 @@ that when both patterns are claimed the match ends with a results screen for eve
   and extra detail (card tabs, notices) MUST appear on demand rather than occupy permanent space. Compactness MUST never reduce card cells below the FR-035
   minimum or touch targets below 40 px.
 - **FR-037**: The visual style MUST be a high-contrast royal arcade look (deep midnight and royal backgrounds, gold accents, bold vibrant B-I-N-G-O headers,
-  glossy 3D ball, neon translucent dauber) with high-contrast text; effects (ball reveal, dauber stamp, FREE tooltip, claim celebration) MUST be reserved for
+  glossy 3D ball, neon translucent dauber) with high-contrast text; effects (ball reveal, dauber stamp, claim celebration) MUST be reserved for
   those moments, and no logs, tickers or extra panels beyond those listed in this specification MUST appear on the match screen.
 - **FR-038**: With a reduced-motion preference, effects MUST be replaced by brief simple transitions with all information intact; every interactive element
   MUST have visible hover, pressed and keyboard-focus states and work by touch, pointer and keyboard.
@@ -429,7 +437,7 @@ that when both patterns are claimed the match ends with a results screen for eve
 - **Winning Pattern**: A named shape from the catalogue: its group, the cells of a card that must be daubed and called, whether it is in play, and its status
   (Available, or Claimed by a player with the card and the time).
 - **Claim**: A player's BINGO! submission naming a card, with the server's decision (accepted, too late, or bogus) and the time received.
-- **Daub**: A player's private toggle on one cell of one of their cards (including FREE); used by the server, together with the called numbers, to decide
+- **Daub**: A player's private toggle on one number cell of one of their cards (never the FREE cell, which always counts); used by the server, together with the called numbers, to decide
   claims.
 - **Chat Message**: A line typed by a person: sender, color, text, time; automated events are never chat messages.
 
@@ -442,22 +450,22 @@ that when both patterns are claimed the match ends with a results screen for eve
 - **SC-002**: Across 40 generated cards, 100% satisfy every card rule (5 by 5, each column inside its B-I-N-G-O range with no repeats, four numbers plus FREE
   in column N, FREE in the centre) and no two are identical.
 - **SC-003**: With the ceiling at 3, a player can choose any count from 1 to 3 and the host sees each change in under 1 second.
-- **SC-004**: In 100% of observed ball calls, no card cell (including FREE) is marked by the game; a cell shows a dauber only after its owner taps it, and the
-  FREE tooltip appears on every new card until its FREE space is first tapped.
+- **SC-004**: In 100% of observed ball calls, no number cell is marked by the game; a number cell shows a dauber only after its owner taps it, and the FREE
+  space is shown marked on every new card and cannot be toggled.
 - **SC-005**: A newly drawn ball appears on every connected screen within 1 second of being drawn with the correct letter and number, and all screens show the
   same sequence of balls.
 - **SC-006**: In automatic mode each draw happens within 0.5 seconds of the chosen 5, 8 or 10 second interval.
 - **SC-007**: The history grid and the master board show every previously called ball under the correct letter after each draw, with a correct "Called n of
   75" count, in 100% of observed draws.
 - **SC-008**: A claim is decided and its result shown (Claimed on all screens, or a private Bogus Bingo alert) within 1 second in 95% of claims.
-- **SC-009**: In 100% of observed claims, validity matches the called numbers, the submitted card and the claimant's daubs (every pattern cell called or FREE
+- **SC-009**: In 100% of observed claims, validity matches the called numbers, the submitted card and the claimant's daubs (every pattern cell is FREE, or called
   and daubed); a pattern is never awarded twice, and a bogus claim is never visible to other players.
 - **SC-010**: In 100% of observed matches the chat stream contains only messages typed by people, with no automated line of any kind.
 - **SC-011**: On every tested screen from 320 to 2560 px wide, in both orientations, the page does not scroll, all card numbers are legible, card cells are at
   least 40 px across, and the playing area (cards, ball console, pattern tiles) uses at least 90% of the viewport apart from the header and gaps.
 - **SC-012**: With reduced motion enabled, 100% of information and controls remain available and understandable.
 - **SC-013**: Animations stay smooth (a steady frame rate with no sustained drops below 30 frames per second during ball reveals and dauber stamps) on a mid-range phone (for example an Android phone from 2021 or later with 4 GB of RAM) and
-  a laptop during a full match, and a first-time player can find a called number, daub it, tap the FREE space and make a claim without instructions in under
+  a laptop during a full match, and a first-time player can find a called number, daub it and make a claim without instructions in under
   2 minutes.
 - **SC-014**: In a stakeholder review, the card look, the ball console, the pattern dashboard and the overall calm, uncluttered feel are each rated at least 4
   out of 5 on average.
@@ -474,8 +482,8 @@ that when both patterns are claimed the match ends with a results screen for eve
 - The host may play (chosen at setup, on by default) or act as a pure caller. A playing host sees a Master Board | My Cards switch on the left of the host
   screen.
 - The card ceiling is 1 to 3 in this version, default 1. Defaults for patterns: Single Line, Four Corners and Blackout preselected; calling mode manual.
-- The FREE space counts as "called" from the start but only counts toward a pattern once the player has daubed it themselves. Patterns that include the centre
-  therefore require that tap; this is what the "Tap to claim your FREE space!" tooltip teaches.
+- The FREE space is marked for the player from the start and counts as both marked and called, so patterns that include the centre need only their other
+  cells. It is never stored in the player's daub record and cannot be toggled.
 - Any number on a card may be daubed whether or not it has been called (as in Housie); only daubs on called numbers count in a claim, and the game gives no
   feedback about correctness until a claim is made.
 - A single BINGO! press submits the selected card and the server decides which patterns it completes; the player does not pick a pattern first. A claim awards
@@ -501,7 +509,7 @@ that when both patterns are claimed the match ends with a results screen for eve
 ## Appendix A: Winning Pattern Catalogue (9)
 
 Positions use rows 1 to 5 from top to bottom and the columns B, I, N, G, O from left to right; the centre is N3 (the FREE space). A pattern counts only
-when every listed cell is daubed by the player and called (or is the FREE space).
+when every listed cell is the FREE space, or is daubed by the player and called.
 
 | Group | Pattern | Cells required |
 |-------|---------|----------------|
@@ -523,7 +531,7 @@ a reproducible starting state, and recorded as scenario, expected result and obs
 | # | Checkpoint | Expected result | Covers |
 |---|------------|-----------------|--------|
 | 1 | Start a match and inspect each player's card(s) | Every card is 5 by 5 with B 1-15, I 16-30, N 31-45 (four numbers plus FREE), G 46-60, O 61-75, no repeats | US2, FR-007, FR-008, SC-002 |
-| 2 | Open a new card and look at the centre | FREE is unmarked and the pulsing "Tap to claim your FREE space!" tooltip shows; tapping FREE daubs it and removes the tooltip | US3, FR-012, FR-015, SC-004 |
+| 2 | Open a new card and look at the centre | FREE is already stamped and nothing shows over it; tapping FREE changes nothing; a number cell daubs on tap and lifts on a second tap | US3, FR-012, FR-015, SC-004 |
 | 3 | Host draws balls | The Current Ball shows the right letter and number (for example G-54) and each previous ball joins the history grid and the master board | US4, FR-019 to FR-022, SC-005, SC-007 |
 | 4 | Type messages, draw balls, claim | Chat shows only the typed player messages and no automated line | US6, FR-031, SC-010 |
 | 5 | Submit a valid pattern with BINGO! from a player | The pattern badge flips to Claimed on every connected client; an invalid submission shows "Bogus Bingo" to the claimant only | US5, FR-024 to FR-026, SC-008, SC-009 |

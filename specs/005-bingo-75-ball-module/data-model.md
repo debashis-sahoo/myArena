@@ -50,8 +50,7 @@ Lobby rules (same as Housie's lobby, FR-001 to FR-006):
 |-------|--------------------|
 | `playerId`, `name`, `color` | From the platform. Color tags come from the 12-color roster palette. |
 | `cards` | 1 to `ceiling` BingoCards. **Private**: only the owner's snapshot contains them. |
-| `daubs` | One 25-bit mask per card (bit `row * 5 + col`; FREE is bit 12). **Private**. |
-| `freeTapped` | One boolean per card: true once that card's FREE cell has received any toggle. **Private** (drives the tooltip, FR-015). |
+| `daubs` | One 25-bit mask per card (bit `row * 5 + col`). The FREE cell (bit 12) is never set: it always counts. **Private**. |
 | `lastClaimAt` | Server-only timestamp for the 2 s claim pace (FR-029). |
 | `bogusStreak`, `lockedUntil` | Server-only. `bogusStreak` counts consecutive bogus claims (a valid claim resets it; "too late" leaves it unchanged). At 3 the player is locked: `lockedUntil = now + CLAIM_LOCK_MS` and the streak resets to 0. |
 | `status` | `playing`, or `left` once the seat is released: cards stop playing, daubs are discarded, patterns already won stay claimed. |
@@ -92,8 +91,8 @@ A claim is an action `{ card }`. The server records only the pace timestamp, the
 1. Match is `running`; the sender is a `playing` entry; `card` is one of the sender's cards (otherwise an error ack, not a bogus).
 2. Lock: `now >= lockedUntil`, otherwise `claimsPaused` (private, remaining ms) and an error ack "Claims paused".
 3. Pace: at least `CLAIM_PACE_MS` (2000) since `lastClaimAt`, otherwise an error ack "Wait a moment" (nothing evaluated, no penalty). Passing sets `lastClaimAt`.
-4. Evaluate the card against every pattern in play with `evaluateBingoPattern`. A cell is **satisfied** when its daub bit is set and (it is the FREE
-   cell, or its number is in `called` as of this moment).
+4. Evaluate the card against every pattern in play with `evaluateBingoPattern`. A cell is **satisfied** when it is the FREE cell (always), or its daub bit is
+   set and its number is in `called` as of this moment.
 5. **Accepted**: at least one *open* pattern is completed. Every such pattern becomes claimed by the sender; `bogusStreak = 0`; one public `claimed`
    event carries all awarded ids; if no pattern remains open the match finishes.
 6. **Too late**: no open pattern completed, but at least one already-claimed pattern is. Private `tooLate`; no penalty; the streak is unchanged.
@@ -122,7 +121,7 @@ interval or change it), `pause`, `resume`, `manual`. Auto stops on finish.
 | `BINGO_CARD_CEILING_MAX` | 3 | Lobby |
 | `BINGO_DEFAULT_CARD_CEILING` | 1 | Lobby |
 | `BINGO_DEFAULT_PATTERN_IDS` | `single-line`, `four-corners`, `blackout` | Lobby |
-| `BINGO_FREE_INDEX` | 12 | Daubs, evaluator, card rendering |
+| `BINGO_FREE_INDEX` | 12 | Evaluator (always satisfied), daub filter, card rendering |
 | `AUTO_INTERVALS_MS`, `CLAIM_PACE_MS`, `BOGUS_STREAK_LIMIT`, `CLAIM_LOCK_MS`, `BALL_ROLL_MS`, `MARK_FLUSH_MS`, `MARK_BATCH_MAX` | Existing Housie values (5/8/10 s; 2000; 3; 60000; 1100; 200; 30) | Reused unchanged from `shared/src/housie/timing.ts` |
 
 ## Device preferences (client, `localStorage`)
@@ -138,8 +137,7 @@ The narrow-screen chat drawer opens closed on every visit and has no stored stat
 | Rule | Server | Client |
 |------|--------|--------|
 | Card shape and uniqueness | Generates and validates (`validateBingoCard`) | Never generates; renders what it receives |
-| Daub acceptance | Only owned cards, cell 0 to 24 (FREE included) | Optimistic toggle, batched send |
-| FREE tooltip state | Holds `freeTapped` per card | Shows the tooltip while it is false |
+| Daub acceptance | Only owned cards, cell 0 to 24 (a FREE change is ignored) | Optimistic toggle, batched send; FREE is drawn marked and is not tappable |
 | Claim validity and awards | The only evaluator | Sends `{ card }`; shows the public and private results |
 | Call order, draws, letters | The only source of numbers | Derives the letter from the number for display |
 | Caller permission | `ctx.hostId()` at action time | Shows caller controls when `you === hostId` |

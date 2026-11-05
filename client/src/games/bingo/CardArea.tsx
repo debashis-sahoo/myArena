@@ -7,15 +7,13 @@ export interface CardAreaProps {
   cards: BingoCard[];
   /** One 25-bit daub mask per card. */
   daubs: number[];
-  /** One flag per card: true once its FREE cell was tapped (hides the FREE hint). */
-  freeTapped: boolean[];
   selected: number;
   onSelect: (index: number) => void;
   onToggle: (card: number, cell: number) => void;
 }
 
 /** Fills its region with the player's cards: stacked, side by side, or one at a time under a tab strip (planCards). */
-export function CardArea({ cards, daubs, freeTapped, selected, onSelect, onToggle }: CardAreaProps): ReactElement {
+export function CardArea({ cards, daubs, selected, onSelect, onToggle }: CardAreaProps): ReactElement {
   const { ref, width, height } = useRegionSize<HTMLDivElement>();
   const n = cards.length;
   const plan = planCards(width, height, n);
@@ -44,7 +42,6 @@ export function CardArea({ cards, daubs, freeTapped, selected, onSelect, onToggl
           cellH={plan.cellH}
           label={label(i)}
           selected={i === sel}
-          freeHint={freeTapped[i] !== true}
           tabLabel={n > 1 && plan.mode !== 'tabs' ? label(i) : undefined}
           onToggle={(cell) => onToggle(i, cell)}
         />

@@ -14,7 +14,8 @@ Method and environment:
 - **Phase 12 real-browser runs (2026-11-05)**: a throwaway Node Playwright script outside the repo (Microsoft Edge, one browser context per person at the exact
   viewport size) drove the real built client against `node server/dist/index.js` with `BINGO_DEV_DECK=first-card` and `BINGO_CLAIM_PACE_MS=300`. The images it
   saved are in `evidence/`; the per-size numbers in V2, V7 and V11 are DOM measurements from those runs.
-- Date: 2026-11-04 and 2026-11-05. Local only: **no Render deployment check was run (T079 pending)** and **no physical device was used (T078 pending)**.
+- Date: 2026-11-04 and 2026-11-05. Everything outside V13 ran locally. V13 is a scripted run against the live Render service; **the two-device browser run and the
+  reconnect-after-replacement check are still pending (T079 stays open)** and **no physical device was used (T078 pending)**.
 
 ## Summary
 
@@ -32,6 +33,8 @@ Method and environment:
 | V10 Regression and production safety | T015, T074 | PASS |
 | V11 Convergence checks | T080 to T090 | PASS (SC-001 is script timing only; see V11) |
 | V12 Second convergence checks | T091 to T093 | PASS for T091 and T093; T092 (human stopwatch) pending |
+| V13 Render deployment | T079 | scripted live checks PASS; two-device run and replacement reconnect pending |
+| V14 FREE marked by default | T094 to T104 (change request of 2026-11-05) | PASS locally; not yet deployed to Render |
 
 ## V1. Host setup (US1; SC-001)
 
@@ -59,16 +62,16 @@ Method and environment:
 |----------|----------|----------|--------|
 | Snapshots | one private `snapshot` each; own cards only; counts match choices | 3, 2, 1 cards for host/Ann/Ben; no leaks (0 violations over all payloads, acks and resume views) | PASS |
 | Card rules | B 1-15, I 16-30, N 31-45 (four + FREE at index 12 = 0), G 46-60, O 61-75, no repeats | 6 of 6 valid; 2000 cards generated in the engine check (all valid, all unique); 600 cards at 200 players x 3: 0 invalid, 600 distinct | PASS |
-| Non-playing host | no cards, empty `you` | `{playing:false, cards:[], daubs:[], freeTapped:[]}` | PASS |
-| FREE daub | persists; `freeTapped` only for that card; stays true after lifting; restored on re-join | daub mask 4096; flags `[true,false]`; unchanged after lift | PASS |
+| Non-playing host | no cards, empty `you` | `{playing:false, cards:[], daubs:[]}` (the `freeTapped` field was removed on 2026-11-05, V14) | PASS |
+| FREE is never a daub | a `daubs` change naming cell 12 is accepted and ignored; the mask never holds bit 12 | mask stays 0 after the change and after a reload (V14; the first design stored FREE and a `freeTapped` flag) | PASS |
 | Foreign card, bad indexes | dropped / `INVALID_PAYLOAD` for cell 25, -1, card 3, empty, 31 changes, extra field, non-boolean | as expected; masks unchanged | PASS |
 | Ball calls never daub | masks identical before and after 8 balls | identical | PASS |
 | Uncalled number daubable | accepted silently | bit set while called = [] | PASS |
-| Browser: new card | FREE unmarked, tooltip pulses over it and does not block taps | tooltip on each card in view; a tap on a cell beneath it works | PASS |
-| Browser: FREE tap | dauber stamps, tooltip gone; stays gone for that card | gone; other card kept its tooltip | PASS |
+| Browser: new card | FREE is already stamped, nothing over it | stamped, marked, disabled, no callout on every card in view at 390 x 844 (touch) and 1366 x 768 (V14) | PASS |
+| Browser: FREE tap | tapping, Enter and Space change nothing | nothing changed; a neighbouring number still toggles on and off | PASS |
 | Browser: ball on my card | cell stays unmarked | unmarked until tapped; neon translucent dauber in the letter color, number readable | PASS |
-| Keyboard | Space/Enter toggle, arrows move, FREE works | Space on, Enter off; ArrowRight moved from "B 15" to "I 25"; Enter toggled FREE | PASS |
-| Reduced motion | tooltip does not pulse | `animation-name: none`; 0 running animations (4 in normal mode) | PASS |
+| Keyboard | Space/Enter toggle number cells, arrows move, FREE ignores them | Space on, Enter off; ArrowRight moved from "B 15" to "I 25"; Enter and Space on FREE changed nothing (V14) | PASS |
+| Reduced motion | no looping animation | 0 running animations (3 in normal mode: ambient background, BINGO! glow, ball breath; V14) | PASS |
 
 Card fit with 2 and 3 cards (real app, measured cell width x height; re-measured after the tabs preference and the header chat button):
 
@@ -159,7 +162,7 @@ No page scroll (`scrollWidth`/`scrollHeight` equal to the viewport) and no card 
 | Contrast | 106 text elements sampled, 102 at or above 4.5:1 (3:1 large); the 4 flagged ("DRAW NEXT BALL", "Off", the lit board cell) sit on gold gradients that the sampler could not read; their text is dark brown on gold |
 | Focus | keyboard focus shows a 3 px light-gold outline |
 | Quiet moment | only `bz-ambient` (background) and `bz-ball-breathe` (ball glow) run |
-| Reduced motion | tooltip pulse off; 0 running animations; ball 150 ms fade |
+| Reduced motion | 0 running animations; ball 150 ms fade |
 | Chat | docked when wide; on narrow and short landscape a 40 px chat button in the header opens a sheet under the header (V11) |
 | Screenshots | `evidence/` holds lobby (host and player), player, host board and host My Cards images at all nine sizes, taken at the exact viewport size (see V11) |
 
@@ -219,7 +222,7 @@ Real built client and server, one Edge browser context per person, exact viewpor
 | T085 | Claims paused | three bogus claims by the host: button "Claims paused 1:00" and disabled; "0:57" after 3 s; the other player's button stayed "BINGO!" and their own bogus claim was still evaluated; button back to "BINGO!" and enabled after the lock (56 s after the last check, about 60 s in all); image `evidence/lock-claims-paused.jpg` | PASS |
 | T086 | Chat plain text and limits (wide dock and narrow sheet) | `<b>hi</b>` arrived as the text `<b>hi</b>` (escaped in the DOM); typing 600 characters stops at 500 (counter "500/500"); a 600-character fill is cut to 500 by the field and arrives as 500; ten rapid sends: 5 delivered, then "You are sending messages too quickly. Try again in 1s." | PASS |
 | T087 | Hover and pressed states | computed style changed on hover and on press for: unselected lobby pattern tile, segmented buttons (lobby and caller), DRAW NEXT BALL, Board / My Cards tab, BINGO!, card cell, unselected card tab, View all, Quit. A selected control (pattern tile, segment or tab) keeps its selected look on hover by design | PASS |
-| T088 | Reload restores daubs and tooltip | daubed cells 0, 1, 6 and FREE on card 1: tooltip gone on card 1 only; FREE lifted: tooltip stays gone; after a reload cells 0, 1, 6 still daubed, FREE still lifted, card 1 has no tooltip and card 2 (never tapped) still shows it; image `evidence/reload-restored.jpg` | PASS |
+| T088 | Reload restores daubs and tooltip (superseded on 2026-11-05: FREE has no tooltip or state any more, see V14) | daubed cells 0, 1, 6 and FREE on card 1: tooltip gone on card 1 only; FREE lifted: tooltip stays gone; after a reload cells 0, 1, 6 still daubed, FREE still lifted, card 1 has no tooltip and card 2 (never tapped) still shows it | PASS at the time |
 | T089 | Host setup time | script clock (a lower bound, no human reading time): 0.50 s from the hub click to the match screen with defaults (create 0.36 s, Start 0.14 s; the guest's join, 0.41 s, is not host time); 0.44 s changing the player limit (typed and a preset), max cards, my cards, calling and two patterns. Clicks: 3 with defaults, 10 changing every setting. A person with a stopwatch is part of the T078 sign-off | PASS (script) |
 | T090 | Screenshots | `evidence/`: lobby (host and player), player, host board and host My Cards at 320x568, 390x844, 667x375, 844x390, 768x1024, 1024x768, 1366x768, 1920x1080 and 2560x1440, plus the claims-paused, reload, chat and open-chat-sheet images | PASS |
 | Extra | Header chat button (replaces the bottom bar) | 40 x 40 and inside the header; closed button names the unread count ("Open chat, 2 unread") and shows a pill of 2; opening shows the two messages and clears the pill; Escape closes; half-typed text survives closing; the open sheet sits below the header inside the viewport | PASS |
@@ -274,6 +277,52 @@ Smaller sizes: only widths that were held at 120 px grow (768 x 1024: 145 x 108 
 identical to the V2 table: 320 x 568 51 x 34, 390 x 844 69 x 69, 667 x 375 60 x 40, 844 x 390 41 x 41 and 64 x 43, 1024 x 768 105 x 77; one card gives 55 x 40, 69 x 69,
 63 x 47, 73 x 49 and 105 x 83 at those five sizes. Panel coverage (V11) did not change.
 
+## V13. Render deployment (T079), scripted part
+
+Service `https://myarena-arp6.onrender.com` (Free plan, created from `render.yaml`), running commit `1b22692`. Checked on 2026-11-05 from a developer machine over HTTPS
+and WSS by a Node script (outside the repo) that acted as three players, without any spoofed headers.
+
+| Check | Observed | Result |
+|-------|----------|--------|
+| Startup and readiness | `GET /healthz` answered 200 `{"status":"ok","uptimeSec":35,...}` on the first request | PASS |
+| Same client as the local build | the index page served `/assets/index-C8wV0H47.js` and `/assets/index-aMdPv4oX.css`, identical to the local `client/dist` | PASS |
+| HTTPS and policy headers | `Strict-Transport-Security: max-age=31536000; includeSubDomains`; CSP with `connect-src 'self' wss:` | PASS |
+| WebSocket connectivity | three clients connected over `wss` on the `websocket` transport (about 1.1 s each from here, including TLS) | PASS |
+| V1 setup (scripted part) | room created, two guests joined by its code, max cards 2, a guest chose 2 cards, Start; each client received only its own cards (1, 2 and 1) | PASS |
+| V3 balls | 6 draws: random order (50, 26, 17, 34, 38, 66, so `BINGO_DEV_DECK` is not applied in production), the same order on all three clients, every ball at every client within 287 ms of the draw request | PASS |
+| V4 claims | an incomplete claim was judged bogus and only its owner saw it; a second claim 0.3 s later was refused ("Wait a moment.": the 2 s pace, so `BINGO_CLAIM_PACE_MS` is not applied); after 48 balls a correct Single Line claim was awarded and all three clients saw it | PASS |
+| V6 chat | 0 system lines after Start on all three clients; a typed message containing `<b>x</b>` arrived unchanged | PASS |
+| V8 reconnect | a reload (same guest id) returned to the same seat with the same daubs and called numbers; a socket closed without leaving showed as "disconnected" with the seat kept, and the guest resumed the same seat with the balls so far | PASS |
+| Cleanup | after everyone left, the service's room count dropped back to the one room that was not part of this run | PASS |
+
+Still pending for T079: the two-device browser run of V1, V3 and V4 on the live URL, and reconnect after a service replacement (a redeploy while a client is connected).
+
+## V14. FREE marked by default (change request of 2026-11-05)
+
+Playtest feedback on the live site: the "Tap to claim your FREE space!" callout looked like a button but passed taps through to the numbers under it (a tap on its left
+part daubed "I 22" instead of FREE, measured at 390 x 844 and 1366 x 768). The owner chose to mark FREE by default. Code: `shared/src/bingo/evaluate.ts` (FREE always
+satisfied), `types.ts` (no `freeTapped`), server `engine.ts`, `matchOps.ts`, `model.ts`, `claims.ts` (comments), client `bingoStore.ts`, `CardGrid.tsx`, `CardArea.tsx`,
+`BingoScreen.tsx`, `bingo.css` (callout removed). Specs reworded: `spec.md` (Clarifications, US3, FR-012 to FR-015, FR-024, SC-004, SC-009, SC-013, assumptions,
+appendices), `plan.md`, `research.md` R4, `data-model.md`, `contracts/bingo-protocol.md`, `contracts/match-screen-layout.md`, `quickstart.md`, `README.md`.
+
+Local run of the rebuilt app, same method as V11; `BINGO_DEV_DECK=first-card`, `BINGO_CLAIM_PACE_MS=300`.
+
+| Check | Observed | Result |
+|-------|----------|--------|
+| Snapshot shape | `you` holds `playing`, `cards`, `daubs` only (no `freeTapped`); the mask starts at 0 | PASS |
+| A `daubs` change naming FREE | accepted without error, ignored; the mask is still 0 after a reload; the join ack has no `freeTapped` | PASS |
+| 23 of the host card's 24 numbers called, all daubed, FREE never touched | a claim of Letter X and Blackout is judged bogus (private) | PASS |
+| 24 of 24 called and daubed, FREE never touched | one claim awards Letter X and Blackout together; the other player sees it; the match finishes | PASS |
+| Browser, 390 x 844 touch and 1366 x 768 mouse | FREE is stamped from the start on every visible card, `aria-pressed` true, `aria-disabled` true, default cursor, no callout element | PASS |
+| Tap, click, Enter and Space on FREE | nothing changes (still marked, no other cell marked); a neighbouring number toggles on and off by tap or click | PASS |
+| Reload | FREE is marked on every visible card and nothing else is | PASS |
+| Running animations | 3 in normal mode (ambient background, BINGO! glow, ball breath; 4 before, with the callout pulse) and 0 with reduced motion | PASS |
+| `npm run build` and `npm run smoke` | pass ("All checks passed") | PASS |
+| Re-run after the change | quickstart-style checks from V10 to V12 that touch the match screen: no page scroll and every cell inside the viewport at the nine sizes, chat (plain text, 500 characters, rate limit), unread pill, claims paused and its end, all PASS | PASS |
+| Evidence images | all `*-player`, `*-host-*`, `*-1card`, `chat-*` and `lock-claims-paused` images were retaken so none shows the old callout; `reload-restored.jpg` (about the old tooltip state) was removed | done |
+
+The Render service still runs the previous build (the callout version) until this change is pushed and deployed; V13 describes that build.
+
 ## Known limits and pending items
 
 - **T092, a person-timed SC-001**: not run (it needs a person). Procedure: start the stopwatch on the hub's PLAY NOW for Bingo, stop when the match screen shows, once
@@ -283,5 +332,5 @@ identical to the V2 table: 320 x 568 51 x 34, 390 x 844 69 x 69, 667 x 375 60 x 
   (the page never scrolls); everything stays reachable.
 - **SC-013 and SC-014** (smooth animation on a mid-range phone, a first-time player finishing a claim in 2 minutes, a stakeholder rating of 4 out
   of 5) and a **human stopwatch for SC-001** (T092): not measured; they need people and devices. **T078 stays open.**
-- **Render deployment (T079)**: not run. Startup, readiness, WebSocket connectivity and reconnect after replacement must still be checked on the deployed
-  service; nothing above is deployment verification.
+- **Render deployment (T079)**: the scripted live checks passed (V13). Still pending: the two-device browser run on the live URL and reconnect after a service
+  replacement. Only the V13 rows count as deployment verification.

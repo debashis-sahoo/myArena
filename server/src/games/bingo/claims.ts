@@ -24,7 +24,7 @@ type ClaimAction = Extract<BingoAction, { type: 'bingo' }>;
 
 /**
  * Decides a claim at the moment the server receives it (single-threaded, so the first arrival wins a race). The named card is
- * checked against every pattern in play; a cell counts only if it is daubed and (FREE or called). Order: data-model "Claim".
+ * checked against every pattern in play; the FREE cell always counts and any other cell counts only if it is daubed and called. Order: data-model "Claim".
  */
 export function handleClaim(match: Match, playerId: string, action: ClaimAction): ActionResult {
   const ctx = match.ctx;

@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactElement } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactElement } from 'react';
 import { BINGO_FREE_INDEX, BINGO_LETTERS, type BingoCard } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
 import { useReducedMotion } from '../../state/viewport';
@@ -13,8 +13,6 @@ export interface CardGridProps {
   cellH: number;
   /** Accessible name of the card, e.g. "Card 2 of 3". */
   label: string;
-  /** Shows the pulsing "Tap to claim your FREE space!" callout. */
-  freeHint?: boolean;
   selected?: boolean;
   /** Short text for the side tab (several cards shown at once); omit for a single card or tabs mode. */
   tabLabel?: string;
@@ -31,7 +29,6 @@ interface CellProps {
   reduced: boolean;
   readOnly: boolean;
   tabbable: boolean;
-  hint: boolean;
   setRef: (el: HTMLButtonElement | null) => void;
   onToggle: (index: number) => void;
   onFocus: () => void;
@@ -41,7 +38,6 @@ interface CellProps {
 function Cell(p: CellProps): ReactElement {
   const free = p.index === BINGO_FREE_INDEX;
   const letter = BINGO_LETTERS[p.index % 5] ?? 'B';
-  const hintId = useId();
   const dauber = useRef<HTMLSpanElement | null>(null);
   const ring = useRef<HTMLSpanElement | null>(null);
 
@@ -70,10 +66,9 @@ function Cell(p: CellProps): ReactElement {
     <button
       ref={p.setRef}
       type="button"
-      className={`bz-cell bz-l-${letter}${free ? ' is-free' : ''}${p.daubed ? ' is-daubed' : ''}${p.readOnly ? ' is-readonly' : ''}${p.hint ? ' has-hint' : ''}`}
+      className={`bz-cell bz-l-${letter}${free ? ' is-free' : ''}${p.daubed ? ' is-daubed' : ''}${p.readOnly ? ' is-readonly' : ''}`}
       aria-pressed={p.daubed}
       aria-label={free ? 'FREE' : `${letter} ${p.value}`}
-      aria-describedby={p.hint ? hintId : undefined}
       aria-disabled={p.readOnly || undefined}
       tabIndex={p.tabbable ? 0 : -1}
       onClick={() => p.onToggle(p.index)}
@@ -87,19 +82,14 @@ function Cell(p: CellProps): ReactElement {
         </>
       )}
       <span className="bz-num">{free ? 'FREE' : p.value}</span>
-      {p.hint && (
-        <span id={hintId} className="bz-free-hint">
-          Tap to claim your FREE space!
-        </span>
-      )}
     </button>
   );
 }
 
 const ARROWS: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -5, ArrowDown: 5 };
 
-/** One bingo card: B-I-N-G-O header and a 5 by 5 grid of buttons. Cells (FREE included) are only ever daubed by the player. */
-export function CardGrid({ card, daubs, cellW, cellH, label, freeHint = false, selected = false, tabLabel, onToggle }: CardGridProps): ReactElement {
+/** One bingo card: B-I-N-G-O header and a 5 by 5 grid of buttons. The FREE cell is always marked; every other cell is only ever daubed by the player. */
+export function CardGrid({ card, daubs, cellW, cellH, label, selected = false, tabLabel, onToggle }: CardGridProps): ReactElement {
   const reduced = useReducedMotion();
   const refs = useRef(new Map<number, HTMLButtonElement>());
   const [active, setActive] = useState(0);
@@ -120,7 +110,7 @@ export function CardGrid({ card, daubs, cellW, cellH, label, freeHint = false, s
   };
 
   const toggle = (i: number): void => {
-    if (!onToggle) return;
+    if (!onToggle || i === BINGO_FREE_INDEX) return;
     if (((daubs >>> i) & 1) === 0) sfx.stamp();
     onToggle(i);
   };
@@ -148,11 +138,10 @@ export function CardGrid({ card, daubs, cellW, cellH, label, freeHint = false, s
             key={i}
             index={i}
             value={value}
-            daubed={((daubs >>> i) & 1) === 1}
+            daubed={i === BINGO_FREE_INDEX || ((daubs >>> i) & 1) === 1}
             reduced={reduced}
-            readOnly={!onToggle}
+            readOnly={!onToggle || i === BINGO_FREE_INDEX}
             tabbable={i === active}
-            hint={freeHint && i === BINGO_FREE_INDEX}
             setRef={(el) => {
               if (el) refs.current.set(i, el);
               else refs.current.delete(i);

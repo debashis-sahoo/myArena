@@ -929,11 +929,6 @@
   z-index: 2;
 }
 
-/* The FREE cell lifts above its neighbors while the hint overflows onto them. */
-.bz-cell.has-hint {
-  z-index: 3;
-}
-
 .bz-num {
   position: relative;
   z-index: 1;
@@ -979,39 +974,6 @@
   border-radius: 50%;
   opacity: 0;
   pointer-events: none;
-}
-
-.bz-free-hint {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 4;
-  width: calc(var(--bz-cw, var(--bz-cell)) * 3);
-  padding: 0.35em 0.5em;
-  transform: translate(-50%, -50%);
-  border-radius: 12px;
-  background: linear-gradient(180deg, var(--bz-gold-hi), var(--bz-gold));
-  color: #2a1a00;
-  font-size: max(11px, calc(var(--bz-cell) * 0.26));
-  font-weight: 900;
-  line-height: 1.15;
-  text-align: center;
-  pointer-events: none;
-  box-shadow: 0 0 12px 2px rgba(245, 192, 74, 0.75);
-  animation: bz-free-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes bz-free-pulse {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(1);
-    box-shadow: 0 0 10px 1px rgba(245, 192, 74, 0.6);
-  }
-
-  50% {
-    transform: translate(-50%, -50%) scale(1.06);
-    box-shadow: 0 0 22px 5px rgba(245, 192, 74, 0.95);
-  }
 }
 
 @keyframes bz-dauber-out {
@@ -2021,7 +1983,6 @@
     transition-duration: 0.01ms !important;
   }
 
-  .bz .bz-free-hint,
   .bz-match::before,
   .bz-ball-glow,
   .bz .bz-bingo::before,

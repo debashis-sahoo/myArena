@@ -31,7 +31,7 @@ Player capacity uses the platform's `room:setCapacity`; Start uses `room:start`;
 | `auto` | `intervalMs: 5000 \| 8000 \| 10000` | Host | Switches to auto at that interval (or changes it); starts or restarts the timer |
 | `manual` | none | Host | Back to manual calling |
 | `pause` / `resume` | none | Host | Pauses or resumes auto calling |
-| `daubs` | `changes: { card: 0..2, cell: 0..24, on: boolean }[]` (1 to 30) | A playing person | Sets daubs on own cards (the FREE cell, 12, is accepted); changes naming a card the sender does not own are dropped |
+| `daubs` | `changes: { card: 0..2, cell: 0..24, on: boolean }[]` (1 to 30) | A playing person | Sets daubs on own cards; a change naming the FREE cell (12) is ignored without an error, and changes naming a card the sender does not own are dropped |
 | `bingo` | `card: 0..2` | A playing person (host included when `hostPlays`) | Server validates and decides (see "Claim decision") |
 
 Rejections use `INVALID_STATE` with a short message: "Only the host can do that.", "The match is over.", "All balls have been called.", "Wait a moment."
@@ -85,8 +85,7 @@ BingoView {
   you: {
     playing: boolean
     cards: BingoCard[]                  // 25 numbers each, index 12 = 0 (FREE); empty when not playing
-    daubs: number[]                     // one 25-bit mask per card
-    freeTapped: boolean[]               // one per card
+    daubs: number[]                     // one 25-bit mask per card; the FREE bit (12) is never set, FREE always counts
     claimsLockedMs?: number
   }
   hostId: string
@@ -95,13 +94,13 @@ BingoView {
 }
 ```
 
-Never included: the deck (unrevealed balls), other players' cards, daubs or tooltip state, other players' claim attempts.
+Never included: the deck (unrevealed balls), other players' cards or daubs, other players' claim attempts.
 
 ## Claim decision
 
 See [../data-model.md](../data-model.md) "Claim (transient)" for the exact order. In short: checks, then lock and pace, then the card is evaluated against
 every pattern in play; every open pattern it completes is awarded in the one `claimed` event; otherwise `tooLate` (only already-claimed patterns
-complete) or `bogus` (nothing completes). A cell counts only if it is daubed and (FREE or called before the claim was received).
+complete) or `bogus` (nothing completes). The FREE cell always counts; any other cell counts only if it is daubed and called before the claim was received.
 
 ## Ordering and recovery
 
@@ -116,11 +115,11 @@ complete) or `bogus` (nothing completes). A cell counts only if it is daubed and
 1. **Authority**: every called number comes from the server's deck; no card, ball or result originates from a client (SC-002, SC-005).
 2. **No repeats**: 75 draws produce each of 1 to 75 exactly once and the 76th is refused.
 3. **Letters**: every ball shows the letter of its range (1-15 B, 16-30 I, 31-45 N, 46-60 G, 61-75 O) (SC-005, SC-007).
-4. **Daubs**: the server never sets a daub; a cell is daubed only because its owner sent it (SC-004).
-5. **Claim correctness**: a pattern is awarded only if some variant has every cell daubed and (FREE or called before receipt) on the named card (SC-009).
+4. **Daubs**: the server never sets a daub; a number cell is daubed only because its owner sent it, and the FREE cell cannot be toggled (SC-004).
+5. **Claim correctness**: a pattern is awarded only if some variant has every cell either FREE or both daubed and called before receipt, on the named card (SC-009).
 6. **Race**: of two simultaneous valid claims for one pattern, exactly one `claimed` event includes it; the other claimant gets `tooLate` (FR-028).
 7. **Pace and lock**: at most one evaluated claim per person per 2 s; three bogus claims in a row start a 1-minute lock; a valid claim resets the count
    (FR-029).
-8. **Privacy**: no event or ack contains another player's cards, daubs or tooltip state; `bogus`, `tooLate` and `claimsPaused` reach only the claimant.
+8. **Privacy**: no event or ack contains another player's cards or daubs; `bogus`, `tooLate` and `claimsPaused` reach only the claimant.
 9. **Chat purity**: the server writes no chat line during the match (SC-010).
 10. **Timing**: draws occur within 0.5 s of the chosen interval; a ball reaches every screen within 1 s (SC-005, SC-006).

@@ -11,11 +11,11 @@ reuses Housie's platform hooks; the only new platform work is configuration (R6)
 a CSS neon blob on each daubed cell (a radial-gradient disc in the letter column's color with `mix-blend-mode: screen`, about 55 percent
 opacity so the number stays readable underneath) that plays a 140 ms "stamp" (scale 1.7 to 1 with a small rotation and a brief ring) via the Web
 Animations API. The **ball** is a CSS sphere (layered radial gradients, a specular highlight, a blurred ground shadow) with its letter above its
-number, revealed with a roll-in (right to left with rotation), settle and glow pulse. The **FREE tooltip** is a small absolutely positioned
-callout with a CSS pulse. Pattern pictures are inline SVG generated from the catalogue data. No canvas, no 3D library, no new dependency.
+number, revealed with a roll-in (right to left with rotation), settle and glow pulse. The FREE cell is drawn with the same dauber from the start (no callout; see R4).
+Pattern pictures are inline SVG generated from the catalogue data. No canvas, no 3D library, no new dependency.
 
 **Rationale**: DOM buttons give touch, pointer, keyboard and screen-reader behavior for free (FR-013, FR-038); the three allowed effects (ball
-reveal, dauber stamp, claim celebration) plus the FREE tooltip are short transforms and opacity changes that stay smooth on mid-range phones.
+reveal, dauber stamp, claim celebration) are short transforms and opacity changes that stay smooth on mid-range phones.
 
 **Alternatives**: Canvas or WebGL for the ball and dauber (rejected: accessibility, battery, more code); a CSS framework (rejected: the project uses
 plain CSS).
@@ -66,20 +66,21 @@ tickets and per-row cell positions).
 
 ## R4. Daubs and claim authority
 
-**Decision**: The server stores each player's daubs per card as a 25-bit mask (bit `row * 5 + col`; the FREE cell is bit 12). Clients toggle
-optimistically and send small batched `daubs` intents; the server accepts a change only for a card the sender owns and a cell index 0 to 24, and never
-infers or adds a daub (FR-012). Unlike Housie, the FREE cell is accepted. The client coalesces taps for about 200 ms into one action (up to 30 changes)
+**Decision**: The server stores each player's daubs per card as a 25-bit mask (bit `row * 5 + col`). The FREE cell (bit 12) is never stored: it always counts,
+the evaluator treats it as satisfied, and a `daubs` change naming it is ignored (no error). Clients toggle
+optimistically and send small batched `daubs` intents; the server accepts a change only for a card the sender owns and a cell index 0 to 24 other than FREE,
+and never infers or adds a daub (FR-012). The client coalesces taps for about 200 ms into one action (up to 30 changes)
 and always flushes pending daubs immediately before a `bingo` claim (socket messages are ordered), so the server holds the latest daubs first. The
 snapshot restores daubs on reload or reconnect (FR-016).
 
-The server also keeps one private flag per card, `freeTapped`, set the first time that card's FREE cell receives any toggle and never cleared until the
-match ends. It rides in the player's own snapshot so the "Tap to claim your FREE space!" tooltip stays gone after a tap on any device or reload
-(User Story 3 scenarios 6 and 7).
+FREE was first specified as a cell the player must tap, with a "Tap to claim your FREE space!" tooltip and a private per-card `freeTapped` flag. Playtesting
+showed the tooltip looked like a button but passed taps through to the numbers under it, so a tap on the callout often daubed a neighbour instead. On 2026-11-05 the
+owner chose to mark FREE by default (spec Clarifications, FR-015); the tooltip, the flag and the FREE-toggle path were removed.
 
-**Rationale**: FR-024 needs the server to check daubs. Batching stays inside the per-socket rate limit (burst 10, 5 per second). A server-held flag is
-simpler and more reliable than device storage and is private by construction.
+**Rationale**: FR-024 needs the server to check daubs. Batching stays inside the per-socket rate limit (burst 10, 5 per second). Keeping FREE out of the mask means
+there is no state to lose, restore or get wrong, and claims through the centre need only the other cells.
 
-**Alternatives**: Per-device storage for the tooltip (rejected: shows again on another device); sending daubs only with the claim (rejected: reconnect
+**Alternatives**: A tooltip with per-device or server-held "FREE tapped" memory (rejected on 2026-11-05 together with the tapped FREE cell, see above); sending daubs only with the claim (rejected: reconnect
 and multi-tab lose them); one message per tap (rejected: trips the rate limit).
 
 ## R5. Ball drawing and the caller
@@ -191,8 +192,8 @@ than parameterizing it.
 ## R11. Sound and motion
 
 **Decision**: Reuse the existing synthesized `sfx` sounds (`ballRoll`, `stamp`, `winChime`, `error`) and the mute toggle; no new audio. Reduced motion
-replaces the ball roll with a 150 ms fade, the dauber stamp with an instant translucent dauber, the claim celebration with a 1 s gold outline on the
-affected tiles, and the FREE tooltip pulse with a static callout (FR-038).
+replaces the ball roll with a 150 ms fade, the dauber stamp with an instant translucent dauber and the claim celebration with a 1 s gold outline on the
+affected tiles (FR-038).
 
 ## R12. Development-only verification controls
 

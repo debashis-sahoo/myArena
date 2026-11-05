@@ -54,11 +54,11 @@ Regions:
 
 - **Header**: "BINGO", room code, player count ("37 / 200"), Quit (with confirmation) and Lobby (opens the room lobby dialog, `LobbyDialog`), sound toggle. One line.
   On narrow and short screens it also holds the chat button (a 40 px icon with the unread pill), so the chat takes no permanent row.
-- **Cards**: see "Card fit". Each cell is a `<button aria-pressed>`; a daubed cell shows the dauber over a still-readable number. The center cell reads
-  "FREE" and is a button too. The selected card has a gold outline; with several cards the strip names it (the selected tab reads "Card 2 of 3", the others "Card 1" and "Card 3" so three tabs fit 320 px).
-- **FREE tooltip**: while the card's `freeTapped` is false, a glowing pulsing callout "Tap to claim your FREE space!" is centered over the FREE cell and may
-  extend over neighboring cells. It ignores pointer input (`pointer-events: none`), so every cell, including FREE, stays tappable through it; it is visible only
-  on the card in view, disappears on the first tap of FREE and does not return for that card.
+- **Cards**: see "Card fit". Each number cell is a `<button aria-pressed>`; a daubed cell shows the dauber over a still-readable number. The center cell reads
+  "FREE" and is drawn marked (the same dauber) from the start; it stays a focusable cell for arrow-key movement but is marked `aria-disabled`, shows the default cursor, has no
+  hover or pressed state and ignores taps, Enter and Space. The selected card has a gold outline; with several cards the strip names it (the selected tab reads "Card 2 of 3", the others "Card 1" and "Card 3" so three tabs fit 320 px).
+- **No FREE tooltip**: nothing is shown over the FREE cell. (An earlier design put a pulsing "Tap to claim your FREE space!" callout there; it looked like a button but passed
+  taps through to the neighbouring numbers, so on 2026-11-05 the FREE cell became marked by default.)
 - **Pattern dashboard**: one tile per host-chosen pattern (nothing else): a mini 5 by 5 picture, the name, and a badge "Available" (green) or "Claimed"
   with the winner's name (the winner's color). The prominent glowing **BINGO!** button sits at the end of the dashboard header (wide) or as a full-width bar
   (narrow); with several cards it reads "BINGO! - Card 2". While the player's claims are paused the button is disabled and shows "Claims paused 0:42". A bogus claim
@@ -112,7 +112,6 @@ sees **New round** (returns everyone to the lobby with default settings).
 |--------|---------|--------|----------------|
 | Ball reveal | `ball` event | 1.1 s roll-in with rotation, settle, glow pulse; a newer ball interrupts it | 150 ms fade |
 | Dauber stamp | Daub on | 140 ms scale 1.7 to 1 with a small rotation and ring | Instant translucent dauber |
-| FREE tooltip | `freeTapped` false | Glowing pulse | Static callout |
 | Claim celebration | `claimed` event | About 1.2 s gold burst on every awarded tile and the BINGO! area, plus the win chime | 1 s gold outline on the tiles |
 | Quiet state | No draw, no claim | Subtle ambient background, ball glow, BINGO! button glow | The same, without animation |
 
@@ -120,8 +119,8 @@ Sounds reuse `sfx.ballRoll`, `sfx.stamp`, `sfx.winChime` and `sfx.error` and res
 
 ## Accessibility
 
-- Every cell, tile, button and tab is a native control with a visible focus ring, hover and pressed states; Enter and Space toggle a cell exactly as a
-  tap (FR-038).
+- Every number cell, tile, button and tab is a native control with a visible focus ring, hover and pressed states; Enter and Space toggle a number cell exactly as a
+  tap (FR-038). The FREE cell is announced as "FREE", pressed and disabled.
 - Card cells have accessible names ("B 7", "FREE") and `aria-pressed` for daubed state; arrow keys move between cells within a card.
 - The ball has an accessible name ("Ball G 54"); badges and the claim result use text, not color alone; the chat region and drawer are labeled landmarks.
 - Contrast between text and backgrounds meets WCAG AA for normal text.

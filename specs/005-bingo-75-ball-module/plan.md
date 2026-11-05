@@ -7,7 +7,7 @@
 ## Summary
 
 Add Bingo as the third real game on the Platform Core and the second user of its lobby channel: a host-configured room of 2 to 200 people, server-generated
-5 by 5 cards on the standard 75-ball distribution with a FREE centre that the player must daub by hand, a server-authoritative caller (manual or 5/8/10 s
+5 by 5 cards on the standard 75-ball distribution with a FREE centre that is marked from the start, a server-authoritative caller (manual or 5/8/10 s
 auto) that shows balls as letter-number spheres, manual daubing with a neon stamp effect, a single glowing BINGO! button whose claim the server decides
 against every pattern in play, pure player chat with no system line at all, and a compact royal arcade screen for players and for the host (who may also
 play).
@@ -69,7 +69,7 @@ Constitution: [.specify/memory/constitution.md](../../.specify/memory/constituti
 |------------------|------|--------------|----------------------|
 | I. Repository and Render-ready hosting | No new services; config repository-relative; zero-downtime and `PORT` rules unchanged | PASS | One optional env var with a default ([research.md](research.md) R6, R13); `render.yaml` unchanged |
 | Runtime: restart behavior documented for active state | Active matches across restart are recovered or explicitly ended | PASS | Lobbies and matches are in memory and end through the existing reconnect then "room ended" flow (R13; quickstart V10) |
-| II. Graphics-first | Saturated palette, tactile states, glowing indicators, smooth effects, max screen use, orientation, safe areas, reduced motion | PASS | R1, R9, R11; [contracts/match-screen-layout.md](contracts/match-screen-layout.md): royal arcade look, ball roll-in, neon dauber stamp, FREE tooltip, claim celebration, measured fit with no page scroll, safe areas, reduced-motion table; spec FR-033 to FR-038 |
+| II. Graphics-first | Saturated palette, tactile states, glowing indicators, smooth effects, max screen use, orientation, safe areas, reduced motion | PASS | R1, R9, R11; [contracts/match-screen-layout.md](contracts/match-screen-layout.md): royal arcade look, ball roll-in, neon dauber stamp, claim celebration, measured fit with no page scroll, safe areas, reduced-motion table; spec FR-033 to FR-038 |
 | III. Velocity and pragmatic verification | Minimize automated suites; manual smoke, deterministic checkpoints, visual checks with recorded evidence; controlled outcomes only in a development-only context without client control | PASS | No new suites; [quickstart.md](quickstart.md) V1 to V10; the dev deck and pace controls are server-side, ignored in production and not reachable from any client message (R12) |
 | IV. Platform and game decoupling | Reuse rooms, presence, invites, host controls, chat; game owns board, rules, turns; explicit contract; no duplicate chat | PASS | Bingo reuses `InviteBar`, `PlayerList`, `ChatPanel`, the lobby dialog and status screens and adds no platform hook ([contracts/platform-integration.md](contracts/platform-integration.md)); it owns cards, patterns, caller, daubs, claims and screens. Watch item below |
 | V. Server-authoritative real-time play | Backend validates state, outcomes, turns, winners; clients send intents; ordered broadcast; reconnect snapshot | PASS | Deck, cards, daubs, claim evaluation, caller and results are server-only; the action schema has no field for a ball, card, pattern or result ([contracts/bingo-protocol.md](contracts/bingo-protocol.md)); private snapshot in join and resume acks; claims are decided in server arrival order (R4, R5, R7) |
@@ -139,7 +139,7 @@ client/src/
 │   └── bingo/                      # NEW
 │       ├── BingoLobby.tsx          # setup column, pattern chooser, card count, roster column
 │       ├── BingoScreen.tsx         # match layout (landscape, narrow, host variant), header, overlays
-│       ├── CardArea.tsx            # card fit (stack, row, tabs), selection, FREE tooltip host
+│       ├── CardArea.tsx            # card fit (stack, row, tabs), selection
 │       ├── CardGrid.tsx            # B-I-N-G-O header, 5 x 5 cell buttons, dauber, keyboard navigation
 │       ├── PatternDashboard.tsx    # tiles (picture, name, badge), BINGO! button, bogus and lock states
 │       ├── PatternPicture.tsx      # SVG 5 x 5 picture (chooser and tiles)
@@ -152,7 +152,7 @@ client/src/
 │       ├── bingoStore.ts           # feed + external store: view, daub batching, selection, notices, lock
 │       ├── useFit.ts               # planCards, planPatterns, board orientation
 │       ├── anim/                   # ballRoll.ts, stamp.ts, celebrate.ts
-│       └── bingo.css               # layout, cards, dauber, ball, tiles, tooltip, reduced motion (scope .bz)
+│       └── bingo.css               # layout, cards, dauber, ball, tiles, reduced motion (scope .bz)
 └── state/viewport.ts               # CHANGE: add useRegionSize (moved verbatim from housie/useFit.ts)
 
 README.md                           # CHANGE: Bingo section, BINGO_MAX_PLAYERS and dev variables
@@ -179,7 +179,7 @@ Platform files change only for configuration and registration; no hook is added,
 | Room setup, limits, ceiling, host plays (FR-001 to FR-006, US1; SC-001, SC-003) | R6; data-model Lobby; platform-integration; `BingoLobby.tsx`, `lobby.ts`, `config.ts`, `roomStore.ts` |
 | Card generation and uniqueness (FR-007, FR-008; SC-002) | R2; `cards.ts`, `card.ts` (`validateBingoCard`); quickstart V2 |
 | Patterns (FR-009 to FR-011) | R3; `patterns.ts`, `PatternPicture.tsx`, chooser; `PatternDashboard.tsx` |
-| Manual daubing and the FREE space (FR-012 to FR-016; SC-004) | R4; `CardGrid.tsx`, `bingoStore.ts` (batching), engine `daubs`, `freeTapped` |
+| Manual daubing and the FREE space (FR-012 to FR-016; SC-004) | R4; `CardGrid.tsx`, `bingoStore.ts` (batching), engine `daubs`, shared `evaluate.ts` (FREE always counts) |
 | Caller and ball console (FR-017 to FR-022; SC-005 to SC-007) | R5; `deck.ts`, `matchOps.ts`, `BallConsole.tsx`, `Ball.tsx`, `CallerConsole.tsx`, `MasterBoard.tsx` |
 | Claims (FR-023 to FR-030; SC-008, SC-009) | R7; `claims.ts`, `PatternDashboard.tsx`, `ResultsOverlay.tsx`; bingo-protocol |
 | Chat (FR-031, FR-032; SC-010) | R6, R10; `quietChat`, `BingoChat.tsx` |
@@ -193,11 +193,11 @@ These details were left open by the spec; the plan picks a default so tasks can 
 
 1. **Per-game player ceiling**: Bingo gets its own optional `BINGO_MAX_PLAYERS` (default 200) instead of sharing `HOUSIE_MAX_PLAYERS`, so changing one game's limit
    never moves the other (R6). The spec's assumption was reworded to "starts at the same value Housie uses and has its own operator setting".
-2. **FREE tooltip behavior**: the callout is centered over the FREE cell, ignores pointer input and may overlap neighboring cells, instead of the earlier
-   "without covering any number", which cannot fit a readable message on a 40 px cell. Spec FR-015 and User Story 3 scenario 5 were reworded to "without
-   blocking taps on any cell".
-3. **Tooltip memory is server-held**: a private `freeTapped` flag per card keeps the tooltip gone across reloads and devices (R4); the alternative is
-   per-device storage, which would show it again on another device.
+2. **FREE is marked by default** (changed 2026-11-05): the FREE cell is drawn stamped on every card, always counts for every pattern, ignores taps and has no
+   tooltip. The first design (tap FREE under a pulsing "Tap to claim your FREE space!" callout) confused players because the callout looked like a button but
+   passed taps through to the numbers beneath it. Spec FR-015, User Story 3 and its scenarios 5 to 8 and the Clarifications were rewritten.
+3. **No per-card FREE state**: the private `freeTapped` flag was removed from the model, the snapshot and the client; FREE is never stored in a daub mask and the
+   server ignores any daub change that names it (R4).
 4. **Master board orientation**: five B-I-N-G-O columns of 15 numbers is the default (FR-022); on a short, wide region it is drawn rotated (five rows of 15)
    when 15 rows would push numbers below 11 px (R9). Spec FR-022 was reworded to allow this fallback; remove the rotation (and that wording) if you want the
    orientation fixed.

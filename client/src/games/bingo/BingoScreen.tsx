@@ -87,7 +87,7 @@ export function BingoScreen(props: Props): ReactElement {
 
 function BingoMatch({ room, youId, invitePath, chat, view }: Props & { view: BingoView }): ReactElement {
   const navigate = useNavigate();
-  const { daubs, freeTapped, selected, ballKey, celebrate } = useBingo();
+  const { daubs, selected, ballKey, celebrate } = useBingo();
   const landscape = useMediaQuery('(min-width: 720px) and (min-aspect-ratio: 5/4)');
   // Landscape phones are too short for the wide layout; short takes precedence over wide and narrow.
   const short = useMediaQuery('(max-height: 520px) and (min-aspect-ratio: 5/4) and (min-width: 560px)');
@@ -179,7 +179,7 @@ function BingoMatch({ room, youId, invitePath, chat, view }: Props & { view: Bin
   const leftTopContent = showBoard ? (
     <MasterBoard called={view.called} current={current} />
   ) : showCards ? (
-    <CardArea cards={view.you.cards} daubs={daubs} freeTapped={freeTapped} selected={selected} onSelect={selectCard} onToggle={toggleDaub} />
+    <CardArea cards={view.you.cards} daubs={daubs} selected={selected} onSelect={selectCard} onToggle={toggleDaub} />
   ) : (
     <div className="bz-caller-note" role="status">
       <strong>You are watching</strong>
