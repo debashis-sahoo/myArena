@@ -16,6 +16,9 @@ text below is the current intent.
 
 ### Session 2026-11-05
 
+- Q: Should the pattern catalogue offer more than the nine patterns in the original brief? → A: Yes. Eighteen patterns were added (27 in total) in four groups: Standard (5, unchanged),
+  Letters (Letter T, H, Z, N, C, U, I, Y), Shapes (the four original custom patterns plus Plus Sign, Picture Frame, Heart, Pyramid, Checkers, Railroad Tracks, Sandwich,
+  Four Stamps and Dice Five) and Multi-line (Two Lines). The defaults (Single Line, Four Corners, Blackout) do not change.
 - Q: Should the player tap the FREE space, or should it be marked by default? → A: Marked by default, as on a paper card. The FREE space is shown stamped from the
   start, always counts toward every pattern that includes the centre, cannot be toggled, and has no tooltip.
 
@@ -33,7 +36,7 @@ text below is the current intent.
 
 The host opens a Bingo room and, before anyone plays, makes a few simple choices on one calm setup screen: how many people the
 room holds, the most cards any one player may take (1 to 3, default 1), whether the host plays too, which winning patterns are in play
-(Standard and Custom/Thematic groups), and how balls are called (manual button, or automatically every 5, 8 or 10 seconds). Sensible
+(Standard, Letters, Shapes and Multi-line groups), and how balls are called (manual button, or automatically every 5, 8 or 10 seconds). Sensible
 defaults are pre-selected so a host can start with one tap. The host shares the invite link, watches players arrive with their chosen
 card counts, and starts the match when ready.
 
@@ -47,8 +50,8 @@ person is seated.
 
 1. **Given** I create a Bingo room, **When** the setup screen opens, **Then** I can set the maximum number of people, the card ceiling
    (1 to 3, default 1), whether I also play, the winning patterns (at least one), and the caller mode, and each already has a default value.
-2. **Given** I am setting up, **When** I open the pattern chooser, **Then** I see all nine patterns grouped as Standard and
-   Custom/Thematic, each with a small picture of the shape, and I can switch any of them on or off, or switch a whole group on or off at once.
+2. **Given** I am setting up, **When** I open the pattern chooser, **Then** I see all 27 patterns in four groups (Standard, Letters, Shapes, Multi-line), each with a
+   small picture of the shape, and I can switch any of them on or off, or switch a whole group on or off at once.
 3. **Given** I have not selected any pattern, **When** I try to start, **Then** I am told to pick at least one and the match does not start.
 4. **Given** people are seated, **When** I lower the maximum below the number already seated, **Then** the change is refused with a clear
    message and nobody is removed.
@@ -292,8 +295,10 @@ that when both patterns are claimed the match ends with a results screen for eve
 - People cannot join once the match has started, and nobody can change card counts or the patterns after the start.
 - A claim names a card the player does not own: it is refused with a short message to that player only (not counted as a bogus claim) and changes nothing.
 - A claim arrives for a number called a moment after the claim was submitted: only numbers called before the server received the claim count.
-- A pattern includes the centre (any line through it, Letter X, Kite, Inner Square, Blackout): the FREE space already counts, so the player needs only the other
+- A pattern includes the centre (any line through it, Letter X, Kite, Inner Square, Blackout and most of the Letters and Shapes): the FREE space already counts, so the player needs only the other
   cells of the pattern; patterns that do not touch the centre are unaffected.
+- The host chooses many patterns (up to all 27): the dashboard's tile grid scrolls inside its panel when the screen is too small to show every tile at the 40 px tap size, the
+  chooser scrolls inside its panel, the results list scrolls inside the results panel, and the page itself never scrolls.
 - A submitted card completes several Available patterns at once (for example Blackout also completes lines and corners that nobody has claimed yet): all of
   them are awarded to that claimant in one claim.
 - Several players complete different open patterns on the same draw: each pattern is awarded to the first valid claim that completes it, and the rest receive
@@ -328,8 +333,8 @@ that when both patterns are claimed the match ends with a results screen for eve
 
 **Winning Patterns**
 
-- **FR-009**: The host MUST be able to choose, before the match, which of the nine patterns in the Pattern Catalogue are in play, individually or by group
-  (Standard, Custom/Thematic), with a small picture of each shape shown in the chooser, and MUST choose at least one.
+- **FR-009**: The host MUST be able to choose, before the match, which of the 27 patterns in the Pattern Catalogue are in play, individually or by group
+  (Standard, Letters, Shapes, Multi-line), with a small picture of each shape shown in the chooser, and MUST choose at least one.
 - **FR-010**: Only the chosen patterns MUST appear anywhere in the players' views; unchosen patterns MUST NOT be shown or claimable.
 - **FR-011**: Each chosen pattern MUST be won at most once per match. Its badge MUST read "Available" until won and "Claimed" with the winner's name once won,
   identical on every screen within 1 second of any change.
@@ -473,7 +478,7 @@ that when both patterns are claimed the match ends with a results screen for eve
 
 ## Assumptions
 
-- Terms: a **pattern** is an entry of the Pattern Catalogue (nine in total); **card** is a player's 5 by 5 Bingo card; the **card ceiling** is the "maximum
+- Terms: a **pattern** is an entry of the Pattern Catalogue (27 in total); **card** is a player's 5 by 5 Bingo card; the **card ceiling** is the "maximum
   cards per participant" the host sets; a **daub** is the player's own mark; **New round** is the host's button on the results screen.
 - Bingo follows the platform's room model and Housie's precedent: one host, invite links for players, no joining after the match starts, and the 60-second
   reconnect window. When a seat is released, host handover follows the platform's room rules, as in Housie; the claim pace and lock, the results screen and the new-round defaults are defined in this specification.
@@ -506,10 +511,11 @@ that when both patterns are claimed the match ends with a results screen for eve
 - Out of scope: money or prizes, bots as players, auto-daub or "suggested claims", spectators, saved match history, voice chat, 90-ball variants,
   automated lines in chat, a minimize-to-bar chat on wide screens, and more than 3 cards per player.
 
-## Appendix A: Winning Pattern Catalogue (9)
+## Appendix A: Winning Pattern Catalogue (27)
 
 Positions use rows 1 to 5 from top to bottom and the columns B, I, N, G, O from left to right; the centre is N3 (the FREE space). A pattern counts only
-when every listed cell is the FREE space, or is daubed by the player and called.
+when every listed cell is the FREE space, or is daubed by the player and called. Cell counts include FREE where the pattern covers the centre. Pattern names are
+kept short (the dashboard tiles show them beside a picture).
 
 | Group | Pattern | Cells required |
 |-------|---------|----------------|
@@ -518,10 +524,28 @@ when every listed cell is the FREE space, or is daubed by the player and called.
 | Standard | Letter X | Both diagonals: B1, I2, N3, G4, O5 and O1, G2, N3, I4, B5 (9 cells) |
 | Standard | Letter L | The whole B column plus the whole bottom row: B1 to B5 and I5, N5, G5, O5 (9 cells) |
 | Standard | Blackout (Full House) | All 25 cells, including FREE |
-| Custom/Thematic | Postage Stamp | Any one 2 by 2 block in a corner of the card: B1 I1 B2 I2, or G1 O1 G2 O2, or B4 I4 B5 I5, or G4 O4 G5 O5 (4 cells) |
-| Custom/Thematic | Diamond | N1, I2, G2, B3, O3, I4, G4, N5 (8 cells, the centre is not needed) |
-| Custom/Thematic | Kite | The upper-right 2 by 2 block G1, O1, G2, O2 plus the tail N3, I4, B5 (7 cells) |
-| Custom/Thematic | Inner Square | The inner 3 by 3 block: I2, N2, G2, I3, N3, G3, I4, N4, G4 (9 cells) |
+| Letters | Letter T | The top row plus the N column below it: B1 I1 N1 G1 O1 and N2 N3 N4 N5 (9 cells) |
+| Letters | Letter H | The B column and the O column joined by the middle row: B1 to B5, O1 to O5 and I3, N3, G3 (13 cells) |
+| Letters | Letter Z | The top row, the bottom row and the diagonal between them: B1 to O1, B5 to O5 and G2, N3, I4 (13 cells) |
+| Letters | Letter N | The B column and the O column joined by the diagonal: B1 to B5, O1 to O5 and I2, N3, G4 (13 cells) |
+| Letters | Letter C | The top row, the bottom row and the B column: B1 to O1, B5 to O5 and B2, B3, B4 (13 cells) |
+| Letters | Letter U | The B column, the O column and the bottom row: B1 to B5, O1 to O5 and I5, N5, G5 (13 cells) |
+| Letters | Letter I | The top row, the bottom row and the N column: B1 to O1, B5 to O5 and N2, N3, N4 (13 cells) |
+| Letters | Letter Y | The two upper diagonals meeting in the centre, then the N column down: B1, I2, N3, G2, O1 and N4, N5 (7 cells) |
+| Shapes | Postage Stamp | Any one 2 by 2 block in a corner of the card: B1 I1 B2 I2, or G1 O1 G2 O2, or B4 I4 B5 I5, or G4 O4 G5 O5 (4 cells) |
+| Shapes | Diamond | N1, I2, G2, B3, O3, I4, G4, N5 (8 cells, the centre is not needed) |
+| Shapes | Kite | The upper-right 2 by 2 block G1, O1, G2, O2 plus the tail N3, I4, B5 (7 cells) |
+| Shapes | Inner Square | The inner 3 by 3 block: I2, N2, G2, I3, N3, G3, I4, N4, G4 (9 cells) |
+| Shapes | Plus Sign | The N column crossed by the middle row: N1 to N5 and B3, I3, G3, O3 (9 cells) |
+| Shapes | Picture Frame | The whole outer ring: rows 1 and 5 and columns B and O (16 cells) |
+| Shapes | Heart | I1, G1; B2 to O2; B3 to O3; I4, N4, G4; N5 (16 cells) |
+| Shapes | Pyramid | The bottom row B5 to O5, the three cells above it I4, N4, G4, and N3 (9 cells) |
+| Shapes | Checkers | Every other cell starting at the top-left corner: B1, N1, O1, I2, G2, B3, N3, O3, I4, G4, B5, N5, O5 (13 cells) |
+| Shapes | Railroad Tracks | The second and fourth rows: B2 to O2 and B4 to O4 (10 cells) |
+| Shapes | Sandwich | The top row and the bottom row: B1 to O1 and B5 to O5 (10 cells) |
+| Shapes | Four Stamps | All four 2 by 2 corner blocks: B1 I1 B2 I2, G1 O1 G2 O2, B4 I4 B5 I5 and G4 O4 G5 O5 (16 cells) |
+| Shapes | Dice Five | The four corners and the centre, like the five on a die: B1, O1, N3, B5, O5 (5 cells) |
+| Multi-line | Two Lines | Any two different complete lines (rows, columns or diagonals), which may cross (9 or 10 cells) |
 
 ## Appendix B: Manual Verification Checkpoints
 

@@ -86,8 +86,9 @@ per accepted win during a match. Design, protocol and the browser verification g
 
 Play Online from the Hub. The host sets the player limit (2 to 200, counting the host), the most cards each person may take
 (1 to 3, default 1), whether the host also plays, how balls are called (manual, or automatically every 5, 8 or 10 seconds) and
-which of nine winning patterns are in play (Single Line, Four Corners, Letter X, Letter L, Blackout, Postage Stamp, Diamond,
-Kite, Inner Square). The server generates valid, unique 5 x 5 cards on the standard 75-ball distribution, draws every ball
+which of 27 winning patterns are in play, in four groups: Standard (Single Line, Four Corners, Letter X, Letter L, Blackout), Letters (T, H, Z, N, C, U,
+I, Y), Shapes (Postage Stamp, Diamond, Kite, Inner Square, Plus Sign, Picture Frame, Heart, Pyramid, Checkers, Railroad Tracks, Sandwich, Four Stamps,
+Dice Five) and Multi-line (Two Lines). The server generates valid, unique 5 x 5 cards on the standard 75-ball distribution, draws every ball
 (shown as a letter and number such as G-54) and checks every claim. Players daub called numbers by hand (the FREE space is already
 marked, as on a paper card), and press one BINGO! button: the server checks the selected card against every open pattern,
 awards each one it completes, and only counts cells that are FREE or both called and daubed. The match screen is two columns in

@@ -68,8 +68,8 @@ A card is addressed by its **index** within its owner (0 to 2), shown to the pla
 
 ### Winning Pattern (catalogue entry)
 
-Static data in `shared/src/bingo/patterns.ts` (research R3): `id`, `name`, `group` (`standard` or `custom`), `description`, `illustration` (cell indexes for
-the picture) and `variants` (alternative cell-index lists). A pattern is completed when some variant has all cells satisfied (see Claim).
+Static data in `shared/src/bingo/patterns.ts` (research R3): `id`, `name`, `group` (`standard`, `letters`, `shapes` or `multi`), `description`, `illustration` (cell indexes for
+the picture), an optional `caption` ("any line", "any corner", "any two lines") and `variants` (alternative cell-index lists). The catalogue holds 27 patterns. A pattern is completed when some variant has all cells satisfied (see Claim).
 
 ### PatternState (per chosen pattern, public)
 

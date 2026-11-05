@@ -26,7 +26,7 @@ Landscape: two columns. Portrait: one column in the same order, chat as the draw
 | Region | Host sees | Others see |
 |--------|-----------|------------|
 | Setup column (left, about 60 percent) | Compact rows: **Players** (number field with 10, 25, 50, 100, 200 presets), **Max cards each** (1 to 3 segmented), **I also play** (toggle), **Calling** (Manual, 5s, 8s, 10s segmented), **Patterns** (chooser) | The same values read-only in one summary strip, plus the chosen patterns as read-only picture tiles |
-| Pattern chooser | Nine picture tiles in two groups (Standard 5, Custom/Thematic 4); tap to toggle; a group header toggle for each group; a counter "3 of 9" and a *Reset to defaults* link; pictures use `PatternPicture` | Read-only |
+| Pattern chooser | 27 picture tiles in four groups (Standard 5, Letters 8, Shapes 13, Multi-line 1); tap to toggle; a group header toggle for each group; a counter "3 of 27" and a *Reset to defaults* link; pictures use `PatternPicture`; the chooser scrolls inside its panel (inside the lobby body on narrow screens) and the page never scrolls | Read-only |
 | My cards | A segmented 1..ceiling control (host only when `hostPlays`) | A segmented 1..ceiling control |
 | People column (right) | Invite bar, roster with each person's card-count chip (scrolls inside), Start (disabled with the reason: no pattern, nobody else seated) | Invite bar, roster, "Waiting for the host" |
 | Chat | Platform chat (typed messages plus the usual join and leave lines before the match) | Same |
@@ -79,7 +79,8 @@ states. A non-playing host never sees cards or BINGO!.
 
 ## Results overlay (FR-030)
 
-Over the dimmed match screen: a list of patterns with the winner's name and color or "No winner", and "Called n of 75". Everyone sees **Leave**; the host also
+Over the dimmed match screen: a list of patterns with the winner's name and color or "No winner", and "Called n of 75" (the list scrolls inside the panel when many
+patterns were in play, for example 27). Everyone sees **Leave**; the host also
 sees **New round** (returns everyone to the lobby with default settings).
 
 ## Sizing rules (never scroll the page)
@@ -97,7 +98,8 @@ sees **New round** (returns everyone to the lobby with default settings).
   A host who plays gets a shorter caller console while viewing My Cards so the cards keep their height.
 - **Dashboard fit** (`planPatterns(width, height, count)`): columns come from the measured width (a tile is at least 140 px wide on wide and short screens, 144 px on
   narrow ones so "Available" and names never clip); rows balance the count (5 tiles on a wide area become 3 + 2, not 5 + 1); tile height is at most 78 px and at
-  least the 40 px tap size. If a very small region still cannot fit, only the tile grid scrolls.
+  least the 40 px tap size. If the region cannot fit every tile (often with many patterns chosen, up to 27), only the tile grid scrolls. Pattern names are short enough to
+  fit beside the picture in a tile (about 90 px of text), which is why the catalogue says "Dice Five" and "Checkers".
 - **Ball console**: ball diameter from the region height (largest that leaves room for the count and one row of history chips, with no fixed maximum); history chips
   are 34 px high and grow to a tenth of the console height on tall consoles; the chips fill the
   remaining area.

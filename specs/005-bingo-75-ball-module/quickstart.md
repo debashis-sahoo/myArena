@@ -32,9 +32,9 @@ normal play.
 1. The Hub shows Bingo as playable (no "Coming Soon"); open it and choose Play Online. Confirm the lobby defaults: card ceiling 1, "I also play" on, manual
    calling, three patterns ticked (Single Line, Four Corners, Blackout).
 2. Time creation to Start with defaults (under 10 s) and with every setting changed (under 60 s).
-3. Open the chooser: nine pictures in two groups (Standard, Custom/Thematic), group toggles, counter "n of 9". Untick all and press Start: refused with
+3. Open the chooser: 27 pictures in four groups (Standard, Letters, Shapes, Multi-line), group toggles, counter "n of 27" (3 of 27 by default). Untick all and press Start: refused with
    "Pick at least one pattern". With nobody else seated, Start is refused ("At least 2 players are needed to start." from the platform; the lobby also shows
-   "Wait for at least one more person.").
+   "Wait for at least one more person."). Press all four "All" toggles: "27 of 27"; "Reset to defaults": "3 of 27". The chooser scrolls inside its panel; the page does not.
 4. Join a second window. Lower the limit below the seated count: refused. Lower the ceiling below a player's choice: the choice is clamped and that player
    sees the notice.
 5. Set the limit to 200 with the preset: accepted; 201 clamps; `BINGO_MAX_PLAYERS=50` makes 50 the maximum, and `HOUSIE_MAX_PLAYERS` still governs Housie.
@@ -81,6 +81,11 @@ normal play.
 8. No deadline: complete a pattern, draw several more balls, then claim: accepted. Timing edge: a claim sent just before the ball that would complete the
    pattern is drawn is bogus (only numbers called before the server received it count).
 9. A non-playing host sees pattern status but no BINGO! button and no cards.
+10. All 27 patterns: with `BINGO_DEV_DECK=first-card` the host's card is called row by row (FREE skipped), so cell `i` is called at draw `i + 1` for `i` below 12 and
+    at draw `i` after the centre. Choose all four groups ("27 of 27"), start, and after each draw daub the new number and press BINGO! only when a pattern is due. Expected
+    awards: draw 5 Single Line; 7 Postage Stamp; 10 Two Lines; 18 Inner Square; 19 Railroad Tracks; 20 Kite; 22 Letter T, Letter Y, Diamond, Plus Sign and Heart; 24 the
+    other 16 (Four Corners, Letter X, L, H, Z, N, C, U, I, Blackout, Picture Frame, Pyramid, Checkers, Sandwich, Four Stamps, Dice Five) in one claim. The results list then has 27 rows and scrolls
+    inside its panel.
 
 ### V5. Match end and new round (US8; FR-030)
 

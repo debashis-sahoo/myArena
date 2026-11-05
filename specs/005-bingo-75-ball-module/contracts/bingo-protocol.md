@@ -17,7 +17,7 @@ number, a card, a pattern or a result; there is no such field.
 |--------|--------|-----|--------|
 | `setCeiling` | `value: 1..4` in the shared schema; the Bingo engine accepts 1 to 3 | Host | Sets the card ceiling; clamps all choices to it |
 | `setHostPlays` | `value: boolean` | Host | Host plays (gets a choice) or only calls |
-| `setPatterns` | `ids: string[]` (0 to 40 ids in the shared schema; the engine accepts only the nine Bingo ids, no duplicates; an empty list is allowed so the host can clear the choice, and Start is then refused) | Host | Replaces the chosen patterns |
+| `setPatterns` | `ids: string[]` (0 to 40 ids in the shared schema; the engine accepts only the 27 Bingo ids, no duplicates; an empty list is allowed so the host can clear the choice, and Start is then refused) | Host | Replaces the chosen patterns |
 | `setCaller` | `mode: 'manual' \| 'auto'`, `intervalMs?: 5000 \| 8000 \| 10000` | Host | Initial caller mode |
 | `setCards` | `count: 1..3` | Anyone seated (the host only when `hostPlays`) | Sets own card count; refused above the ceiling |
 

@@ -35,13 +35,14 @@ Method and environment:
 | V12 Second convergence checks | T091 to T093 | PASS for T091 and T093; T092 (human stopwatch) pending |
 | V13 Render deployment | T079 | scripted live checks PASS; two-device run and replacement reconnect pending |
 | V14 FREE marked by default | T094 to T104 (change request of 2026-11-05) | PASS locally; not yet deployed to Render |
+| V15 27 patterns | T105 to T114 (change request of 2026-11-05) | PASS locally; not yet deployed to Render |
 
 ## V1. Host setup (US1; SC-001)
 
 | Scenario | Expected | Observed | Result |
 |----------|----------|----------|--------|
 | Hub card | Bingo shows as playable; launch modal offers Play Online only | "Active" badge; "Play Bingo" modal with Play Online | PASS |
-| Lobby defaults | ceiling 1, host plays, Single Line + Four Corners + Blackout, manual, capacity 10 | exactly that, "3 of 9" | PASS |
+| Lobby defaults | ceiling 1, host plays, Single Line + Four Corners + Blackout, manual, capacity 10 | exactly that, "3 of 9" at the time ("3 of 27" since the catalogue grew, V15) | PASS |
 | `setCeiling` 3 / 4 / 0 / 2.5 | 3 ok; 4 refused "Choose 1 to 3 cards."; 0 and 2.5 rejected by schema | as expected; ceiling stayed 3 after refusals | PASS |
 | `setPatterns` unknown, duplicate, `[]` | unknown and duplicate refused; `[]` allowed | as expected; Start then refused "Pick at least one pattern." | PASS |
 | Start with nobody else | refused | `NOT_ENOUGH_PLAYERS`: "At least 2 players are needed to start." (the platform check runs before the engine's "Wait for at least one more person.") | PASS (message text differs; docs updated) |
@@ -53,7 +54,7 @@ Method and environment:
 | Capacity below seated; 1; 200; 201 | refused; out of range; ok; refused | `CAPACITY_BELOW_PLAYERS`; `CAPACITY_OUT_OF_RANGE`; ok; `CAPACITY_OUT_OF_RANGE` | PASS |
 | `BINGO_MAX_PLAYERS=50` | Bingo max 50; Housie unaffected | 50 ok / 51 refused; Housie stays 200 (and `HOUSIE_MAX_PLAYERS=60` caps only Housie) | PASS |
 | Card audit log | 500 of 500 valid and unique | "bingo card audit: 500 of 500 valid and unique" | PASS |
-| Browser lobby | setup column, nine pattern pictures in two groups, group "All" toggles, "n of 9", read-only summary for non-hosts, people list with card counts | seen; join lines appear in the lobby chat | PASS |
+| Browser lobby | setup column, the pattern pictures in groups, group "All" toggles, "n of N", read-only summary for non-hosts, people list with card counts | seen with nine patterns in two groups; re-checked with 27 in four groups in V15; join lines appear in the lobby chat | PASS |
 | SC-001 timing | under 10 s with defaults, under 60 s changing everything | script timing in V11: 0.50 s with defaults, 0.44 s changing every setting (a lower bound, no human reading time); 3 clicks with defaults, 10 changing everything | PASS (script); human timing stays with T078 |
 
 ## V2. Cards, FREE space and daubing (US2, US3; SC-002 to SC-004)
@@ -133,7 +134,7 @@ Scripted (47 checks) and in the browser:
 | All patterns claimed | calling stops; results list each pattern and winner | browser "Match over - Called 24 of 75 - Single Line / Four Corners / Blackout: Jolly Tiger"; Leave and New round (host) | PASS |
 | 75 balls with an unclaimed pattern | results show no winner | `finished` with three results and no winner | PASS |
 | Last card holder leaves (host only calling) | match ends at once | `playerLeft` then `finished` in 1 ms | PASS |
-| New round | defaults restored: ceiling 1, default patterns, manual, host plays on, card counts 1; capacity kept | browser lobby: 1, "3 of 9", Manual, "I also play" on, players 10; non-host `room:reset` refused | PASS |
+| New round | defaults restored: ceiling 1, default patterns, manual, host plays on, card counts 1; capacity kept | browser lobby: 1, "3 of 9" ("3 of 27" now), Manual, "I also play" on, players 10; non-host `room:reset` refused | PASS |
 
 ## V6. Pure chat (US6; SC-010)
 
@@ -323,12 +324,37 @@ Local run of the rebuilt app, same method as V11; `BINGO_DEV_DECK=first-card`, `
 
 The Render service still runs the previous build (the callout version) until this change is pushed and deployed; V13 describes that build.
 
+## V15. 27 patterns (change request of 2026-11-05)
+
+The catalogue grew from nine to 27 patterns (Letters T, H, Z, N, C, U, I, Y; Shapes Plus Sign, Picture Frame, Heart, Pyramid, Checkers, Railroad Tracks, Sandwich, Four
+Stamps, Dice Five; Multi-line Two Lines) as a data change in `shared/src/bingo/patterns.ts`; the original "Custom/Thematic" group became "Shapes". No evaluator, server or
+protocol code changed. Specs reworded: `spec.md` (Clarifications, User Story 1, FR-009, edge cases, assumptions, Appendix A), `plan.md` (decision 8), `research.md` R3 and R9,
+`data-model.md`, `contracts/bingo-protocol.md`, `contracts/match-screen-layout.md`, `quickstart.md` (V1 step 3, V4 step 10), `README.md`.
+
+Local run of the rebuilt app (`BINGO_DEV_DECK=first-card`, `BINGO_CLAIM_PACE_MS=300`), same method as V11.
+
+| Check | Observed | Result |
+|-------|----------|--------|
+| Catalogue shape (independent script: each pattern re-derived from rows, columns and diagonals, not copied) | 27 unique ids; groups Standard 5, Letters 8, Shapes 13, Multi-line 1; every cell index 0 to 24; every pattern except Two Lines matches its derivation; Single Line is the 12 lines; no two patterns share the same cells | PASS |
+| Two Lines | 66 distinct variants, each the union of two different lines (9 or 10 cells); top row + O column completes it, the top row alone does not | PASS |
+| Evaluator, every single-shape pattern | completes with exactly its non-FREE cells daubed and called; fails when any one cell is not daubed or not called; FREE alone never completes anything | PASS |
+| Server, all 27 chosen (`setPatterns` with 27 ids) | accepted; every claim awarded exactly what the independent model predicts: draw 5 Single Line; 7 Postage Stamp; 10 Two Lines; 18 Inner Square; 19 Railroad Tracks; 20 Kite; 22 Letter T, Letter Y, Diamond, Plus Sign, Heart; 24 the other 16 in one claim; 27 of 27 won across 8 claims, match finished with 27 result rows, the other player saw every award | PASS |
+| Browser lobby at the nine sizes (host) | 27 tiles in four groups (STANDARD, LETTERS, SHAPES, MULTI-LINE), counter "3 of 27" with the three defaults pressed; the four "All" toggles give "27 of 27"; no page scroll and no clipped tile text; the chooser scrolls inside its panel (inside the lobby body on narrow screens) | PASS |
+| Browser lobby (player) at the nine sizes | read-only summary shows all 27 chosen patterns; no page scroll, nothing clipped | PASS |
+| Browser match with all 27 chosen at the nine sizes | 27 tiles on the dashboard for player and host; BINGO! inside the viewport; no page scroll; card cells at least 55 px (40 required); no clipped tile text; the tile grid scrolls inside its panel on phones and 1024 x 768 and needs no scrolling at 1366 x 768 and above | PASS |
+| Results with 27 patterns (1366 x 768 and 390 x 844) | the host claimed once with the full card and won all 27; the overlay lists 27 rows, scrolls inside its panel, fits the viewport and keeps Leave and New round visible | PASS |
+| Names that clipped | "Corners and Centre" (105 px needed, 90 available) and "Checkerboard" (84 of 80 px at 1920 x 1080) were clipped in dashboard tiles; renamed "Dice Five" and "Checkers", then no tile clipped at any size | fixed |
+| Evidence | retaken: lobby images at the nine sizes now show the 27-pattern chooser; added `*-lobby-27-patterns*.jpg`, `*-match-27-patterns-player.jpg` and `*-results-27-patterns.jpg` at the sizes where they were taken | done |
+| `npm run build` and `npm run smoke` | pass | PASS |
+
+The Render service still runs the previous build until this change is pushed and deployed.
+
 ## Known limits and pending items
 
 - **T092, a person-timed SC-001**: not run (it needs a person). Procedure: start the stopwatch on the hub's PLAY NOW for Bingo, stop when the match screen shows, once
   accepting every default (under 10 s; 3 clicks plus sharing the link) and once changing the player limit, max cards, my cards, calling and patterns (under 60 s); record
   both times here and add the run to the T078 sign-off.
-- **Pattern dashboard on the smallest phones**: with nine patterns, or a host who plays, at 320 x 568 the tile grid shows two rows and scrolls inside its panel
+- **Pattern dashboard on the smallest phones**: with many patterns chosen (nine or more), or a host who plays, at 320 x 568 the tile grid shows two rows and scrolls inside its panel
   (the page never scrolls); everything stays reachable.
 - **SC-013 and SC-014** (smooth animation on a mid-range phone, a first-time player finishing a claim in 2 minutes, a stakeholder rating of 4 out
   of 5) and a **human stopwatch for SC-001** (T092): not measured; they need people and devices. **T078 stays open.**

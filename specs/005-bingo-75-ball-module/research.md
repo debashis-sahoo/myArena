@@ -35,12 +35,13 @@ is correct. With about 10^20 possible cards a collision never happens in practic
 **Alternatives**: Sorted columns (rejected: not part of the 75-ball standard and the spec does not ask for it); pre-computed card tables (rejected:
 large data, no benefit).
 
-## R3. Winning patterns as data: one evaluator for all nine
+## R3. Winning patterns as data: one evaluator for all 27
 
 **Decision**: `shared/src/bingo/patterns.ts` holds the catalogue (spec Appendix A) in catalogue order. Each pattern has `id`, `name`, `group`
-(`standard` or `custom`), a one-line `description`, an `illustration` (the cell indexes drawn in the picture) and `variants`: a list of alternative
-cell-index lists. A pattern is **completed** by a card when at least one variant has every cell *satisfied*; a cell is satisfied when the claimant
-daubed it **and** it is the FREE cell or its number is in the server's call list at the moment the claim is received (FR-024).
+(`standard`, `letters`, `shapes` or `multi`), a one-line `description`, an `illustration` (the cell indexes drawn in the picture) and `variants`: a list of alternative
+cell-index lists. A pattern is **completed** by a card when at least one variant has every cell *satisfied*; the FREE cell is always satisfied and any other cell is
+satisfied when the claimant daubed it **and** its number is in the server's call list at the moment the claim is received (FR-024). The catalogue grew from nine to 27
+patterns on 2026-11-05 as a pure data change: no evaluator, server rule or protocol change was needed.
 
 | Pattern | Variants |
 |---------|----------|
@@ -49,19 +50,24 @@ daubed it **and** it is the FREE cell or its number is in the server's call list
 | `letter-x` | 1: both diagonals, 9 cells |
 | `letter-l` | 1: whole B column plus bottom row, 9 cells |
 | `blackout` | 1: all 25 cells |
+| `letter-t`, `letter-h`, `letter-z`, `letter-n`, `letter-c`, `letter-u`, `letter-i`, `letter-y` | 1 each: 9, 13, 13, 13, 13, 13, 13 and 7 cells |
 | `postage-stamp` | 4: the 2 by 2 block in each corner |
 | `diamond` | 1: `[2, 6, 8, 10, 14, 16, 18, 22]` |
 | `kite` | 1: `[3, 4, 8, 9, 12, 16, 20]` |
 | `inner-square` | 1: the inner 3 by 3 block, 9 cells |
+| `plus-sign`, `picture-frame`, `heart`, `pyramid`, `checkers`, `railroad-tracks`, `sandwich`, `four-stamps`, `dice-five` | 1 each: 9, 16, 16, 9, 13, 10, 10, 16 and 5 cells |
+| `two-lines` | 66: the union of every pair of different lines out of the 12 (built in code from the same line list as Single Line) |
 
-Illustrations show the first variant for "any" patterns (the top row for Single Line, the top-left block for Postage Stamp) with a small caption
-"any line" or "any corner". The evaluator is pure and used only by the server; the client imports the catalogue to draw pictures and never to decide
-a claim.
+Illustrations show the first variant for "any" patterns (the top row for Single Line, the top-left block for Postage Stamp, the top two rows for Two Lines) with a
+small caption "any line", "any corner" or "any two lines". The evaluator is pure and used only by the server; the client imports the catalogue to draw pictures and
+never to decide a claim. Names stay short because the dashboard tile shows the name beside the picture ("Corners and Centre" and "Checkerboard" were clipped in the
+tiles and became "Dice Five" and "Checkers").
 
 **Rationale**: One data-driven catalogue keeps chooser, tiles and validation in agreement and makes adding a pattern a data change. A single `variants`
-shape covers "any of" patterns and fixed shapes without separate rule kinds (Housie needed four kinds for 40 patterns; nine do not).
+shape covers "any of" patterns and fixed shapes without separate rule kinds (Housie needed four kinds for 40 patterns; 27 need none). The shared schema accepts up
+to 40 pattern ids, so 13 more fit without touching it.
 
-**Alternatives**: Nine hand-written validators (rejected: drift from the pictures); reusing Housie's evaluator (rejected: it is built around 3 by 9
+**Alternatives**: One hand-written validator per pattern (rejected: drift from the pictures); reusing Housie's evaluator (rejected: it is built around 3 by 9
 tickets and per-row cell positions).
 
 ## R4. Daubs and claim authority
@@ -165,9 +171,9 @@ removes the need for ordering rules (no Full House sequencing as in Housie).
   the right and the chat as a drawer. For `n` cards in a `W x H` region the planner tries **stack** (n rows), **row** (n
   columns, for two cards on wide regions) and **tabs**; it takes the largest cell that is at least 40 px (FR-035) and falls back to tabs, or takes tabs when their cell is at least 1.5 times taller, where one
   card fills the region and a tab strip names "Card 1 of 3". The selected card has a gold outline and its tab is gold. Cell text scales with the cell.
-- **Pattern dashboard**: at most nine tiles, so one density: each tile is a mini 5 by 5 SVG picture, the name and the badge. The planner picks columns
-  from the measured width; the BINGO! button sits at the end of the dashboard header on wide screens and as a full-width bar on narrow ones. If a very
-  small screen cannot fit all tiles at the 40 px tap size, the tile grid (not the page) scrolls.
+- **Pattern dashboard**: from one to 27 tiles at one density: each tile is a mini 5 by 5 SVG picture, the name and the badge. The planner picks columns
+  from the measured width; the BINGO! button sits at the end of the dashboard header on wide screens and as a full-width bar on narrow ones. If the screen
+  cannot fit all tiles at the 40 px tap size (common with many patterns chosen), the tile grid (not the page) scrolls.
 - **Ball console**: ball diameter from the region height, "Called n of 75", and a history grid of the newest-first chips that fit plus a "View all"
   chip opening the full 5 by 15 board as an overlay (every called ball reachable, FR-021).
 - **Narrow or portrait**: one column (compact ball row, cards, dashboard) with chat in a drawer opened from a header button that shows an unread pill while closed (FR-032); the button replaced a bottom bar that kept a permanent 44 px strip (SC-011).

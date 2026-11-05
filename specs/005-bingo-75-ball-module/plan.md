@@ -16,10 +16,10 @@ Technical approach (details in [research.md](research.md)):
 
 - **Rendering**: DOM and CSS with inline SVG; CSS sphere ball revealed with the Web Animations API; CSS neon dauber with a short stamp; SVG pattern pictures.
   No canvas or 3D library, no new dependencies.
-- **Authority**: the server owns the shuffled deck, cards, daubs, the per-card FREE-tap flag, claim evaluation, caller timers and results. Clients send
+- **Authority**: the server owns the shuffled deck, cards, daubs, claim evaluation, caller timers and results. Clients send
   intents (`draw`, `auto`, `daubs`, `bingo`, lobby settings); the server broadcasts small public events and sends private snapshots and notices only to the
   person concerned.
-- **Patterns**: one data-driven catalogue of nine patterns in `shared/`, each a list of alternative cell sets (`variants`), and one pure evaluator used by
+- **Patterns**: one data-driven catalogue of 27 patterns in `shared/`, each a list of alternative cell sets (`variants`), and one pure evaluator used by
   the server; the same catalogue draws the chooser and the tiles.
 - **Claim**: `{ card }` only. The server evaluates the card against all open patterns, awards every one it completes in a single `claimed` event, or
   answers privately with `tooLate` or `bogus` (3 in a row lock claims for 1 minute).
@@ -57,7 +57,7 @@ mid-range phone; re-fit within 0.5 s of resize or rotation
 variables; Render plan limits (one instance, 512 MB) unchanged; no new required environment variables (`BINGO_MAX_PLAYERS` is optional with a default)
 
 **Scale/Scope**: Rooms of 2 to 200 people (configurable ceiling), up to 3 cards each (600 cards in the largest room); existing `MAX_ROOMS` 100 plus the
-`MAX_SOCKETS` guard (default 1500); 9 patterns; one caller timer per match; about 100 bytes per ball event
+`MAX_SOCKETS` guard (default 1500); 27 patterns; one caller timer per match; about 100 bytes per ball event
 
 ## Constitution Check
 
@@ -110,7 +110,7 @@ shared/src/
 ├── index.ts                        # CHANGE: re-export ./bingo/*
 └── bingo/                          # NEW
     ├── card.ts                     # BingoCard type, cell helpers (index <-> row/col, letter column), validateBingoCard
-    ├── patterns.ts                 # 9-pattern catalogue (data), variants, illustrations
+    ├── patterns.ts                 # 27-pattern catalogue (data), variants, illustrations
     ├── evaluate.ts                 # Pure evaluator over (pattern, card, daubs, called)
     ├── letters.ts                  # BINGO_BALLS, BINGO_LETTERS, column ranges, ballLetter(n)
     ├── timing.ts                   # BINGO_CARD_CEILING_MAX, defaults (neutral Housie timing constants reused)
@@ -207,6 +207,10 @@ These details were left open by the spec; the plan picks a default so tasks can 
    another game's folder (R15); no behavior change.
 7. **One cross-game import**: the match screen reuses `LobbyDialog` from `client/src/games/ludo/MatchDialogs.tsx`, as Housie does; moving it to a platform
    folder is left as a later clean-up (R15).
+8. **27 patterns in four groups** (changed 2026-11-05): 18 patterns were added as data (Letters, more Shapes, Two Lines) with no change to the evaluator, server or
+   protocol; the original "Custom/Thematic" group became "Shapes". Names are kept short ("Dice Five", "Checkers") because longer ones clipped in the dashboard tiles.
+   With many patterns chosen the dashboard tile grid, the chooser and the results list scroll inside their panels; the page never scrolls. The shared schema
+   allows 40 ids, so 13 more patterns fit without a schema change.
 
 ## Complexity Tracking
 
