@@ -1,8 +1,8 @@
 # myArena
 
 myArena is a multiplayer game platform: a colorful **myArena Hub**, private rooms with shareable invite links, a single
-authoritative host per room, real-time presence and chat. Ludo and Housie are live on the Hub; Snakes & Ladders and
-Bingo are coming soon.
+authoritative host per room, real-time presence and chat. Ludo, Housie and Bingo are live on the Hub; Snakes & Ladders is
+coming soon.
 
 Repository: https://github.com/debashis-sahoo/myArena.git
 
@@ -17,6 +17,7 @@ Repository: https://github.com/debashis-sahoo/myArena.git
 | `specs/001-platform-hub-rooms/` | Spec, plan, contracts, tasks and verification notes |
 | `specs/002-ludo-game-module/` | Ludo: spec, plan, contracts, tasks, quickstart and verification notes |
 | `specs/003-housie-tambola-module/` | Housie: spec, plan, contracts, tasks, quickstart, mockups and verification notes |
+| `specs/005-bingo-75-ball-module/` | Bingo: spec, plan, contracts, tasks, quickstart and verification notes |
 
 The server serves the built client from the same origin, so production needs one process, one port and no CORS.
 
@@ -81,6 +82,19 @@ console over chat) and stacked with a chat drawer in portrait, with no page scro
 per accepted win during a match. Design, protocol and the browser verification guide are in
 [specs/003-housie-tambola-module](specs/003-housie-tambola-module/).
 
+## Bingo (75-ball)
+
+Play Online from the Hub. The host sets the player limit (2 to 200, counting the host), the most cards each person may take
+(1 to 3, default 1), whether the host also plays, how balls are called (manual, or automatically every 5, 8 or 10 seconds) and
+which of nine winning patterns are in play (Single Line, Four Corners, Letter X, Letter L, Blackout, Postage Stamp, Diamond,
+Kite, Inner Square). The server generates valid, unique 5 x 5 cards on the standard 75-ball distribution, draws every ball
+(shown as a letter and number such as G-54) and checks every claim. Players daub numbers by hand, including the FREE space
+(a glowing tooltip reminds them), and press one BINGO! button: the server checks the selected card against every open pattern,
+awards each one it completes, and only counts cells that are both called (or FREE) and daubed. The match screen is two columns in
+landscape (cards over patterns; ball console over chat), a compact two-column layout on landscape phones, and stacked with a chat
+drawer in portrait, with no page scrolling. Chat shows only typed messages; the server never writes a system line during a match.
+Design, protocol and the browser verification guide are in [specs/005-bingo-75-ball-module](specs/005-bingo-75-ball-module/).
+
 ## Environment variables
 
 | Variable | Default | Purpose |
@@ -92,6 +106,7 @@ per accepted win during a match. Design, protocol and the browser verification g
 | `RECONNECT_WINDOW_MS` | `60000` | How long a disconnected player keeps their seat |
 | `REMOVAL_COOLDOWN_MS` | `60000` | How long a removed player must wait before rejoining |
 | `HOUSIE_MAX_PLAYERS` | `200` | Optional. The most people a Housie room may hold (2 to 500); raise or lower it without code changes |
+| `BINGO_MAX_PLAYERS` | `200` | Optional. The most people a Bingo room may hold (2 to 500); independent of `HOUSIE_MAX_PLAYERS` |
 | `MAX_SOCKETS` | `1500` | Optional. New rooms and new seats are refused (`SERVER_BUSY`) above this many connections; returning players are never refused |
 
 No secrets are required.
@@ -121,3 +136,14 @@ Same rule as above: read only outside production, ignored (with a startup warnin
 | `HOUSIE_DEV_BALLS` | `42,7,19` | The call order starts with these numbers |
 | `HOUSIE_DEV_TICKET_AUDIT` | `500` | At start-up, generates N tickets and logs how many are valid and unique |
 | `HOUSIE_CLAIM_PACE_MS` | `300` | Replaces the 2000 ms pause between a player's claims |
+
+### Bingo development-only variables
+
+Same rule as above: read only outside production, ignored (with a startup warning) in production.
+
+| Variable | Example | Effect |
+|----------|---------|--------|
+| `BINGO_DEV_DECK` | `first-card` | The call order starts with the first seated card holder's first card (top row first, then row by row, skipping FREE), so a valid claim is reproducible |
+| `BINGO_DEV_BALLS` | `54,7,19` | The call order starts with these numbers |
+| `BINGO_DEV_CARD_AUDIT` | `500` | At start-up, generates N cards and logs how many are valid and unique |
+| `BINGO_CLAIM_PACE_MS` | `300` | Replaces the 2000 ms pause between a player's claims |

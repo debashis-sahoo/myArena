@@ -61,13 +61,15 @@ export const GAMES: readonly GameDefinition[] = [
     id: 'bingo',
     name: 'Bingo',
     tagline: 'Match the balls, fill the card. Quick rounds with big cheers.',
-    status: 'coming_soon',
+    status: 'active',
     minPlayers: 2,
-    maxPlayers: 4,
-    defaultCapacity: 4,
+    maxPlayers: 200,
+    defaultCapacity: 10,
     supportsAi: false,
     seatColors: ['red', 'green', 'yellow', 'blue'],
     theme: { accent: '#4fb6ff', accent2: '#8a5cff' },
+    roster: true,
+    quietChat: true,
   },
 ];
 

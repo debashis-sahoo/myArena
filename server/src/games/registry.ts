@@ -1,4 +1,5 @@
 import { getGame } from '@myarena/shared';
+import { createBingoEngine } from './bingo/engine.js';
 import { createHousieEngine } from './housie/engine.js';
 import { createLudoEngine } from './ludo/engine.js';
 import { placeholderEngine } from './placeholderEngine.js';
@@ -61,6 +62,7 @@ export interface GameEngine {
 const engines = new Map<string, GameEngine>([
   ['ludo', createLudoEngine()],
   ['housie', createHousieEngine()],
+  ['bingo', createBingoEngine()],
 ]);
 
 export function getEngine(gameId: string): GameEngine {

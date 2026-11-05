@@ -362,7 +362,7 @@ const scenarios: Scenario[] = [
     async (url) => {
       const c = await connect(url, 'Odd');
       fail(await emit(c, EVENTS.ROOM_JOIN, { gameId: 'ludo', roomId: 'ABCDEFGH', guest: c.guest, extra: 1 }), 'INVALID_PAYLOAD');
-      fail(await emit(c, EVENTS.ROOM_CREATE, { gameId: 'bingo', mode: 'online', guest: c.guest }), 'GAME_UNAVAILABLE');
+      fail(await emit(c, EVENTS.ROOM_CREATE, { gameId: 'snakes-and-ladders', mode: 'online', guest: c.guest }), 'GAME_UNAVAILABLE');
       fail(await emit(c, EVENTS.ROOM_CREATE, { gameId: 'ludo', mode: 'online', guest: { ...c.guest, guestId: 'nope' } }), 'INVALID_PAYLOAD');
       fail(await emit(c, EVENTS.CHAT_SEND, { text: 'hi' }), 'NOT_IN_ROOM');
       fail(await emit(c, EVENTS.ROOM_START, {}), 'NOT_IN_ROOM');

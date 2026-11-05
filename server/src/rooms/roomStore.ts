@@ -62,8 +62,8 @@ export class RoomStore {
     const room = new Room(this.newRoomId(), game, mode, capacity, this.events, {
       reconnectWindowMs: config.reconnectWindowMs,
       removalCooldownMs: config.removalCooldownMs,
-      // Roster games take their player ceiling from the operator setting (HOUSIE_MAX_PLAYERS, default 200).
-      maxPlayers: game.roster ? config.housieMaxPlayers : game.maxPlayers,
+      // Roster games take their player ceiling from the operator setting for that game (HOUSIE_MAX_PLAYERS, BINGO_MAX_PLAYERS).
+      maxPlayers: game.roster ? (config.rosterMaxPlayers[game.id] ?? game.maxPlayers) : game.maxPlayers,
     });
     const playerId = room.seedCreator(guest, socketId, bots);
     this.rooms.set(room.roomId, room);

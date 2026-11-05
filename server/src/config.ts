@@ -15,6 +15,9 @@ function clampedIntFromEnv(name: string, fallback: number, min: number, max: num
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
+const housieMaxPlayers = clampedIntFromEnv('HOUSIE_MAX_PLAYERS', 200, 2, 500);
+const bingoMaxPlayers = clampedIntFromEnv('BINGO_MAX_PLAYERS', 200, 2, 500);
+
 export const config = {
   /** Render injects PORT (10000); 10000 is also the local default. */
   port: intFromEnv('PORT', 10000),
@@ -24,7 +27,11 @@ export const config = {
   reconnectWindowMs: intFromEnv('RECONNECT_WINDOW_MS', RECONNECT_WINDOW_MS),
   removalCooldownMs: intFromEnv('REMOVAL_COOLDOWN_MS', REMOVAL_COOLDOWN_MS),
   /** Housie seat cap (env HOUSIE_MAX_PLAYERS), clamped to 2..500. */
-  housieMaxPlayers: clampedIntFromEnv('HOUSIE_MAX_PLAYERS', 200, 2, 500),
+  housieMaxPlayers,
+  /** Bingo seat cap (env BINGO_MAX_PLAYERS), clamped to 2..500. */
+  bingoMaxPlayers,
+  /** Player ceiling per roster game id. */
+  rosterMaxPlayers: { housie: housieMaxPlayers, bingo: bingoMaxPlayers } as Record<string, number>,
   /** Maximum concurrent sockets (env MAX_SOCKETS). */
   maxSockets: intFromEnv('MAX_SOCKETS', 1500),
   /** server/dist/<file>.js -> repo/client/dist. Same relative hop from server/src when run with tsx. */

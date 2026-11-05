@@ -1,30 +1,4 @@
-import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
-
-/** Measures an element's content box with one ResizeObserver; integer sizes, 0,0 until measured. */
-export function useRegionSize<T extends HTMLElement>(): { ref: RefObject<T | null>; width: number; height: number } {
-  const ref = useRef<T | null>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const measure = (): void => {
-      const width = Math.max(0, Math.floor(el.clientWidth));
-      const height = Math.max(0, Math.floor(el.clientHeight));
-      setSize((prev) => (prev.width === width && prev.height === height ? prev : { width, height }));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    window.addEventListener('orientationchange', measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('orientationchange', measure);
-    };
-  }, []);
-
-  return { ref, width: size.width, height: size.height };
-}
+export { useRegionSize } from '../../state/viewport';
 
 export type TicketPlan = { mode: 'stack' | 'grid' | 'tabs'; cell: number };
 

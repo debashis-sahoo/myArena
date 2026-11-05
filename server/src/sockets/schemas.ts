@@ -49,8 +49,8 @@ export const chatSendSchema = z.object({ text: z.string().max(2000) }).strict();
 const autoInterval = z.union([z.literal(5000), z.literal(8000), z.literal(10000)]); // mirrors AUTO_INTERVALS_MS
 
 /**
- * Game intents. Ludo: a roll or a pawn choice. Housie: host settings, calling and player marks/claims.
- * There is deliberately no field for a die value, a ball number, ticket contents or a result.
+ * Game intents. Ludo: a roll or a pawn choice. Housie and Bingo: host settings, calling and player marks/daubs and claims.
+ * There is deliberately no field for a die value, a ball number, ticket or card contents, a pattern result or a winner.
  */
 export const gameActionSchema = z.union([
   z.object({ type: z.literal('roll') }).strict(),
@@ -89,4 +89,23 @@ export const gameActionSchema = z.union([
   z
     .object({ type: z.literal('claim'), combo: z.string().min(1).max(40), ticket: z.number().int().min(0).max(3) })
     .strict(),
+  z.object({ type: z.literal('setCards'), count: z.number().int().min(1).max(3) }).strict(),
+  z
+    .object({
+      type: z.literal('daubs'),
+      changes: z
+        .array(
+          z
+            .object({
+              card: z.number().int().min(0).max(2),
+              cell: z.number().int().min(0).max(24),
+              on: z.boolean(),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(30),
+    })
+    .strict(),
+  z.object({ type: z.literal('bingo'), card: z.number().int().min(0).max(2) }).strict(),
 ]);
