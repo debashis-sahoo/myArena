@@ -25,7 +25,8 @@ export const createRoomSchema = z
   .object({
     gameId,
     mode: z.enum(['online', 'ai']),
-    botCount: z.number().int().min(1).max(3).optional(),
+    botCount: z.number().int().min(1).max(4).optional(),
+    capacity: z.number().int().min(2).max(500).optional(),
     guest,
   })
   .strict();
@@ -50,6 +51,7 @@ const autoInterval = z.union([z.literal(5000), z.literal(8000), z.literal(10000)
 
 /**
  * Game intents. Ludo: a roll or a pawn choice. Housie and Bingo: host settings, calling and player marks/daubs and claims.
+ * UNO: play, draw, keep, call and catch; there is no field for a card face the sender does not hold, a result or a winner.
  * There is deliberately no field for a die value, a ball number, ticket or card contents, a pattern result or a winner.
  */
 export const gameActionSchema = z.union([
@@ -108,4 +110,16 @@ export const gameActionSchema = z.union([
     })
     .strict(),
   z.object({ type: z.literal('bingo'), card: z.number().int().min(0).max(2) }).strict(),
+  z
+    .object({
+      type: z.literal('playCard'),
+      card: z.number().int().min(0).max(107),
+      color: z.enum(['red', 'yellow', 'green', 'blue']).optional(),
+    })
+    .strict(),
+  z.object({ type: z.literal('drawCard') }).strict(),
+  z.object({ type: z.literal('keepCard') }).strict(),
+  z.object({ type: z.literal('callUno') }).strict(),
+  z.object({ type: z.literal('catchPlayer'), player: z.string().min(1).max(40) }).strict(),
+  z.object({ type: z.literal('playAgain') }).strict(),
 ]);

@@ -6,6 +6,8 @@ import { HousieScreen } from './housie/HousieScreen';
 import './bingo/bingoStore';
 import { BingoLobby } from './bingo/BingoLobby';
 import { BingoScreen } from './bingo/BingoScreen';
+import './uno/unoStore';
+import { UnoScreen } from './uno/UnoScreen';
 import { PlaceholderBoard } from './placeholder/PlaceholderBoard';
 import type { GameBoardProps } from './types';
 
@@ -19,6 +21,7 @@ const matchScreens: Record<string, ComponentType<MatchScreenProps>> = {
   ludo: LudoScreen,
   housie: HousieScreen,
   bingo: BingoScreen,
+  uno: UnoScreen,
 };
 
 export function getMatchScreen(gameId: string): ComponentType<MatchScreenProps> | undefined {

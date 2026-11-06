@@ -87,6 +87,44 @@
   min-height: 190px;
 }
 
+/* Generic lobby: the chat gives up height before the seats do, and only the seat list scrolls when both cannot fit. */
+.room-shell.side .panel-scroll + .docked-chat {
+  flex: 1 1 0;
+  min-height: 100px;
+}
+
+.room-shell.side .panel-scroll {
+  display: flex;
+  flex-direction: column;
+}
+
+.room-shell.side .panel-scroll > .lobby {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.room-shell.side .lobby > * {
+  flex: none;
+}
+
+.room-shell.side .lobby > section[aria-label='Players'] {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.room-shell.side .lobby > section[aria-label='Players'] > .player-list {
+  flex: 0 1 auto;
+  min-height: 96px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 3px;
+}
+
 /* ----- portrait or narrow: board on top, panel below ----- */
 .room-shell.stack {
   min-height: 100dvh;
@@ -372,12 +410,18 @@
   flex: 1 1 130px;
 }
 
-/* The host's Start button stays reachable while the lobby scrolls (short landscape screens). */
+/* Side layout: the seat list shrinks and scrolls itself, so the controls stay in flow and never cover a seat row. */
 .room-shell.side .host-controls {
-  position: sticky;
-  bottom: 0;
-  z-index: 2;
-  background: #21115a;
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.room-shell.side .host-controls .panel-title {
+  margin: 0;
+}
+
+.room-shell.side .host-controls .start-btn {
+  min-height: 44px;
 }
 
 .roster-capacity {
@@ -428,6 +472,34 @@
   font-size: 1.05rem;
 }
 
+.fill-ai-btn {
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 12px;
+  font-size: 0.9rem;
+}
+
+.fill-ai {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+
+.fill-ai-q {
+  font-weight: 800;
+}
+
+.fill-ai-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.fill-ai-actions .btn {
+  flex: 1 1 0;
+}
+
 .waiting {
   text-align: center;
   padding: 6px;
@@ -446,5 +518,13 @@
 
   .player {
     padding: 3px 8px;
+  }
+
+  /* Seats scroll in their own list; the Start button stays reachable while the panel scrolls. */
+  .room-shell.side .host-controls {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: #21115a;
   }
 }

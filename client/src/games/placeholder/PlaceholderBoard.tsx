@@ -5,6 +5,7 @@ import { BingoArt } from '../../art/BingoArt';
 import { HousieArt } from '../../art/HousieArt';
 import { LudoArt } from '../../art/LudoArt';
 import { SnakesLaddersArt } from '../../art/SnakesLaddersArt';
+import { UnoArt } from '../../art/UnoArt';
 import type { GameBoardProps } from '../types';
 
 const ART: Record<string, () => ReactElement> = {
@@ -12,6 +13,7 @@ const ART: Record<string, () => ReactElement> = {
   'snakes-and-ladders': SnakesLaddersArt,
   housie: HousieArt,
   bingo: BingoArt,
+  uno: UnoArt,
 };
 
 /** Placeholder board: shows the game's art, the match state, and the seated players (FR-032). */

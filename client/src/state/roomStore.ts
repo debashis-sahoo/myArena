@@ -66,6 +66,10 @@ let view: RoomView = IDLE;
 let session: { gameId: string; roomId: string } | null = null;
 let joinedOnce = false;
 let wired = false;
+// Set by leaveRoom() so the room page does not re-join a room the player just left while the route is still changing.
+let leftRoomId: string | null = null;
+// Creates and joins in flight: the delayed disconnect after a leave must not cut them off (switching rooms joins right after leaving).
+let pendingConnects = 0;
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<RoomView>): void {
@@ -87,6 +91,13 @@ export function getRoomView(): RoomView {
   return view;
 }
 
+export function hasLeftRoom(roomId: string): boolean {
+  return leftRoomId === roomId;
+}
+
+export function clearLeftRoom(): void {
+  leftRoomId = null;
+}
 // A refresh keeps the same guestId, so a page that was in this room can rejoin without the name gate.
 const markKey = (roomId: string) => `myarena.room.${roomId}`;
 export function wasInRoom(roomId: string): boolean {
@@ -224,14 +235,27 @@ export async function createRoom(
   gameId: string,
   mode: 'online' | 'ai',
   botCount?: number,
+  capacity?: number,
 ): Promise<{ ok: true; roomId: string } | { ok: false; message: string }> {
   wire();
   connectSocket();
-  const res = await emitWithAck<JoinedData>(
-    EVENTS.ROOM_CREATE,
-    { gameId, mode, ...(mode === 'ai' ? { botCount } : {}), guest: guestInfo() },
-    90_000,
-  );
+  pendingConnects += 1;
+  let res: ClientAck<JoinedData>;
+  try {
+    res = await emitWithAck<JoinedData>(
+      EVENTS.ROOM_CREATE,
+      {
+        gameId,
+        mode,
+        ...(mode === 'ai' ? { botCount } : {}),
+        ...(mode === 'online' && capacity !== undefined ? { capacity } : {}),
+        guest: guestInfo(),
+      },
+      90_000,
+    );
+  } finally {
+    pendingConnects -= 1;
+  }
   if (!res.ok) {
     disconnectSocket();
     return { ok: false, message: res.error.message };
@@ -244,7 +268,13 @@ export async function joinRoom(gameId: string, roomId: string): Promise<void> {
   if (view.phase === 'in_room' && view.room?.roomId === roomId) return;
   wire();
   set({ ...IDLE, phase: 'joining' });
-  const res = await emitWithAck<JoinedData>(EVENTS.ROOM_JOIN, { gameId, roomId, guest: guestInfo() }, 90_000);
+  pendingConnects += 1;
+  let res: ClientAck<JoinedData>;
+  try {
+    res = await emitWithAck<JoinedData>(EVENTS.ROOM_JOIN, { gameId, roomId, guest: guestInfo() }, 90_000);
+  } finally {
+    pendingConnects -= 1;
+  }
   if (!res.ok) {
     if (res.error.code === 'REMOVED_COOLDOWN') sfx.error();
     endSession(statusFor(res.error.code, res.error.message, res.error.retryAfterMs));
@@ -264,7 +294,10 @@ export function resyncRoom(): void {
 
 export function leaveRoom(): void {
   const wasIn = session !== null;
-  if (session) markRoom(session.roomId, false);
+  if (session) {
+    leftRoomId = session.roomId;
+    markRoom(session.roomId, false);
+  }
   session = null;
   joinedOnce = false;
   resetGameFeeds();
@@ -273,11 +306,14 @@ export function leaveRoom(): void {
     disconnectSocket();
     return;
   }
-  // Tell the server this is deliberate (so the seat frees at once), then drop the connection.
+  // Tell the server this is deliberate (so the seat frees at once), then drop the connection unless a new join has started.
   const s = socketInstance();
+  const dropWhenIdle = (): void => {
+    if (session === null && pendingConnects === 0 && view.phase !== 'joining') disconnectSocket();
+  };
   if (s.connected) {
-    s.emit(EVENTS.ROOM_LEAVE, {}, () => disconnectSocket());
-    setTimeout(disconnectSocket, 1500);
+    s.emit(EVENTS.ROOM_LEAVE, {}, dropWhenIdle);
+    setTimeout(dropWhenIdle, 1500);
   } else {
     disconnectSocket();
   }
@@ -304,6 +340,15 @@ export async function kickPlayer(playerId: string): Promise<SimpleResult> {
 
 export async function startMatch(): Promise<SimpleResult> {
   const res = await emitWithAck<RoomData>(EVENTS.ROOM_START, {});
+  if (res.ok) sfx.success();
+  return simple(res, (d) => {
+    if (view.room && d.room.rev > view.room.rev) set({ room: d.room });
+  });
+}
+
+/** Host only: seat computer players in every empty seat and start the match. */
+export async function fillWithAi(): Promise<SimpleResult> {
+  const res = await emitWithAck<RoomData>(EVENTS.ROOM_FILL_AI, {});
   if (res.ok) sfx.success();
   return simple(res, (d) => {
     if (view.room && d.room.rev > view.room.rev) set({ room: d.room });

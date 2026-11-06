@@ -1,0 +1,225 @@
+/* UNO results: winner, standings and the way on, in a panel that scrolls inside itself. */
+.un .un-results {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 12px) calc(var(--safe-right) + 12px) calc(var(--safe-bottom) + 12px) calc(var(--safe-left) + 12px);
+  background: rgba(8, 4, 24, 0.8);
+  animation: un-res-fade 0.25s ease both;
+}
+
+.un .un-res-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(460px, 100%);
+  max-height: 100%;
+  min-height: 0;
+  padding: 16px 18px;
+  border: 2px solid var(--un-gold);
+  border-radius: 18px;
+  background: radial-gradient(80% 50% at 50% 0%, rgba(255, 207, 61, 0.16), transparent 70%), linear-gradient(180deg, var(--un-panel-2), var(--un-bg0));
+  box-shadow: 0 0 0 1px rgba(255, 241, 176, 0.2), 0 0 32px rgba(255, 207, 61, 0.25), 0 18px 48px rgba(0, 0, 0, 0.6);
+  animation: un-res-rise 0.3s ease both;
+}
+
+.un .un-res-win {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.un .un-res-title {
+  margin: 0;
+  color: var(--un-gold-hi);
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow: 0 0 14px rgba(255, 207, 61, 0.55), 0 2px 0 rgba(0, 0, 0, 0.4);
+  overflow-wrap: anywhere;
+}
+
+.un .un-res-list {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  margin: 12px 0;
+  padding: 0 2px 0 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.un .un-res-row {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 3px 0 0 var(--c);
+}
+
+.un .un-res-row.is-winner {
+  border-color: var(--un-gold);
+  background: linear-gradient(90deg, rgba(255, 207, 61, 0.28), rgba(255, 207, 61, 0.08));
+}
+
+.un .un-res-row.is-left {
+  opacity: 0.7;
+}
+
+.un .un-res-place {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.un .un-res-row.is-winner .un-res-place {
+  background: var(--un-gold);
+  color: #2a1a00;
+}
+
+.un .un-res-name {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 800;
+}
+
+.un .un-res-nm {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.un .un-res-you {
+  flex: none;
+  color: var(--un-gold);
+  font-size: 13px;
+  font-style: normal;
+}
+
+.un .un-res-bot {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--un-line);
+  border-radius: 999px;
+  color: var(--un-muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.un .un-res-cards {
+  flex: none;
+  color: var(--un-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.un .un-res-row.is-winner .un-res-cards {
+  color: var(--un-gold-hi);
+}
+
+.un .un-res-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.un .un-res-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.un .un-res-actions .un-btn {
+  flex: 1 1 120px;
+  max-width: 200px;
+  min-height: 48px;
+}
+
+.un .un-res-note {
+  margin: 0;
+  color: var(--un-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+@keyframes un-res-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes un-res-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+}
+
+@media (max-height: 420px) {
+  .un .un-res-panel {
+    padding: 10px 14px;
+  }
+
+  .un .un-res-win {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .un .un-res-title {
+    font-size: 1.2rem;
+  }
+
+  .un .un-res-list {
+    margin: 8px 0;
+  }
+
+  .un .un-res-row {
+    min-height: 38px;
+    padding-block: 3px;
+  }
+
+  .un .un-res-actions .un-btn {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .un .un-results,
+  .un .un-res-panel {
+    animation: none;
+  }
+}

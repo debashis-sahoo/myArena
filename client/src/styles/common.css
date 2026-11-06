@@ -137,7 +137,7 @@
 
 .opponent-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -145,6 +145,7 @@
   display: grid;
   justify-items: center;
   gap: 4px;
+  min-width: 0;
   padding: 14px 6px;
   border-radius: var(--radius);
   border: 2px solid var(--line);
@@ -174,6 +175,9 @@
 .opponent-bots {
   font-size: 0.95rem;
   letter-spacing: 2px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .spinner.small {

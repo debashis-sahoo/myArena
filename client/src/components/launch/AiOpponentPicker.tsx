@@ -1,21 +1,28 @@
-import { useState, type ReactElement } from 'react';
+import { useState, type CSSProperties, type ReactElement } from 'react';
 
 interface Props {
   max: number;
+  /** Opponent count preselected when the step opens. */
+  defaultCount: number;
   onConfirm: (botCount: number) => void;
   onBack: () => void;
   busy: boolean;
 }
 
-/** Choose 1 to 3 computer opponents (3 preselected) and confirm with one tap (FR-011). */
-export function AiOpponentPicker({ max, onConfirm, onBack, busy }: Props): ReactElement {
-  const [count, setCount] = useState(max);
+/** Choose 1 to `max` computer opponents (`defaultCount` preselected) and confirm with one tap (FR-011). */
+export function AiOpponentPicker({ max, defaultCount, onConfirm, onBack, busy }: Props): ReactElement {
+  const [count, setCount] = useState(defaultCount);
   const options = Array.from({ length: max }, (_, i) => i + 1);
   return (
     <div className="launch-step">
       <h2 className="modal-title">How many opponents?</h2>
-      <p className="hint">Pick the computer players you want to race against.</p>
-      <div className="opponent-row" role="radiogroup" aria-label="Number of computer opponents">
+      <p className="hint">Pick the computer players you want to play against.</p>
+      <div
+        className="opponent-row"
+        role="radiogroup"
+        aria-label="Number of computer opponents"
+        style={{ '--cols': options.length } as CSSProperties}
+      >
         {options.map((n) => (
           <button
             key={n}

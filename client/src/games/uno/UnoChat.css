@@ -1,0 +1,130 @@
+/* UNO chat: the docked column and the header drawer. The platform ChatPanel supplies the bubbles and the input. */
+.un .un-chat-dock {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 8px;
+  border: 1px solid var(--un-line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(45, 24, 101, 0.82), rgba(29, 15, 64, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.un .un-chat-panel.chat {
+  flex: 1 1 auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.un .un-chat-panel .panel-title {
+  margin: 0 0 4px;
+  color: var(--un-gold);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.un .un-chat-drawer {
+  flex: none;
+  min-width: 0;
+}
+
+.un .un-chat-bar {
+  appearance: none;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--un-line);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #4a2a92, var(--un-panel-2) 55%, #231250);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 3px 0 #150a33;
+  color: var(--un-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 0.15s ease, transform 0.08s ease;
+}
+
+.un .un-chat-bar[aria-expanded='true'] {
+  border-color: var(--un-gold-hi);
+  box-shadow: 0 0 0 1px var(--un-gold-hi) inset, 0 0 14px rgba(255, 207, 61, 0.4);
+}
+
+.un .un-chat-bar:hover {
+  filter: brightness(1.15);
+}
+
+.un .un-chat-bar:active {
+  transform: translateY(2px);
+}
+
+.un .un-chat-bar:focus-visible {
+  outline: 2px solid var(--un-gold);
+  outline-offset: 2px;
+}
+
+.un .un-chat-icon {
+  flex: none;
+  color: var(--un-gold);
+}
+
+.un .un-chat-unread {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--un-danger);
+  color: #2a0008;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* Anchored to the viewport just under the header, so no ancestor needs to be positioned. */
+.un .un-chat-sheet {
+  position: fixed;
+  top: var(--un-chat-top, 52px);
+  right: max(8px, var(--safe-right));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, calc(100vw - 16px - var(--safe-left) - var(--safe-right)));
+  height: min(60dvh, 420px);
+  max-height: calc(100dvh - var(--un-chat-top, 52px) - 12px);
+  padding: 8px;
+  border: 2px solid var(--un-gold);
+  border-radius: 16px;
+  background: linear-gradient(180deg, var(--un-panel-2), var(--un-bg0));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+  animation: un-chat-drop 0.16s ease-out both;
+}
+
+@keyframes un-chat-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .un .un-chat-sheet {
+    animation: none;
+  }
+
+  .un .un-chat-bar {
+    transition: none;
+  }
+}

@@ -4,7 +4,7 @@ import { normalizeRoomCode } from '@myarena/shared';
 import { JoinGate } from '../components/room/JoinGate';
 import { RoomShell } from '../components/room/RoomShell';
 import { RoomStatusScreen } from '../components/room/RoomStatusScreen';
-import { clearStatus, getRoomView, joinRoom, leaveRoom, useRoom, wasInRoom } from '../state/roomStore';
+import { clearLeftRoom, clearStatus, getRoomView, hasLeftRoom, joinRoom, leaveRoom, useRoom, wasInRoom } from '../state/roomStore';
 
 /** /room/:gameId/:roomId: join gate on a direct load, then the room, or a friendly status screen. */
 export function RoomPage(): ReactElement {
@@ -18,6 +18,12 @@ export function RoomPage(): ReactElement {
   // Arriving from "Play Online" or a refresh of a room already joined skips the name gate.
   const [gateDone, setGateDone] = useState(() => getRoomView().room?.roomId === roomId || wasInRoom(roomId));
 
+  // A fresh visit to a room link starts clean; declared before the join effect so it runs first.
+  // Back and Forward reuse this page for another room id, so the marker is cleared on every id change.
+  useEffect(() => {
+    clearLeftRoom();
+  }, [roomId]);
+
   useEffect(() => {
     if (!gateDone || leaving.current) return;
     // Switching to a different room's link while still in another: leave first, then join this one.
@@ -26,6 +32,8 @@ export function RoomPage(): ReactElement {
       return;
     }
     if (view.phase !== 'idle') return;
+    // The Leave button clears the room before the route changes; do not walk back in.
+    if (hasLeftRoom(roomId)) return;
     void joinRoom(gameId, roomId);
   }, [gateDone, view.phase, view.room, gameId, roomId]);
 

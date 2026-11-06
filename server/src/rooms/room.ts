@@ -326,6 +326,31 @@ export class Room {
     if (this.seatedCount() < this.game.minPlayers) {
       throw new RoomError('NOT_ENOUGH_PLAYERS', `At least ${this.game.minPlayers} players are needed to start.`);
     }
+    this.startNow();
+  }
+
+  /** Host only: seats a bot in every empty seat of an online lobby, then starts. Returns the number of bots added. */
+  fillWithBots(socketId: string): number {
+    this.requireHost(socketId);
+    if (this.mode !== 'online' || this.state !== 'lobby') {
+      throw new RoomError('INVALID_STATE', 'Bots can only be added in an online lobby.');
+    }
+    if (!this.game.launch?.hostFillWithAi) {
+      throw new RoomError('INVALID_STATE', 'This game cannot fill seats with AI.');
+    }
+    const empty = this.seats.filter((s) => !s.occupant).length;
+    if (empty === 0) throw new RoomError('INVALID_STATE', 'There are no empty slots to fill.');
+    const seatedBots = this.seats.filter((s) => s.occupant?.kind === 'bot').length;
+    for (let i = 0; i < empty; i++) {
+      this.addParticipant('bot', BOT_NAMES[(seatedBots + i) % BOT_NAMES.length] ?? 'Bot', 'robot', null, null);
+    }
+    this.announce('joined', `The host filled ${empty} empty ${empty === 1 ? 'slot' : 'slots'} with AI`);
+    this.startNow();
+    return empty;
+  }
+
+  /** Starts the match without a host check (AI rooms and fillWithBots); the caller has verified a lobby with enough players. */
+  startNow(): void {
     // Slot order: the host first, then the other players by seat order.
     const ordered = this.seats
       .flatMap((s) => (s.occupant ? [{ seat: s, p: s.occupant }] : []))

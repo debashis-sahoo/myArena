@@ -1,0 +1,295 @@
+/* UNO centre area: aura, arrow track, piles and the pending badge. All selectors are scoped under .un. */
+.un .un-tc {
+  position: relative;
+  flex: none;
+  pointer-events: none;
+}
+
+/* ---------- aura ---------- */
+.un .un-aura {
+  position: absolute;
+  z-index: 2;
+  box-sizing: border-box;
+  border: 3px solid var(--aura);
+  border-radius: 12% / 8.5%;
+  box-shadow: 0 0 26px 6px rgba(var(--aura-rgb), 0.75), inset 0 0 14px 2px rgba(var(--aura-rgb), 0.55);
+  transition: border-color var(--aura-ms) ease, box-shadow var(--aura-ms) ease;
+}
+
+.un .un-aura-halo {
+  position: absolute;
+  inset: -24% -42%;
+  z-index: -1;
+  border-radius: 50%;
+  background-color: var(--aura);
+  opacity: 0.38;
+  filter: blur(28px);
+  transition: background-color var(--aura-ms) ease;
+}
+
+.un .un-aura-label {
+  position: absolute;
+  z-index: 6;
+  transform: translate(-50%, -50%);
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 18px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #1a0b2e;
+  background-color: var(--aura);
+  box-shadow: 0 0 0 2px #1a0b2e, 0 0 12px rgba(var(--aura-rgb), 0.9);
+  transition: background-color var(--aura-ms) ease, box-shadow var(--aura-ms) ease;
+}
+
+/* ---------- arrow track ---------- */
+.un .un-track {
+  position: absolute;
+  z-index: 3;
+}
+
+.un .un-track-line {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.un .un-track-line path {
+  fill: none;
+  stroke: rgba(255, 241, 176, 0.65);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1 7;
+  filter: drop-shadow(0 0 3px rgba(255, 207, 61, 0.6));
+}
+
+.un .un-track.still .un-track-line path {
+  stroke: rgba(255, 241, 176, 0.85);
+  stroke-dasharray: none;
+}
+
+.un .un-chev {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  line-height: 0;
+  offset-path: var(--un-path);
+  offset-rotate: auto;
+  offset-anchor: 50% 50%;
+  animation: un-track-run 6s linear infinite;
+  animation-delay: calc(var(--i) * -2s);
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(255, 207, 61, 1)) drop-shadow(0 0 2px rgba(0, 0, 0, 0.6));
+}
+
+.un .un-chev svg path {
+  fill: none;
+  stroke: #fffbe0;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Counter-clockwise: the same path run backwards, with the chevrons turned to face the way they travel. */
+.un .un-track.ccw .un-chev {
+  offset-rotate: reverse;
+  animation-direction: reverse;
+}
+
+@keyframes un-track-run {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+
+.un .un-dir-badge {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--band) / 2);
+  transform: translate(-50%, -50%);
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: min(18px, var(--band));
+  white-space: nowrap;
+  color: var(--un-gold-hi);
+  background: var(--un-panel);
+  box-shadow: 0 0 0 1.5px var(--un-gold), 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Draw Pile ---------- */
+.un .un-draw {
+  position: absolute;
+  z-index: 4;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 11.6% / 8%;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transition: filter 0.15s ease;
+}
+
+.un .un-draw:hover {
+  filter: brightness(1.12);
+}
+
+.un .un-draw:focus-visible {
+  outline: 2px solid var(--un-gold);
+  outline-offset: 4px;
+}
+
+.un .un-draw.empty {
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+}
+
+.un .un-draw::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 12% / 8.5%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.un .un-draw.can::after {
+  opacity: 1;
+  box-shadow: 0 0 0 3px var(--un-gold), 0 0 20px 6px rgba(255, 207, 61, 0.85);
+  animation: un-draw-glow 1.1s ease-in-out infinite;
+}
+
+@keyframes un-draw-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.un .un-draw-count {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  min-width: 30px;
+  padding: 0 8px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  color: var(--un-text);
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.un .un-draw-pend {
+  position: absolute;
+  left: 50%;
+  top: 10%;
+  padding: 2px 10px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  font-weight: 900;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: #2a1a00;
+  background: linear-gradient(180deg, var(--un-gold-hi), var(--un-gold));
+  box-shadow: 0 0 0 2px #2a1a00, 0 0 14px rgba(255, 207, 61, 0.9);
+}
+
+/* ---------- Discard Pile ---------- */
+.un .un-discard {
+  position: absolute;
+  z-index: 4;
+}
+
+.un .un-plate {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 11.6% / 8%;
+  background: linear-gradient(135deg, #fdfcff, #cfc7ea);
+  box-shadow: 0 0 0 1.5px #1a0b2e, 0 2px 5px rgba(0, 0, 0, 0.45);
+}
+
+.un .un-discard-top {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/* ---------- Pending penalty badge ---------- */
+.un .un-pending {
+  position: absolute;
+  z-index: 7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transform: translate(-50%, calc(var(--d) / -2));
+  animation: un-tc-in 0.25s ease-out both;
+}
+
+.un .un-pending-n {
+  display: grid;
+  place-items: center;
+  width: var(--d);
+  height: var(--d);
+  border-radius: 50%;
+  font-size: calc(var(--d) * 0.44);
+  font-weight: 900;
+  color: #2a1a00;
+  background: radial-gradient(circle at 35% 30%, var(--un-gold-hi), var(--un-gold) 60%, var(--un-gold-lo));
+  box-shadow: 0 0 0 2px #2a1a00, 0 0 18px rgba(255, 207, 61, 0.95);
+}
+
+.un .un-pending-kind {
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 16px;
+  white-space: nowrap;
+  color: var(--un-gold-hi);
+  background: var(--un-panel);
+  box-shadow: 0 0 0 1.5px var(--un-gold);
+}
+
+@keyframes un-tc-in {
+  from {
+    opacity: 0;
+    scale: 0.5;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .un .un-chev,
+  .un .un-draw.can::after,
+  .un .un-pending {
+    animation: none;
+  }
+
+  .un .un-aura,
+  .un .un-aura-halo,
+  .un .un-aura-label {
+    transition-duration: 120ms;
+  }
+}

@@ -1,21 +1,41 @@
-import { useEffect, useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { getGame, type RoomState } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
-import { setCapacity, startMatch } from '../../state/roomStore';
+import { fillWithAi, setCapacity, startMatch } from '../../state/roomStore';
 
-/** Host-only lobby controls: capacity and Start (FR-016, FR-019, FR-020). Shown to the host in a lobby only. */
+/** Host-only lobby controls: capacity, Start and, where the game allows it, Fill with AI (FR-016, FR-019, FR-020). Shown to the host in a lobby only. */
 export function HostControls({ room }: { room: RoomState }): ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [asking, setAsking] = useState(false);
+  const [filling, setFilling] = useState(false);
+  const fillRef = useRef<HTMLButtonElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const wasAsking = useRef(false);
   const seated = room.seats.filter((s) => s.occupant).length;
   const canStart = seated >= room.minPlayers;
   const online = room.inviteEnabled;
-  const roster = getGame(room.gameId)?.roster === true;
+  const game = getGame(room.gameId);
+  const roster = game?.roster === true;
+  const empty = room.capacity - seated;
+  const canFill = room.mode === 'online' && game?.launch?.hostFillWithAi === true && empty > 0;
+  const slots = empty === 1 ? 'slot' : 'slots';
   const [draft, setDraft] = useState(String(room.capacity));
 
   useEffect(() => {
     setDraft(String(room.capacity));
   }, [room.capacity]);
+
+  // A changed seat count cancels a pending confirmation so the host never confirms a different number.
+  useEffect(() => {
+    setAsking(false);
+  }, [empty]);
+
+  useEffect(() => {
+    if (asking) cancelRef.current?.focus();
+    else if (wasAsking.current) fillRef.current?.focus();
+    wasAsking.current = asking;
+  }, [asking]);
 
   const change = async (capacity: number): Promise<void> => {
     sfx.tap();
@@ -35,6 +55,18 @@ export function HostControls({ room }: { room: RoomState }): ReactElement {
     if (!res.ok) {
       sfx.error();
       setError(res.message);
+    }
+  };
+
+  const fill = async (): Promise<void> => {
+    setFilling(true);
+    setError(null);
+    const res = await fillWithAi();
+    setFilling(false);
+    if (!res.ok) {
+      sfx.error();
+      setError(res.message);
+      setAsking(false);
     }
   };
 
@@ -125,10 +157,44 @@ export function HostControls({ room }: { room: RoomState }): ReactElement {
             </div>
           </div>
         )}
-        <button type="button" className="btn lime start-btn" disabled={!canStart || busy} onClick={() => void start()}>
+        <button
+          type="button"
+          className="btn lime start-btn"
+          disabled={!canStart || busy || filling}
+          onClick={() => void start()}
+        >
           {busy ? 'Starting...' : 'Start match'}
         </button>
       </div>
+      {canFill && !asking && (
+        <button
+          ref={fillRef}
+          type="button"
+          className="btn ghost fill-ai-btn"
+          disabled={busy}
+          onClick={() => {
+            sfx.tap();
+            setAsking(true);
+          }}
+        >
+          <span aria-hidden="true">🤖</span> Fill {empty} empty {slots} with AI
+        </button>
+      )}
+      {canFill && asking && (
+        <div className="fill-ai" role="group" aria-label="Confirm filling empty slots with AI">
+          <p className="fill-ai-q">
+            Fill {empty} {slots} with AI and start now?
+          </p>
+          <div className="fill-ai-actions">
+            <button ref={cancelRef} type="button" className="btn ghost" disabled={filling} onClick={() => setAsking(false)}>
+              Cancel
+            </button>
+            <button type="button" className="btn lime" disabled={filling} onClick={() => void fill()}>
+              {filling ? 'Starting...' : 'Confirm'}
+            </button>
+          </div>
+        </div>
+      )}
       {online && !roster && shrinkBlockedByPlayers && !minusBlocked && (
         <p className="hint">To lower the player count below {seated}, remove a player first.</p>
       )}

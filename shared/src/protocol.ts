@@ -10,6 +10,7 @@ export const EVENTS = {
   ROOM_KICK: 'room:kick',
   ROOM_START: 'room:start',
   ROOM_RESET: 'room:reset',
+  ROOM_FILL_AI: 'room:fillAi',
   CHAT_SEND: 'chat:send',
   // server -> client
   ROOM_STATE: 'room:state',
@@ -122,6 +123,8 @@ export interface CreateRoomPayload {
   gameId: string;
   mode: RoomMode;
   botCount?: number;
+  /** Online rooms only: the room capacity for games that ask for it. */
+  capacity?: number;
   guest: GuestInfo;
 }
 export interface JoinRoomPayload {

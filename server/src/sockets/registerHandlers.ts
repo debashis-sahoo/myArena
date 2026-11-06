@@ -144,7 +144,7 @@ export function createRealtime(io: Server): { store: RoomStore } {
         throw new RoomError('SERVER_BUSY', 'The arena is busy right now. Please try again soon.');
       }
       leaveCurrent(socket);
-      const { room, playerId } = store.create(p.gameId, p.mode, p.botCount, p.guest, socket.id);
+      const { room, playerId } = store.create(p.gameId, p.mode, p.botCount, p.capacity, p.guest, socket.id);
       attach(socket, room);
       logger.info({ roomId: room.roomId, gameId: room.game.id, mode: room.mode, capacity: room.capacity }, 'room created');
       const data: JoinedData = {
@@ -221,6 +221,13 @@ export function createRealtime(io: Server): { store: RoomStore } {
       const room = roomOf(socket);
       room.start(socket.id);
       logger.info({ roomId: room.roomId, seated: room.seatedCount() }, 'match started');
+      return { room: room.projection() };
+    });
+
+    handler(socket, EVENTS.ROOM_FILL_AI, emptySchema, () => {
+      const room = roomOf(socket);
+      const added = room.fillWithBots(socket.id);
+      logger.info({ roomId: room.roomId, added }, 'room filled with AI');
       return { room: room.projection() };
     });
 

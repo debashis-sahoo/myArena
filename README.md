@@ -1,7 +1,7 @@
 # myArena
 
 myArena is a multiplayer game platform: a colorful **myArena Hub**, private rooms with shareable invite links, a single
-authoritative host per room, real-time presence and chat. Ludo, Housie and Bingo are live on the Hub; Snakes & Ladders is
+authoritative host per room, real-time presence and chat. Ludo, Housie, Bingo and UNO are live on the Hub; Snakes & Ladders is
 coming soon.
 
 Repository: https://github.com/debashis-sahoo/myArena.git
@@ -18,6 +18,7 @@ Repository: https://github.com/debashis-sahoo/myArena.git
 | `specs/002-ludo-game-module/` | Ludo: spec, plan, contracts, tasks, quickstart and verification notes |
 | `specs/003-housie-tambola-module/` | Housie: spec, plan, contracts, tasks, quickstart, mockups and verification notes |
 | `specs/005-bingo-75-ball-module/` | Bingo: spec, plan, contracts, tasks, quickstart and verification notes |
+| `specs/006-uno-game-module/` | UNO: spec, plan, contracts, tasks, quickstart, verification notes and screenshot evidence |
 
 The server serves the built client from the same origin, so production needs one process, one port and no CORS.
 
@@ -96,6 +97,24 @@ landscape (cards over patterns; ball console over chat), a compact two-column la
 drawer in portrait, with no page scrolling. Chat shows only typed messages; the server never writes a system line during a match.
 Design, protocol and the browser verification guide are in [specs/005-bingo-75-ball-module](specs/005-bingo-75-ball-module/).
 
+## UNO
+
+Play with AI (1 to 4 bots, 3 preselected, the table opens at once) or Play Online (2 to 5 players, 4 preselected, with an invite
+link). In an online lobby the host can press **Fill empty slots with AI**, which seats a bot in every open slot and starts the match
+at once. The table shows the discard and draw piles as large as the screen allows, a glowing aura in the active colour, direction
+arrows, every opponent with a card count, and your own hand as a fan along the bottom (it tightens and scrolls sideways inside its
+band when it grows). Tap or click a playable card to throw it; Wild and Wild Draw 4 open a four-colour wheel.
+
+Rules in short: match the top card by colour, number or symbol; Skip, Reverse (acts as Skip with two players), Draw 2, Wild and Wild
+Draw 4 work as in the classic game. **Draw 2 stacks only on a Draw 2 and Wild Draw 4 only on a Wild Draw 4**, a Wild Draw 4 may be
+played at any time, and a player who cannot stack draws the whole running total and loses the turn. Press **UNO!** when you are down
+to one card; anyone who forgets can be caught with **Catch** during a fixed **5-second window** and draws 2 cards. A turn has a
+30-second countdown: a miss draws one card and passes, a warning shows after two misses and the seat is released after three.
+The server is authoritative for every deal, draw and move, and never sends another player's hand or the draw-pile order to a
+client. At the end the standings show and the host can press **Play again**, which deals a new match at once with the first player
+moving one seat. Chat shows only typed messages in online rooms and is hidden in solo rooms. Design, protocol and the browser
+verification guide are in [specs/006-uno-game-module](specs/006-uno-game-module/).
+
 ## Environment variables
 
 | Variable | Default | Purpose |
@@ -148,3 +167,15 @@ Same rule as above: read only outside production, ignored (with a startup warnin
 | `BINGO_DEV_BALLS` | `54,7,19` | The call order starts with these numbers |
 | `BINGO_DEV_CARD_AUDIT` | `500` | At start-up, generates N cards and logs how many are valid and unique |
 | `BINGO_CLAIM_PACE_MS` | `300` | Replaces the 2000 ms pause between a player's claims |
+
+### UNO development-only variables
+
+Same rule as above: read only outside production, ignored (with one startup warning naming them) in production, so real deals,
+bot pauses, countdowns and UNO! behaviour can never be influenced.
+
+| Variable | Example | Effect |
+|----------|---------|--------|
+| `UNO_DEV_DECK` | `wild` | A fixed opening deal for repeatable checks (seat 1 is the host): `wild` (a Wild and a Wild Draw 4 plus red numbers), `reverse` (a red Reverse plus red numbers), `uno` (two cards, one play from UNO!), `stack` (the first two seats each hold a Draw 2 and a Wild Draw 4), `short-pile` (a 4-card draw pile, so the discard pile is reshuffled), `endgame` (one card, so the first play wins) |
+| `UNO_DEV_BOT_MS` | `500` | Replaces the 1.5 to 2.0 s bot pause (and the catch delay) with this many milliseconds |
+| `UNO_DEV_TURN_MS` | `3000` | Replaces the 30 s turn countdown (auto-draw, warning and removal checks) |
+| `UNO_DEV_FORGET` | `always` | `always` makes bots forget to call UNO!, `never` makes them always call; unset keeps the random mix |

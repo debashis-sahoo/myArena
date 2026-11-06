@@ -4,6 +4,7 @@ import { BingoArt } from '../../art/BingoArt';
 import { HousieArt } from '../../art/HousieArt';
 import { LudoArt } from '../../art/LudoArt';
 import { SnakesLaddersArt } from '../../art/SnakesLaddersArt';
+import { UnoArt } from '../../art/UnoArt';
 import { sfx } from '../../audio/sfx';
 
 const ART: Record<string, () => ReactElement> = {
@@ -11,6 +12,7 @@ const ART: Record<string, () => ReactElement> = {
   'snakes-and-ladders': SnakesLaddersArt,
   housie: HousieArt,
   bingo: BingoArt,
+  uno: UnoArt,
 };
 
 interface Props {

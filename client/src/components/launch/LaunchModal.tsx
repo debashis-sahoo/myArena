@@ -5,6 +5,7 @@ import { sfx } from '../../audio/sfx';
 import { createRoom } from '../../state/roomStore';
 import { Modal } from '../common/Modal';
 import { AiOpponentPicker } from './AiOpponentPicker';
+import { CapacityPicker } from './CapacityPicker';
 
 interface Props {
   game: GameDefinition | null;
@@ -14,7 +15,7 @@ interface Props {
 /** Game launch modal: two distinct actions, "Play with AI" and "Play Online" (FR-009 to FR-012). */
 export function LaunchModal({ game, onClose }: Props): ReactElement {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'choose' | 'ai'>('choose');
+  const [step, setStep] = useState<'choose' | 'ai' | 'capacity'>('choose');
   const [busy, setBusy] = useState<null | 'online' | 'ai'>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,12 +27,12 @@ export function LaunchModal({ game, onClose }: Props): ReactElement {
     }
   }, [game]);
 
-  const launch = async (mode: 'online' | 'ai', botCount?: number): Promise<void> => {
+  const launch = async (mode: 'online' | 'ai', botCount?: number, capacity?: number): Promise<void> => {
     if (!game || busy) return;
     sfx.tap();
     setBusy(mode);
     setError(null);
-    const res = await createRoom(game.id, mode, botCount);
+    const res = await createRoom(game.id, mode, botCount, capacity);
     if (res.ok) {
       sfx.success();
       navigate(`/room/${game.id}/${res.roomId}`);
@@ -62,7 +63,12 @@ export function LaunchModal({ game, onClose }: Props): ReactElement {
                 <span className="launch-sub">Start right away, solo</span>
               </button>
             )}
-            <button type="button" className="launch-choice online" onClick={() => void launch('online')} disabled={busy !== null}>
+            <button
+              type="button"
+              className="launch-choice online"
+              onClick={() => (game.launch?.askCapacity ? setStep('capacity') : void launch('online'))}
+              disabled={busy !== null}
+            >
               <span className="launch-icon" aria-hidden="true">
                 {busy === 'online' ? <span className="spinner small" /> : '🌐'}
               </span>
@@ -81,9 +87,27 @@ export function LaunchModal({ game, onClose }: Props): ReactElement {
         <>
           <AiOpponentPicker
             max={game.maxPlayers - 1}
+            defaultCount={game.defaultCapacity - 1}
             busy={busy === 'ai'}
             onBack={() => setStep('choose')}
             onConfirm={(n) => void launch('ai', n)}
+          />
+          {error && (
+            <p className="error-text" role="alert">
+              {error}
+            </p>
+          )}
+        </>
+      )}
+      {game && game.launch?.askCapacity && step === 'capacity' && (
+        <>
+          <CapacityPicker
+            min={game.minPlayers}
+            max={game.maxPlayers}
+            defaultCount={game.defaultCapacity}
+            busy={busy === 'online'}
+            onBack={() => setStep('choose')}
+            onConfirm={(n) => void launch('online', undefined, n)}
           />
           {error && (
             <p className="error-text" role="alert">

@@ -39,6 +39,7 @@ export class RoomStore {
     gameId: string,
     mode: RoomMode,
     botCount: number | undefined,
+    capacityRequest: number | undefined,
     guest: GuestInfo,
     socketId: string,
   ): { room: Room; playerId: string } {
@@ -48,6 +49,8 @@ export class RoomStore {
       throw new RoomError('SERVER_BUSY', 'The arena is busy right now. Please try again soon.');
     }
 
+    // Roster games take their player ceiling from the operator setting for that game (HOUSIE_MAX_PLAYERS, BINGO_MAX_PLAYERS).
+    const maxPlayers = game.roster ? (config.rosterMaxPlayers[game.id] ?? game.maxPlayers) : game.maxPlayers;
     let capacity = game.defaultCapacity;
     let bots = 0;
     if (mode === 'ai') {
@@ -57,15 +60,20 @@ export class RoomStore {
         throw new RoomError('INVALID_PAYLOAD', `Choose 1 to ${game.maxPlayers - 1} opponents.`);
       }
       capacity = bots + 1;
+    } else if (capacityRequest !== undefined) {
+      if (!Number.isInteger(capacityRequest) || capacityRequest < game.minPlayers || capacityRequest > maxPlayers) {
+        throw new RoomError('INVALID_PAYLOAD', `Choose between ${game.minPlayers} and ${maxPlayers} players.`);
+      }
+      capacity = capacityRequest;
     }
 
     const room = new Room(this.newRoomId(), game, mode, capacity, this.events, {
       reconnectWindowMs: config.reconnectWindowMs,
       removalCooldownMs: config.removalCooldownMs,
-      // Roster games take their player ceiling from the operator setting for that game (HOUSIE_MAX_PLAYERS, BINGO_MAX_PLAYERS).
-      maxPlayers: game.roster ? (config.rosterMaxPlayers[game.id] ?? game.maxPlayers) : game.maxPlayers,
+      maxPlayers,
     });
     const playerId = room.seedCreator(guest, socketId, bots);
+    if (mode === 'ai' && game.launch?.startAiAtOnce) room.startNow();
     this.rooms.set(room.roomId, room);
     return { room, playerId };
   }

@@ -22,6 +22,7 @@ import {
   type GuestInfo,
   type JoinedData,
   type RoomState,
+  type UnoView,
 } from '@myarena/shared';
 
 const WINDOW_MS = Number(process.env.SMOKE_WINDOW_MS ?? 3000);
@@ -355,6 +356,24 @@ const scenarios: Scenario[] = [
       fail(after.res, 'ROOM_NOT_FOUND');
       fail(await emit(human, EVENTS.ROOM_CREATE, { gameId: 'ludo', mode: 'ai', botCount: 9, guest: human.guest }), 'INVALID_PAYLOAD');
       closeAll(human, stranger.c, after.c);
+    },
+  ],
+  [
+    'UNO AI room: starts at once with a 7-card hand and no other hand in the payload',
+    async (url) => {
+      const human = await connect(url, 'Solo');
+      const created = ok(
+        await emit<JoinedData>(human, EVENTS.ROOM_CREATE, { gameId: 'uno', mode: 'ai', botCount: 3, guest: human.guest }),
+      );
+      const game = created.game as UnoView | undefined;
+      assert(created.room.state === 'in_progress', `UNO AI room state ${created.room.state}`);
+      assert(game?.you?.hand.length === 7, 'the player holds 7 cards');
+      assert(game.table.players.length === 4 && game.table.players.every((p) => p.handCount === 7), '4 players with 7 cards each');
+      const text = JSON.stringify(created);
+      assert((text.match(/"hand"/g) ?? []).length === 1, "only the receiver's own hand is in the payload");
+      assert(!text.includes('drawPile'), 'the draw pile is never sent');
+      ok(await emit(human, EVENTS.ROOM_LEAVE, {}));
+      closeAll(human);
     },
   ],
   [

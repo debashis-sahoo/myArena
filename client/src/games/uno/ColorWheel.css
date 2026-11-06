@@ -1,0 +1,192 @@
+/* UNO colour wheel: a centred modal with four glowing wedges and a Cancel hub. The host element carries .un (it lives on document.body). */
+.un.un-wheel-host {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: none;
+}
+
+.un .un-wheel-backdrop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 8px) calc(var(--safe-bottom) + 8px) calc(var(--safe-left) + 8px);
+  background: rgba(8, 4, 24, 0.66);
+  animation: un-wheel-fade 120ms ease-out both;
+}
+
+.un .un-wheel-dialog {
+  --un-wheel: clamp(224px, min(86vw, 64dvh), 420px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.un .un-wheel-title {
+  margin: 0;
+  padding: 5px 16px;
+  border: 1px solid var(--un-gold);
+  border-radius: 999px;
+  background: rgba(18, 10, 42, 0.9);
+  box-shadow: 0 0 16px rgba(255, 207, 61, 0.35);
+  color: var(--un-gold-hi);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.un .un-wheel {
+  position: relative;
+  width: var(--un-wheel);
+  height: var(--un-wheel);
+  animation: un-wheel-pop 170ms cubic-bezier(0.2, 1.25, 0.4, 1) both;
+}
+
+.un .un-wheel svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.un .un-wheel-disc {
+  fill: rgba(18, 10, 42, 0.94);
+  stroke: var(--un-gold);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 16px rgba(255, 207, 61, 0.5));
+}
+
+/* ---------- Wedges ---------- */
+.un .un-wedge {
+  cursor: pointer;
+  outline: none;
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transition: transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.un .un-wedge-shape {
+  fill: var(--w);
+  stroke: #fff6d0;
+  stroke-opacity: 0.85;
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 7px var(--w));
+  transition: filter 120ms ease;
+}
+
+.un .un-wedge:hover,
+.un .un-wedge:focus-visible {
+  transform: scale(1.04);
+}
+
+.un .un-wedge:hover .un-wedge-shape,
+.un .un-wedge:focus-visible .un-wedge-shape {
+  filter: brightness(1.15) drop-shadow(0 0 14px var(--w));
+}
+
+.un .un-wedge:focus-visible .un-wedge-shape {
+  stroke: #fff;
+  stroke-opacity: 1;
+  stroke-width: 6;
+}
+
+.un .un-wedge:active {
+  transform: scale(0.98);
+}
+
+.un .un-wedge text {
+  fill: #fff;
+  paint-order: stroke fill;
+  stroke: #1a0b2e;
+  stroke-linejoin: round;
+  font-family: 'Arial Black', 'Segoe UI', system-ui, sans-serif;
+  font-weight: 900;
+  pointer-events: none;
+}
+
+.un .un-wedge-glyph {
+  font-size: 36px;
+  stroke-width: 5px;
+}
+
+.un .un-wedge-name {
+  font-size: 17px;
+  stroke-width: 4px;
+}
+
+.un .un-wedge-key {
+  font-size: 14px;
+  stroke-width: 3px;
+  opacity: 0.85;
+}
+
+/* ---------- Cancel hub ---------- */
+.un .un-wheel .un-wheel-cancel {
+  position: absolute;
+  top: 34.5%;
+  left: 34.5%;
+  width: 31%;
+  height: 31%;
+  min-width: 56px;
+  min-height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 13px;
+}
+
+@keyframes un-wheel-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.55) rotate(-24deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes un-wheel-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-height: 420px) {
+  .un .un-wheel-dialog {
+    --un-wheel: clamp(200px, min(86vw, 74dvh), 420px);
+    gap: 4px;
+  }
+
+  .un .un-wheel-title {
+    padding: 3px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .un .un-wheel,
+  .un .un-wheel-backdrop {
+    animation: none;
+  }
+
+  .un .un-wedge,
+  .un .un-wedge-shape {
+    transition: none;
+  }
+
+  .un .un-wedge:hover,
+  .un .un-wedge:focus-visible,
+  .un .un-wedge:active {
+    transform: none;
+  }
+}

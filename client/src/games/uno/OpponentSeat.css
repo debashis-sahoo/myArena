@@ -1,0 +1,337 @@
+/* UNO opponent seat. All selectors are scoped under .un. */
+.un .un-seat {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  min-width: 0;
+}
+
+.un .un-seat.catchable {
+  z-index: 6;
+}
+
+.un .un-seat-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.un .un-seat.left .un-seat-body,
+.un .un-seat.right .un-seat-body {
+  flex-direction: column;
+  width: 100%;
+  gap: 3px;
+  text-align: center;
+}
+
+.un .un-seat.gone .un-seat-av,
+.un .un-seat.gone .un-seat-info {
+  opacity: 0.5;
+  filter: grayscale(0.85);
+}
+
+/* ---------- avatar, ring and badges ---------- */
+.un .un-seat-av {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--ring);
+  height: var(--ring);
+}
+
+.un .un-seat-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--tag);
+  background: rgba(18, 10, 42, 0.55);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.un .un-seat.active .un-seat-ring {
+  box-shadow: 0 0 0 2px var(--un-gold), 0 0 16px 4px rgba(255, 207, 61, 0.85);
+  animation: un-ring-glow 1.4s ease-in-out infinite;
+}
+
+.un .un-seat-av .avatar {
+  position: relative;
+  border-width: 1.5px;
+}
+
+.un .un-seat-arc {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.un .un-seat-arc circle {
+  fill: none;
+  stroke: var(--un-gold-hi);
+  stroke-linecap: round;
+  stroke-dasharray: 100px;
+  stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 3px rgba(255, 207, 61, 0.9));
+}
+
+.un .un-seat-crown {
+  position: absolute;
+  top: -4px;
+  left: -5px;
+  font-size: 15px;
+  line-height: 1;
+  transform: rotate(-14deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.un .un-seat-bot,
+.un .un-seat-think {
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+}
+
+.un .un-seat-bot {
+  padding: 0 5px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  color: #0b2a2a;
+  background: linear-gradient(180deg, #8ff6ea, #2dd4c4);
+  box-shadow: 0 0 0 1px #0b2a2a, 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+.un .un-seat-think {
+  display: grid;
+  place-items: center;
+  padding: 0 6px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--un-panel);
+  box-shadow: 0 0 0 1.5px var(--un-gold), 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+.un .un-seat-dot {
+  position: absolute;
+  right: -1px;
+  bottom: 3px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--un-bg0);
+  background: var(--un-ok);
+}
+
+.un .un-seat-dot.away {
+  background: var(--un-warn);
+}
+
+.un .un-seat-dot.left {
+  background: #8a82a8;
+}
+
+/* ---------- name, status, card fan ---------- */
+.un .un-seat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.un .un-seat.left .un-seat-info,
+.un .un-seat.right .un-seat-info {
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.un .un-seat-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 15px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.un .un-seat.left .un-seat-name,
+.un .un-seat.right .un-seat-name {
+  flex-direction: column;
+  gap: 1px;
+  max-width: 100%;
+}
+
+.un .un-seat-name .n {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.un .un-seat.active .un-seat-name .n {
+  color: var(--un-gold-hi);
+}
+
+.un .un-seat-chip {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 15px;
+  color: #2a1a00;
+  background: var(--un-warn);
+}
+
+.un .un-seat-chip.left {
+  color: var(--un-text);
+  background: #5d5580;
+}
+
+.un .un-seat-chip.warn {
+  animation: un-ring-glow 1.2s ease-in-out infinite;
+}
+
+.un .un-seat-cards {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.un .un-seat.left .un-seat-cards,
+.un .un-seat.right .un-seat-cards {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.un .un-seat-fan {
+  position: relative;
+  flex: none;
+  display: block;
+}
+
+.un .un-seat-count {
+  flex: none;
+  min-width: 30px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+.un .un-seat-count.called {
+  color: #2a1a00;
+  background: linear-gradient(180deg, var(--un-gold-hi), var(--un-gold));
+  box-shadow: 0 0 8px rgba(255, 207, 61, 0.8);
+}
+
+/* ---------- Catch button ---------- */
+.un .un-seat-catch-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+  pointer-events: none;
+}
+
+.un .un-seat.left .un-seat-catch-wrap {
+  justify-content: flex-start;
+}
+
+.un .un-seat.right .un-seat-catch-wrap {
+  justify-content: flex-end;
+}
+
+.un .un-seat-catch {
+  flex: none;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  max-width: 190px;
+  padding: 4px 12px;
+  font-size: 13px;
+  line-height: 1.1;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.un .un-seat-catch strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.un .un-seat.left .un-seat-catch,
+.un .un-seat.right .un-seat-catch {
+  flex-direction: column;
+  gap: 0;
+  max-width: 110px;
+  padding: 4px 10px;
+}
+
+/* ---------- Short overlays ---------- */
+.un .un-seat-flash {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 20px;
+  white-space: nowrap;
+  color: #2a1a00;
+  background: linear-gradient(180deg, var(--un-gold-hi), var(--un-gold));
+  box-shadow: 0 0 0 2px #2a1a00, 0 0 18px rgba(255, 207, 61, 0.95);
+}
+
+.un .un-seat-flash.caught {
+  color: #2a0008;
+  background: linear-gradient(180deg, #ffb3bf, var(--un-danger));
+  box-shadow: 0 0 0 2px #2a0008, 0 0 18px rgba(255, 92, 112, 0.95);
+}
+
+.un .un-seat-flash.skip {
+  color: #fff;
+  background: linear-gradient(180deg, #5aa0ff, var(--un-blue-dark));
+  box-shadow: 0 0 0 2px #06163a, 0 0 18px rgba(47, 128, 255, 0.9);
+}
+
+.un .un-seat-flash.penalty,
+.un .un-seat-flash.info,
+.un .un-seat-flash.turn {
+  color: var(--un-gold-hi);
+  background: var(--un-panel);
+  box-shadow: 0 0 0 2px var(--un-gold), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .un .un-seat.active .un-seat-ring,
+  .un .un-seat-chip.warn {
+    animation: none;
+  }
+}

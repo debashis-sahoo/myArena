@@ -3,6 +3,7 @@ import { createBingoEngine } from './bingo/engine.js';
 import { createHousieEngine } from './housie/engine.js';
 import { createLudoEngine } from './ludo/engine.js';
 import { placeholderEngine } from './placeholderEngine.js';
+import { createUnoEngine } from './uno/engine.js';
 
 /** Seat info the platform hands to a game (contracts/platform-extensions.md). Seats arrive in slot order: host first, then seat order. */
 export interface MatchSeat {
@@ -63,6 +64,7 @@ const engines = new Map<string, GameEngine>([
   ['ludo', createLudoEngine()],
   ['housie', createHousieEngine()],
   ['bingo', createBingoEngine()],
+  ['uno', createUnoEngine()],
 ]);
 
 export function getEngine(gameId: string): GameEngine {

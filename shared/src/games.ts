@@ -16,6 +16,15 @@ export interface GameDefinition {
   roster?: boolean;
   /** No automatic system chat lines while a match is in progress (the game posts its own notices). */
   quietChat?: boolean;
+  /** Platform capabilities a game opts into (specs/006-uno-game-module/contracts/platform-integration.md). */
+  launch?: {
+    /** "Play Online" asks for the room capacity before creating the room. */
+    askCapacity?: boolean;
+    /** "Play with AI" starts the match as soon as the room exists (no lobby step). */
+    startAiAtOnce?: boolean;
+    /** The host's lobby shows "Fill empty slots with AI", which seats bots and starts the match. */
+    hostFillWithAi?: boolean;
+  };
 }
 
 export const GAMES: readonly GameDefinition[] = [
@@ -70,6 +79,20 @@ export const GAMES: readonly GameDefinition[] = [
     theme: { accent: '#4fb6ff', accent2: '#8a5cff' },
     roster: true,
     quietChat: true,
+  },
+  {
+    id: 'uno',
+    name: 'UNO',
+    tagline: 'Match colours, play action cards, shout UNO! and catch anyone who forgets.',
+    status: 'active',
+    minPlayers: 2,
+    maxPlayers: 5,
+    defaultCapacity: 4,
+    supportsAi: true,
+    seatColors: ['orange', 'purple', 'teal', 'pink', 'lime'],
+    theme: { accent: '#ffcf3d', accent2: '#ff4d6d' },
+    quietChat: true,
+    launch: { askCapacity: true, startAiAtOnce: true, hostFillWithAi: true },
   },
 ];
 
