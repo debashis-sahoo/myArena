@@ -104,6 +104,24 @@
   box-shadow: inset 0 0 0 1px var(--line);
 }
 
+/* Server humor (Ludo): playful, set apart from people's messages and from routine announcements. */
+.chat-system.chat-humor {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  border-radius: 14px;
+  color: #ffe9a3;
+  background: rgba(255, 217, 61, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 217, 61, 0.3);
+  font-style: italic;
+  text-align: left;
+}
+
+.chat-humor-icon {
+  flex: none;
+  font-style: normal;
+}
+
 .chat-form {
   display: flex;
   gap: 8px;

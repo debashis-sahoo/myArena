@@ -17,8 +17,8 @@ import { sfx } from '../../audio/sfx';
 import { flareTrack, pulseAura } from './anim/flare';
 import { REDUCED_FADE_MS, boxOf, flyCards, flyStagger, type Box, type FlyItem } from './anim/fly';
 import { bounceCard, shakeTable } from './anim/shake';
-import { throwCard } from './anim/throw';
-import { commitUno, getUno, pushBanner, skipUnoToLatest, unoViewOf, useUno } from './unoStore';
+import { holdCard, throwCard, type HeldCard } from './anim/throw';
+import { commitUno, confirmAttempt, endAttempt, finishReturn, getAttempt, getUno, pushBanner, skipUnoToLatest, unoViewOf, useUno, type PlayAttempt } from './unoStore';
 
 /** A backlog longer than this jumps to the newest state instead of replaying. */
 const MAX_QUEUE = 6;
@@ -74,27 +74,91 @@ function hide(s: Session, el: HTMLElement | null): void {
 
 const smallCard = (pile: Box): number => Math.max(24, Math.round(pile.height * 0.45));
 
+// ---------- staged play (specs/007 US2) ----------
+
+/** The card currently hovering toward the pile, with the hand card it hides. One at a time (the store allows one attempt). */
+let heldCard: { handle: HeldCard; card: number; el: HTMLElement | null } | null = null;
+
+function restoreHeld(h: { el: HTMLElement | null } | null): void {
+  if (h?.el) h.el.style.visibility = '';
+}
+
+/** Drops a leftover hover (a newer snapshot replaced the screen, the screen unmounted). */
+function dropHeld(): void {
+  if (!heldCard) return;
+  const h = heldCard;
+  heldCard = null;
+  h.handle.remove();
+  restoreHeld(h);
+}
+
+function liftHeld(a: PlayAttempt, reduced: boolean): void {
+  const el = handCardEl(a.card);
+  const from = boxOf(el);
+  const to = boxOf(pileEl('discard'));
+  if (!el || !from || !to) {
+    // Nothing to fly from or to: let the server's event animate the play as before.
+    endAttempt();
+    return;
+  }
+  const handle = holdCard({ from, to, card: a.card, reduced, handEl: el });
+  if (!reduced) el.style.visibility = 'hidden';
+  heldCard = { handle, card: a.card, el };
+  performance.mark('uno:held');
+}
+
+async function returnHeld(): Promise<void> {
+  const h = heldCard;
+  heldCard = null;
+  if (!h) {
+    finishReturn();
+    return;
+  }
+  await frame(); // the hand has settled back into its slot
+  try {
+    await h.handle.returnTo(boxOf(handCardEl(h.card)));
+  } catch {
+    h.handle.remove();
+  }
+  restoreHeld(h);
+  finishReturn();
+}
+
 // ---------- per-event motion ----------
 
 async function animatePlay(ev: EventOf<'play'>, s: Session, commit: () => void): Promise<void> {
   const mine = ev.by === (ev.you?.playerId ?? null);
   const pile = boxOf(pileEl('discard'));
   if (pile) {
-    let from: Box | null;
-    if (mine) {
-      const el = handCardEl(ev.card);
-      from = boxOf(el) ?? boxOf(find('[data-uno-hand]'), Math.round(pile.height * 0.8));
-      hide(s, el);
-    } else {
-      from = boxOf(seatEl(ev.by), smallCard(pile));
-    }
-    if (from) {
-      const landed = await throwCard({ from, to: pile, card: ev.card, faceDown: !mine, reduced: s.reduced });
+    const attempt = getAttempt();
+    const staged = mine && attempt !== null && attempt.card === ev.card && attempt.phase === 'held' && heldCard !== null && heldCard.card === ev.card;
+    if (staged && heldCard) {
+      // The card is already hovering: confirm it and finish the throw from where it is (no second throw from the hand).
+      const h = heldCard;
+      heldCard = null;
+      confirmAttempt();
+      const landed = await h.handle.finish(pile);
       s.undo.push(landed.remove);
       sfx.stamp();
+      performance.mark('uno:landed');
+    } else {
+      let from: Box | null;
+      if (mine) {
+        const el = handCardEl(ev.card);
+        from = boxOf(el) ?? boxOf(find('[data-uno-hand]'), Math.round(pile.height * 0.8));
+        hide(s, el);
+      } else {
+        from = boxOf(seatEl(ev.by), smallCard(pile));
+      }
+      if (from) {
+        const landed = await throwCard({ from, to: pile, card: ev.card, faceDown: !mine, reduced: s.reduced });
+        s.undo.push(landed.remove);
+        sfx.stamp();
+      }
     }
   }
   commit();
+  if (mine && getAttempt()?.card === ev.card) endAttempt();
 
   if (ev.skipped && (ev.effect === 'skip' || ev.effect === 'reverse')) pushBanner('Skipped!', 'skip', ev.skipped);
   const total = ev.table.pending?.total;
@@ -314,7 +378,7 @@ export interface UnoAnimator {
 
 /** Call once from the match screen. */
 export function useUnoAnimator(reducedMotion: boolean): UnoAnimator {
-  const { queue, shakeKey, rejection } = useUno();
+  const { queue, shakeKey, rejection, attempt } = useUno();
   const [busy, setBusy] = useState(false);
   const reducedRef = useRef(reducedMotion);
   reducedRef.current = reducedMotion;
@@ -361,6 +425,8 @@ export function useUnoAnimator(reducedMotion: boolean): UnoAnimator {
     const showNewest = (): void => {
       if (document.hidden) return;
       abandon();
+      dropHeld();
+      endAttempt();
       setBusy(false);
       skipUnoToLatest();
     };
@@ -372,8 +438,23 @@ export function useUnoAnimator(reducedMotion: boolean): UnoAnimator {
       window.removeEventListener('pageshow', showNewest);
       window.removeEventListener('online', showNewest);
       abandon();
+      dropHeld();
     };
   }, []);
+
+  // Staged play: lift the card the moment it is activated, fly it back after a refusal or silence, drop it when a newer state wins.
+  const attemptKey = attempt ? `${attempt.startedAt}:${attempt.phase}` : '';
+  useEffect(() => {
+    if (!attempt) {
+      dropHeld();
+      return;
+    }
+    if (attempt.phase === 'held') {
+      if (!heldCard) liftHeld(attempt, reducedRef.current);
+    } else if (attempt.phase === 'returning') {
+      void returnHeld();
+    }
+  }, [attemptKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // A refused move: shake the table and bounce the card.
   const seenShake = useRef(shakeKey);

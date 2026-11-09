@@ -204,6 +204,12 @@
   background: #5d5580;
 }
 
+.un .un-seat-chip.turn {
+  color: #2a1a00;
+  background: linear-gradient(180deg, var(--un-gold-hi), var(--un-gold));
+  box-shadow: 0 0 0 1px var(--un-gold-lo);
+}
+
 .un .un-seat-chip.warn {
   animation: un-ring-glow 1.2s ease-in-out infinite;
 }

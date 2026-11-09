@@ -1,0 +1,59 @@
+{
+ "rows": [
+  {
+   "name": "picker: 3000 lines, none over 120 chars, no unfilled slot, no repeat within 5, guards hold",
+   "expected": 0,
+   "observed": 0,
+   "status": "PASS"
+  },
+  {
+   "name": "picker: general and addressed both appear (about half each)",
+   "expected": "both between 35% and 65%",
+   "observed": {
+    "general": 1484,
+    "addressed": 1516,
+    "other": 0
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "picker: long names are cut to 20 characters",
+   "expected": "a 30-char name renders 20 chars",
+   "observed": true,
+   "status": "PASS"
+  },
+  {
+   "name": "picker: a lone player with no leader and nothing home never gets leader or home lines",
+   "expected": 0,
+   "observed": 0,
+   "status": "PASS"
+  },
+  {
+   "name": "pools: at least 12 general and 12 addressed templates; each guard kind present",
+   "expected": "14 / 14",
+   "observed": {
+    "general": 14,
+    "addressed": 14,
+    "guarded": 6
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "humorDelayMs: 300k samples between 45 000 and 90 000 ms",
+   "expected": "[45000, 90000]",
+   "observed": {
+    "min": 45000,
+    "max": 90000,
+    "atZero": 45000,
+    "atOne": 90000
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "every template stays within 120 characters even with a 20-character name",
+   "expected": "<= 120",
+   "observed": 83,
+   "status": "PASS"
+  }
+ ]
+}

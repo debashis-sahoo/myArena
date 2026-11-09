@@ -1,0 +1,164 @@
+{
+  "defaults": {
+    "sound": 0.8,
+    "music": 0.3
+  },
+  "cuesDefault": {
+    "tap": {
+      "peakDb": -7.2,
+      "rmsMaxDb": -30.3,
+      "rmsMedianDb": -180
+    },
+    "join": {
+      "peakDb": -6.5,
+      "rmsMaxDb": -25,
+      "rmsMedianDb": -180
+    },
+    "message": {
+      "peakDb": -11.5,
+      "rmsMaxDb": -33.2,
+      "rmsMedianDb": -180
+    },
+    "error": {
+      "peakDb": -8.3,
+      "rmsMaxDb": -29.4,
+      "rmsMedianDb": -180
+    },
+    "success": {
+      "peakDb": -6.7,
+      "rmsMaxDb": -25.4,
+      "rmsMedianDb": -180
+    },
+    "stamp": {
+      "peakDb": -11.8,
+      "rmsMaxDb": -35.4,
+      "rmsMedianDb": -180
+    },
+    "ballRoll": {
+      "peakDb": -6.4,
+      "rmsMaxDb": -22.9,
+      "rmsMedianDb": -180
+    },
+    "winChime": {
+      "peakDb": -6.2,
+      "rmsMaxDb": -22.2,
+      "rmsMedianDb": -180
+    }
+  },
+  "cues100": {
+    "tap": {
+      "peakDb": -4.3,
+      "rmsMaxDb": -27.4,
+      "rmsMedianDb": -180
+    },
+    "join": {
+      "peakDb": -3.6,
+      "rmsMaxDb": -22.1,
+      "rmsMedianDb": -180
+    },
+    "message": {
+      "peakDb": -8.6,
+      "rmsMaxDb": -30.3,
+      "rmsMedianDb": -180
+    },
+    "error": {
+      "peakDb": -5.4,
+      "rmsMaxDb": -26.5,
+      "rmsMedianDb": -180
+    },
+    "success": {
+      "peakDb": -3.8,
+      "rmsMaxDb": -22.5,
+      "rmsMedianDb": -180
+    },
+    "stamp": {
+      "peakDb": -8.9,
+      "rmsMaxDb": -32.5,
+      "rmsMedianDb": -180
+    },
+    "ballRoll": {
+      "peakDb": -3.5,
+      "rmsMaxDb": -20,
+      "rmsMedianDb": -180
+    },
+    "winChime": {
+      "peakDb": -3.3,
+      "rmsMaxDb": -19.3,
+      "rmsMedianDb": -180
+    }
+  },
+  "themesDefault": {
+    "ludo": {
+      "secs": 17.8,
+      "peakDb": -16.1,
+      "rmsMaxDb": -33.4,
+      "rmsMedianDb": -37.5
+    },
+    "housie": {
+      "secs": 15,
+      "peakDb": -18.9,
+      "rmsMaxDb": -35.6,
+      "rmsMedianDb": -37.4
+    },
+    "bingo": {
+      "secs": 16.3,
+      "peakDb": -17.9,
+      "rmsMaxDb": -35.2,
+      "rmsMedianDb": -38.3
+    },
+    "uno": {
+      "secs": 15.5,
+      "peakDb": -16.9,
+      "rmsMaxDb": -34.3,
+      "rmsMedianDb": -37.6
+    }
+  },
+  "themes100": {
+    "ludo": {
+      "secs": 17.8,
+      "peakDb": -1.9,
+      "rmsMaxDb": -17.8,
+      "rmsMedianDb": -21.8
+    },
+    "housie": {
+      "secs": 15,
+      "peakDb": -2.1,
+      "rmsMaxDb": -19.9,
+      "rmsMedianDb": -21.7
+    },
+    "bingo": {
+      "secs": 16.3,
+      "peakDb": -2.4,
+      "rmsMaxDb": -19.6,
+      "rmsMedianDb": -22.6
+    },
+    "uno": {
+      "secs": 15.5,
+      "peakDb": -2.1,
+      "rmsMaxDb": -18.6,
+      "rmsMedianDb": -21.9
+    }
+  },
+  "combined100": {
+    "ludo": {
+      "peakDb": -1.8,
+      "rmsMaxDb": -14.8,
+      "rmsMedianDb": -22.1
+    },
+    "housie": {
+      "peakDb": -1.7,
+      "rmsMaxDb": -14.7,
+      "rmsMedianDb": -21
+    },
+    "bingo": {
+      "peakDb": -1.8,
+      "rmsMaxDb": -14.9,
+      "rmsMedianDb": -22.7
+    },
+    "uno": {
+      "peakDb": -1.7,
+      "rmsMaxDb": -14.8,
+      "rmsMedianDb": -22.8
+    }
+  }
+}

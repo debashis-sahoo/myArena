@@ -1,0 +1,141 @@
+/* The persistent turn strip (specs/007 US1). Scope .un. */
+.un .un-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 100%;
+  max-height: 34px;
+  padding: 0 10px 0 6px;
+  border-radius: 999px;
+  background: rgba(18, 10, 42, 0.82);
+  box-shadow: inset 0 0 0 2px var(--strip-edge, var(--un-line)), 0 2px 0 rgba(0, 0, 0, 0.35);
+  color: var(--un-text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.un .un-strip.header {
+  flex: 0 1 auto;
+  margin: 0 auto;
+  max-width: 460px;
+  height: calc(var(--btn-h, 40px) - 4px);
+}
+
+.un .un-strip.row {
+  width: 100%;
+  border-radius: 0;
+  box-shadow: inset 0 -2px 0 var(--strip-edge, var(--un-line));
+  justify-content: center;
+}
+
+.un .un-strip-av {
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.un .un-strip-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.un .un-strip-note {
+  color: var(--un-gold-hi);
+  font-style: normal;
+  font-weight: 900;
+}
+
+.un .un-strip-clock {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.un .un-strip-time {
+  min-width: 2.4em;
+  text-align: right;
+  color: var(--un-muted);
+  font-size: 12px;
+}
+
+.un .un-strip-bar {
+  display: block;
+  width: 36px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+.un .un-strip-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--un-gold);
+  transition: width 250ms linear;
+}
+
+/* My turn: gold fill, dark text, gentle pulse. */
+.un .un-strip.mine {
+  background: linear-gradient(180deg, var(--un-gold-hi), var(--un-gold) 60%, var(--un-gold-lo));
+  box-shadow: inset 0 0 0 2px var(--un-gold-hi), 0 0 14px rgba(255, 207, 61, 0.55);
+  color: #2a1a00;
+  animation: un-strip-pulse 1.6s ease-in-out infinite;
+}
+
+.un .un-strip.mine .un-strip-time {
+  color: #4a3300;
+}
+
+.un .un-strip.mine .un-strip-note {
+  color: #7a1020;
+}
+
+.un .un-strip.mine .un-strip-bar {
+  background: rgba(42, 26, 0, 0.25);
+}
+
+.un .un-strip.mine .un-strip-bar > span {
+  background: #2a1a00;
+}
+
+.un .un-strip.penalty:not(.mine),
+.un .un-strip.auto:not(.mine) {
+  box-shadow: inset 0 0 0 2px var(--un-danger), 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+@keyframes un-strip-pulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .un .un-strip.mine {
+    animation: none;
+  }
+  .un .un-strip-bar > span {
+    transition: none;
+  }
+}
+
+/* Narrow phones: the row keeps its whole label by dropping the countdown bar (the number stays) and one font step. */
+@media (max-width: 360px) {
+  .un .un-strip {
+    font-size: 12px;
+  }
+
+  .un .un-strip.row .un-strip-bar {
+    display: none;
+  }
+}

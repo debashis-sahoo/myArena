@@ -481,7 +481,11 @@ export class Room {
         if (target?.socketId) this.events.gameEventTo(this, target.socketId, event);
       },
       hostId: () => this.hostPlayerId,
-      notice: (text) => this.notice(text),
+      notice: (text, code) => this.notice(text, code),
+      isConnected: (playerId) => {
+        const p = this.seats.find((s) => s.occupant?.playerId === playerId)?.occupant;
+        return !!p && (p.kind === 'bot' || p.connection === 'connected');
+      },
       releaseSeat: (playerId, reason) => this.releaseSeat(playerId, reason),
       now: () => Date.now(),
       log: (level, fields, message) => logger[level]({ roomId: this.roomId, ...fields }, message),
@@ -489,14 +493,14 @@ export class Room {
   }
 
   /** A game's own system chat line (the only automatic line in quiet-chat games), at most 5 per second per room. */
-  private notice(text: string): void {
+  private notice(text: string, code: 'game_notice' | 'humor' = 'game_notice'): void {
     const now = Date.now();
     this.noticeTimes = this.noticeTimes.filter((t) => now - t < 1000);
     if (this.noticeTimes.length >= 5) return;
     const clean = sanitizeChatText(text);
     if (clean === null) return;
     this.noticeTimes.push(now);
-    this.events.chat(this, this.chat.system('game_notice', clean));
+    this.events.chat(this, this.chat.system(code, clean));
   }
 
   /** Chat as a participant (a bot), at most one message per second each. */
@@ -635,8 +639,17 @@ export class Room {
 
   private announce(code: SystemCode, text: string): void {
     this.lastActivityAt = Date.now();
-    // Quiet-chat games write no automatic lines while a match is running.
-    if (this.game.quietChat && this.state === 'in_progress') return;
+    // Quiet-chat games write no automatic lines while a match is running; a game may record them in its own activity feed.
+    if (this.game.quietChat && this.state === 'in_progress') {
+      if (this.match !== null && code !== 'match_started') {
+        try {
+          this.engine.onRoomNotice?.(this.match, code, text);
+        } catch (err) {
+          logger.error({ err, roomId: this.roomId }, 'onRoomNotice failed');
+        }
+      }
+      return;
+    }
     this.events.chat(this, this.chat.system(code, text));
   }
 

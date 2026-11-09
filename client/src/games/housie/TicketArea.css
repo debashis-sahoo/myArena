@@ -9,6 +9,14 @@
   justify-content: center;
 }
 
+/* Last resort on very short screens: the ticket region scrolls vertically inside itself; the page and the ticket never scroll sideways. */
+.hz-ta.is-scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-items: flex-start;
+  overscroll-behavior: contain;
+}
+
 .hz-ta__stack,
 .hz-ta__grid,
 .hz-ta__tabs {

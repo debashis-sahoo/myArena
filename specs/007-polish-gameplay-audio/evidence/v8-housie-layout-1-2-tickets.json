@@ -1,0 +1,519 @@
+{
+  "started": "2026-11-09T11:27:02.607Z",
+  "layout": [
+    {
+      "viewport": "320x568",
+      "tickets": 1,
+      "mode": "stack",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": true,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 32,
+          "cellH": 30,
+          "font": 18.5
+        }
+      ]
+    },
+    {
+      "viewport": "390x844",
+      "tickets": 1,
+      "mode": "stack",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 39,
+          "cellH": 30,
+          "font": 18.5
+        }
+      ]
+    },
+    {
+      "viewport": "768x1024",
+      "tickets": 1,
+      "mode": "stack",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 81,
+          "cellH": 58,
+          "font": 36
+        }
+      ]
+    },
+    {
+      "viewport": "1024x768",
+      "tickets": 1,
+      "mode": "stack",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 59,
+          "cellH": 42,
+          "font": 26
+        }
+      ]
+    },
+    {
+      "viewport": "1440x900",
+      "tickets": 1,
+      "mode": "stack",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 86,
+          "cellH": 62,
+          "font": 38.5
+        }
+      ]
+    },
+    {
+      "viewport": "568x320",
+      "tickets": 1,
+      "mode": "stack",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": true,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 59,
+          "cellH": 42,
+          "font": 26
+        }
+      ]
+    },
+    {
+      "viewport": "844x390",
+      "tickets": 1,
+      "mode": "stack",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 48,
+          "cellH": 38,
+          "font": 24
+        }
+      ]
+    },
+    {
+      "viewport": "320x568",
+      "tickets": 2,
+      "mode": "tabs",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": true,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 32,
+          "cellH": 30,
+          "font": 18.5
+        }
+      ]
+    },
+    {
+      "viewport": "390x844",
+      "tickets": 2,
+      "mode": "stack",
+      "visibleTickets": 2,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 38,
+          "cellH": 30,
+          "font": 18.5
+        },
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 38,
+          "cellH": 30,
+          "font": 18.5
+        }
+      ]
+    },
+    {
+      "viewport": "768x1024",
+      "tickets": 2,
+      "mode": "stack",
+      "visibleTickets": 2,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 80,
+          "cellH": 58,
+          "font": 36
+        },
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 80,
+          "cellH": 58,
+          "font": 36
+        }
+      ]
+    },
+    {
+      "viewport": "1024x768",
+      "tickets": 2,
+      "mode": "stack",
+      "visibleTickets": 2,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 58,
+          "cellH": 42,
+          "font": 26
+        },
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 58,
+          "cellH": 42,
+          "font": 26
+        }
+      ]
+    },
+    {
+      "viewport": "1440x900",
+      "tickets": 2,
+      "mode": "stack",
+      "visibleTickets": 2,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 85,
+          "cellH": 61,
+          "font": 38
+        },
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 85,
+          "cellH": 61,
+          "font": 38
+        }
+      ]
+    },
+    {
+      "viewport": "568x320",
+      "tickets": 2,
+      "mode": "tabs",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": true,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 59,
+          "cellH": 42,
+          "font": 26
+        }
+      ]
+    },
+    {
+      "viewport": "844x390",
+      "tickets": 2,
+      "mode": "tabs",
+      "visibleTickets": 1,
+      "pass": true,
+      "docOverflowX": false,
+      "areaScrollsY": false,
+      "docScrollsY": false,
+      "tickets_detail": [
+        {
+          "cols": 9,
+          "rows": 3,
+          "clipped": 0,
+          "cellW": 48,
+          "cellH": 38,
+          "font": 24
+        }
+      ]
+    }
+  ],
+  "font": [
+    {
+      "viewport": "320x568",
+      "tickets": 1,
+      "fontPx": 18.5,
+      "required": 18,
+      "pass": true
+    },
+    {
+      "viewport": "390x844",
+      "tickets": 1,
+      "fontPx": 18.5,
+      "required": 18,
+      "pass": true
+    },
+    {
+      "viewport": "768x1024",
+      "tickets": 1,
+      "fontPx": 36,
+      "required": 24,
+      "pass": true
+    },
+    {
+      "viewport": "1024x768",
+      "tickets": 1,
+      "fontPx": 26,
+      "required": 24,
+      "pass": true
+    },
+    {
+      "viewport": "1440x900",
+      "tickets": 1,
+      "fontPx": 38.5,
+      "required": 24,
+      "pass": true
+    },
+    {
+      "viewport": "568x320",
+      "tickets": 1,
+      "fontPx": 26,
+      "required": 18,
+      "pass": true
+    },
+    {
+      "viewport": "844x390",
+      "tickets": 1,
+      "fontPx": 24,
+      "required": 24,
+      "pass": true
+    },
+    {
+      "viewport": "320x568",
+      "tickets": 2,
+      "fontPx": 18.5,
+      "required": 18,
+      "pass": true
+    },
+    {
+      "viewport": "390x844",
+      "tickets": 2,
+      "fontPx": 18.5,
+      "required": 18,
+      "pass": true
+    },
+    {
+      "viewport": "768x1024",
+      "tickets": 2,
+      "fontPx": 36,
+      "required": 24,
+      "pass": true
+    },
+    {
+      "viewport": "1024x768",
+      "tickets": 2,
+      "fontPx": 26,
+      "required": 24,
+      "pass": true
+    },
+    {
+      "viewport": "1440x900",
+      "tickets": 2,
+      "fontPx": 38,
+      "required": 24,
+      "pass": true
+    },
+    {
+      "viewport": "568x320",
+      "tickets": 2,
+      "fontPx": 26,
+      "required": 18,
+      "pass": true
+    },
+    {
+      "viewport": "844x390",
+      "tickets": 2,
+      "fontPx": 24,
+      "required": 24,
+      "pass": true
+    }
+  ],
+  "marking": {
+    "mouse": {
+      "before": {
+        "pressed": "false",
+        "cls": "hz-tk-cell",
+        "bg": "rgb(217, 227, 255)",
+        "ring": "none",
+        "tick": "none",
+        "hasCross": false,
+        "label": "Row 1, column 5, number 48"
+      },
+      "marked": {
+        "pressed": "true",
+        "cls": "hz-tk-cell is-marked",
+        "bg": "rgb(191, 200, 224)",
+        "ring": "rgb(214, 40, 62) 0px 0px 0px 2px inset",
+        "tick": "\"\"",
+        "hasCross": true,
+        "label": "Row 1, column 5, number 48, crossed"
+      },
+      "unmarked": {
+        "pressed": "false",
+        "cls": "hz-tk-cell",
+        "bg": "rgb(217, 227, 255)",
+        "ring": "none",
+        "tick": "none",
+        "hasCross": false,
+        "label": "Row 1, column 5, number 48"
+      },
+      "pass": true
+    },
+    "keyboard": {
+      "tabsToReachCell": 1,
+      "focused": {
+        "cell": true,
+        "pressed": "false",
+        "hasCross": false,
+        "tick": "none",
+        "ring": "none",
+        "label": "Row 1, column 1, number 1"
+      },
+      "afterEnter": {
+        "cell": true,
+        "pressed": "true",
+        "hasCross": true,
+        "tick": "\"\"",
+        "ring": "rgb(43, 79, 208) 0px 0px 0px 2px inset",
+        "label": "Row 1, column 1, number 1, crossed"
+      },
+      "afterEnter2": {
+        "cell": true,
+        "pressed": "false",
+        "hasCross": false,
+        "tick": "none",
+        "ring": "none",
+        "label": "Row 1, column 1, number 1"
+      },
+      "afterSpace": {
+        "cell": true,
+        "pressed": "true",
+        "hasCross": true,
+        "tick": "\"\"",
+        "ring": "rgb(43, 79, 208) 0px 0px 0px 2px inset",
+        "label": "Row 1, column 1, number 1, crossed"
+      },
+      "afterSpace2": {
+        "cell": true,
+        "pressed": "false",
+        "hasCross": false,
+        "tick": "none",
+        "ring": "none",
+        "label": "Row 1, column 1, number 1"
+      },
+      "pass": true
+    },
+    "touch": {}
+  },
+  "screenshots": [
+    "C:\\Users\\debashis\\AppData\\Local\\Temp\\housie-verify\\v8-housie-390x844-1tickets.jpg",
+    "C:\\Users\\debashis\\AppData\\Local\\Temp\\housie-verify\\v8-housie-1440x900-2tickets.jpg",
+    "C:\\Users\\debashis\\AppData\\Local\\Temp\\housie-verify\\v8-housie-844x390-2tickets.jpg"
+  ],
+  "notes": [
+    {
+      "n": 1,
+      "setCeiling": true,
+      "hostTickets": true,
+      "guestTickets": true,
+      "start": true
+    },
+    {
+      "n": 2,
+      "setCeiling": true,
+      "hostTickets": true,
+      "guestTickets": true,
+      "start": true
+    },
+    {
+      "fatal": "page.waitForSelector: Timeout 12000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.hz-tk-cell') to be visible\u001b[22m\n\n    at C:\\Users\\debashis\\AppData\\Local\\Temp\\housie-verify\\run.mjs:213:16"
+    }
+  ],
+  "finished": "2026-11-09T11:27:38.082Z"
+}

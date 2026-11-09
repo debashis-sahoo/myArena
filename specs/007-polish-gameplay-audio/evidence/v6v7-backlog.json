@@ -1,0 +1,19 @@
+{
+ "rows": [
+  {
+   "name": "while everyone is away no humor is posted (history on return equals what was there before)",
+   "expected": 2,
+   "observed": {
+    "before": 2,
+    "history": 2
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "after returning, lines resume one at a time (no backlog burst)",
+   "expected": "<= 2 in 3.5 s",
+   "observed": 2,
+   "status": "PASS"
+  }
+ ]
+}

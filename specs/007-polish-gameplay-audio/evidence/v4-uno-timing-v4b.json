@@ -1,0 +1,15 @@
+[
+ {
+  "name": "connection cut after a tap: the ghost waits, returns after about 4 s with \"Connection is slow\", hand intact",
+  "expected": "ghost at 1.2 s, back at ~4000 ms, toast, hand unchanged",
+  "observed": {
+   "ghostAt1200": 1,
+   "handAt1200": 9,
+   "ghostBackMs": 4124,
+   "toastMs": 4009,
+   "handBefore": 9,
+   "handAfter": 9
+  },
+  "status": "PASS"
+ }
+]

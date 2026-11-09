@@ -1,14 +1,20 @@
+/*
+ * Housie ticket (specs/007 US3, contracts/housie-ticket-layout.md). Numbers are the strongest element: dark ink on light column tints,
+ * sized by the planner (--tk-font, --tk-cell-h). The ribbon, tints and frame add character without covering a cell.
+ */
 .hz-tk {
+  --tk-ink-dark: #2a1a0a;
   position: relative;
   display: inline-flex;
+  flex-direction: column;
   align-items: stretch;
-  gap: 4px;
-  padding: 6px 6px 6px 4px;
+  gap: 2px;
+  padding: 0 4px 4px;
   border-radius: 10px;
   background: linear-gradient(160deg, var(--hz-paper) 0%, var(--hz-paper-2) 100%);
   border: 2px solid var(--hz-gold-lo);
   box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 241, 184, 0.6);
-  color: var(--hz-ink);
+  color: var(--tk-ink-dark);
   max-width: 100%;
   box-sizing: border-box;
   transition: border-color 120ms, box-shadow 120ms;
@@ -16,15 +22,15 @@
 
 .hz-tk.is-selected {
   border: 4px solid var(--hz-gold);
-  padding: 4px 4px 4px 2px;
+  padding: 0 2px 2px;
   box-shadow: 0 0 0 2px var(--hz-gold-hi), 0 4px 14px rgba(242, 183, 58, 0.45);
 }
 
-/* Compact: no side label, thin border and padding, 1px gaps, so 9 cells of 32px fit a 320px screen. */
+/* Compact (a single ticket or the tabs): thinner frame and 1px gaps so nine cells of 29px fit a 320px screen. */
 .hz-tk.compact,
 .hz-tk.compact.is-selected {
-  gap: 0;
-  padding: 2px;
+  gap: 1px;
+  padding: 0 2px 2px;
   border-width: 2px;
 }
 
@@ -32,27 +38,56 @@
   gap: 1px;
 }
 
-.hz-tk-tab {
+/* ---------- ribbon: ticket name, scalloped lower edge ---------- */
+.hz-tk-ribbon {
+  position: relative;
+  flex: none;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 16px;
-  flex: none;
-  border-radius: 6px;
+  justify-content: space-between;
+  gap: 6px;
+  height: 18px;
+  margin: 0 -4px 3px;
+  padding: 0 10px;
+  border-radius: 6px 6px 0 0;
   background: linear-gradient(180deg, var(--hz-gold-hi), var(--hz-gold) 60%, var(--hz-gold-lo));
-  color: var(--hz-ink);
+  color: var(--tk-ink-dark);
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  overflow: hidden;
-}
-
-.hz-tk-tab span {
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
+.hz-tk-ribbon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 5px;
+  background: radial-gradient(circle at 50% 0, var(--hz-gold-lo) 3px, transparent 3.5px) 0 0 / 10px 5px repeat-x;
+  pointer-events: none;
+}
+
+.hz-tk-ribbon span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hz-tk.compact .hz-tk-ribbon {
+  height: 14px;
+  margin: 0 -2px 2px;
+  padding: 0 8px;
+  font-size: 9px;
+}
+
+.hz-tk.is-selected .hz-tk-ribbon {
+  margin: 0 -2px 3px;
+}
+
+/* ---------- grid ---------- */
 .hz-tk-grid {
   display: grid;
   grid-template-columns: repeat(9, var(--tk-cell-w));
@@ -74,10 +109,10 @@
   height: 100%;
   margin: 0;
   padding: 0;
-  border: 1px solid rgba(120, 90, 40, 0.4);
+  border: 1px solid rgba(120, 90, 40, 0.5);
   border-radius: 4px;
-  background: rgba(255, 252, 240, 0.55);
-  color: var(--hz-ink);
+  background: var(--tint, rgba(255, 252, 240, 0.9));
+  color: var(--tk-ink-dark);
   font: inherit;
   cursor: pointer;
   touch-action: manipulation;
@@ -85,17 +120,46 @@
   transition: background-color 80ms, transform 80ms;
 }
 
+/* One tint per column, following the number ranges 1-9, 10-19 ... 80-90; light enough that the ink keeps at least 10:1 contrast. */
+.hz-tk-cell[data-col='0'] { --tint: #fff1c9; --tint-marked: #e0d4b1; }
+.hz-tk-cell[data-col='1'] { --tint: #ffe0d2; --tint-marked: #e0c5b9; }
+.hz-tk-cell[data-col='2'] { --tint: #fdd9e6; --tint-marked: #dfbfca; }
+.hz-tk-cell[data-col='3'] { --tint: #ead9fb; --tint-marked: #cebfdd; }
+.hz-tk-cell[data-col='4'] { --tint: #d9e3ff; --tint-marked: #bfc8e0; }
+.hz-tk-cell[data-col='5'] { --tint: #d2f1f7; --tint-marked: #b9d4d9; }
+.hz-tk-cell[data-col='6'] { --tint: #d4f5dd; --tint-marked: #bbd8c2; }
+.hz-tk-cell[data-col='7'] { --tint: #e9f5c8; --tint-marked: #cdd8b0; }
+.hz-tk-cell[data-col='8'] { --tint: #ffe8b8; --tint-marked: #e0cca2; }
+
 .hz-tk-cell.is-readonly {
   cursor: default;
 }
 
 .hz-tk-cell:not(.is-readonly):hover {
-  background: rgba(255, 241, 184, 0.85);
+  filter: brightness(1.06);
 }
 
 .hz-tk-cell:not(.is-readonly):active {
   transform: scale(0.94);
-  background: rgba(242, 183, 58, 0.45);
+}
+
+/* Marked: the hand-inked cross plus a filled inset, an ink ring and a corner tick, so it differs by shape and fill, not only hue. */
+.hz-tk-cell.is-marked {
+  background: var(--tint-marked, rgba(255, 241, 184, 0.9));
+  box-shadow: inset 0 0 0 2px var(--tk-ink);
+}
+
+.hz-tk-cell.is-marked::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid var(--tk-ink);
+  border-bottom: 2px solid var(--tk-ink);
+  transform: rotate(-45deg);
+  pointer-events: none;
 }
 
 .hz-tk-cell:focus-visible {
@@ -106,10 +170,10 @@
 
 .hz-tk-num {
   font-weight: 800;
-  font-size: calc(var(--tk-cell-h) * 0.55);
+  font-size: var(--tk-font, 18px);
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: var(--hz-ink);
+  color: var(--tk-ink-dark);
 }
 
 .hz-tk-cross {

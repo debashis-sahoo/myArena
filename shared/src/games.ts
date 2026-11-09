@@ -39,6 +39,7 @@ export const GAMES: readonly GameDefinition[] = [
     supportsAi: true,
     seatColors: ['yellow', 'green', 'blue', 'red'],
     theme: { accent: '#3dff9a', accent2: '#8a5cff' },
+    quietChat: true,
   },
   {
     id: 'snakes-and-ladders',

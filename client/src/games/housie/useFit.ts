@@ -1,46 +1,92 @@
 export { useRegionSize } from '../../state/viewport';
 
-export type TicketPlan = { mode: 'stack' | 'grid' | 'tabs'; cell: number };
+/**
+ * Ticket planner (specs/007 contracts/housie-ticket-layout.md section 4): the largest cell that fits, with a row height and a number
+ * size that never fall below the readable minimums (18 px on phones, 24 px from 768 px wide).
+ */
+export type TicketPlan = {
+  mode: 'stack' | 'grid' | 'tabs';
+  /** Cell width in px. */
+  cell: number;
+  /** Cell height in px. */
+  rowH: number;
+  /** Number size in px. */
+  fontPx: number;
+  /** Last resort: even one ticket cannot reach the minimum sizes in the height; the ticket region scrolls vertically inside itself. */
+  scrollY: boolean;
+};
 
-const MIN_CELL = 32;
-const MAX_CELL = 110;
-const ROW_RATIO = 0.62;
+export const WIDE_FROM = 768;
+export const MIN_FONT_PHONE = 18;
+export const MIN_FONT_WIDE = 24;
+export const MIN_ROW_PHONE = 30;
+export const MIN_ROW_WIDE = 38;
+const MIN_CELL_PHONE = 29; // nine columns fit a 320 px screen with compact padding
+const MIN_CELL_WIDE = 32;
+const MAX_CELL = 128;
+const ROW_RATIO = 0.72;
 const TICKET_ROWS = 3;
 const TICKET_COLS = 9;
-const PAD_X = 58; // per ticket: borders, padding, the 16px label tab and the 8 inner column gaps
-const PAD_X_COMPACT = 18; // no label tab, 2px borders and padding, 1px column gaps
-const LABEL_H_COMPACT = 12;
-const LABEL_H = 28;
+const PAD_X = 28; // roomy ticket: frame, padding and the 8 inner column gaps
+const PAD_X_COMPACT = 18; // single or tabbed ticket: 2px frame and padding, 1px column gaps
+const OVERHEAD_Y = 36; // roomy: ribbon 18, frame and padding 14, 2 row gaps of 2px
+const OVERHEAD_Y_COMPACT = 22; // compact: ribbon 14, frame and padding 6, 2 row gaps of 1px
 const GAP = 8;
 const TAB_STRIP = 30;
 
-const clampCell = (v: number): number => Math.max(0, Math.min(MAX_CELL, Math.floor(v)));
-
-/** Largest cell width that fits `cols x rows` tickets in width x height. */
-function fitCell(width: number, height: number, cols: number, rows: number, strip: number, compact = false): number {
-  const padX = compact ? PAD_X_COMPACT : PAD_X;
-  const labelH = compact ? LABEL_H_COMPACT : LABEL_H;
-  const byW = (width - padX * cols - GAP * (cols - 1)) / (TICKET_COLS * cols);
-  const byH = (height - strip - labelH * rows - GAP * (rows - 1)) / (TICKET_ROWS * ROW_RATIO * rows);
-  return clampCell(Math.min(byW, byH));
+interface Spec {
+  minFont: number;
+  minRow: number;
+  minCell: number;
 }
 
-export function planTickets(width: number, height: number, count: number): TicketPlan {
+const specFor = (viewportWidth: number): Spec =>
+  viewportWidth >= WIDE_FROM
+    ? { minFont: MIN_FONT_WIDE, minRow: MIN_ROW_WIDE, minCell: MIN_CELL_WIDE }
+    : { minFont: MIN_FONT_PHONE, minRow: MIN_ROW_PHONE, minCell: MIN_CELL_PHONE };
+
+const rowFor = (cell: number, spec: Spec): number => Math.round(Math.max(spec.minRow, ROW_RATIO * cell));
+const fontFor = (cell: number, rowH: number, spec: Spec): number => Math.round(Math.max(spec.minFont, Math.min(0.62 * rowH, 0.6 * cell)) * 2) / 2;
+
+/** Largest cell width that fits `cols x rows` tickets in width x height with the minimum sizes kept; 0 when none does. */
+function fitCell(width: number, height: number, cols: number, rows: number, strip: number, compact: boolean, spec: Spec): number {
+  const padX = compact ? PAD_X_COMPACT : PAD_X;
+  const overY = compact ? OVERHEAD_Y_COMPACT : OVERHEAD_Y;
+  const byW = Math.floor((width - padX * cols - GAP * (cols - 1)) / (TICKET_COLS * cols));
+  for (let cell = Math.min(byW, MAX_CELL); cell >= spec.minCell; cell -= 1) {
+    const need = strip + rows * (overY + TICKET_ROWS * rowFor(cell, spec)) + GAP * (rows - 1);
+    if (need <= height) return cell;
+  }
+  return 0;
+}
+
+function sized(mode: TicketPlan['mode'], cell: number, spec: Spec, scrollY = false): TicketPlan {
+  const rowH = rowFor(cell, spec);
+  return { mode, cell, rowH, fontPx: fontFor(cell, rowH, spec), scrollY };
+}
+
+export function planTickets(width: number, height: number, count: number, viewportWidth: number): TicketPlan {
   const n = Math.max(1, Math.floor(count));
   const w = Math.max(0, width);
   const h = Math.max(0, height);
-  const tabsCell = Math.max(MIN_CELL / 2, fitCell(w, h, 1, 1, n > 1 ? TAB_STRIP + GAP : 0, true));
-  if (n === 1) return { mode: 'stack', cell: tabsCell };
+  const spec = specFor(viewportWidth);
 
-  const candidates: TicketPlan[] = [{ mode: 'stack', cell: fitCell(w, h, 1, n, 0) }];
-  if (n >= 3) candidates.push({ mode: 'grid', cell: fitCell(w, h, 2, Math.ceil(n / 2), 0) });
+  // One ticket at a time (a single ticket, or the tabs): compact padding, plus the tab strip when there are several.
+  const strip = n > 1 ? TAB_STRIP + GAP : 0;
+  const single = fitCell(w, h, 1, 1, strip, true, spec);
+  const widthCell = Math.max(16, Math.min(MAX_CELL, Math.floor((w - PAD_X_COMPACT) / TICKET_COLS)));
+  const fallback = (): TicketPlan => sized(n === 1 ? 'stack' : 'tabs', single || widthCell, spec, single === 0);
+  if (n === 1) return fallback();
 
-  let best: TicketPlan | null = null;
+  const candidates: { mode: 'stack' | 'grid'; cell: number }[] = [{ mode: 'stack', cell: fitCell(w, h, 1, n, 0, false, spec) }];
+  if (n >= 3) candidates.push({ mode: 'grid', cell: fitCell(w, h, 2, Math.ceil(n / 2), 0, false, spec) });
+
+  let best: { mode: 'stack' | 'grid'; cell: number } | null = null;
   for (const c of candidates) {
-    if (c.cell < MIN_CELL) continue;
+    if (c.cell <= 0) continue;
     if (!best || c.cell > best.cell) best = c; // strict ">" keeps stack on ties
   }
-  return best ?? { mode: 'tabs', cell: tabsCell };
+  return best ? sized(best.mode, best.cell, spec) : fallback();
 }
 
 export type TilePlan = { cols: number; tier: 'large' | 'medium' | 'compact'; tileHeight: number; scroll: boolean };

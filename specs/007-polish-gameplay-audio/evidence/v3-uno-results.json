@@ -1,0 +1,1851 @@
+{
+ "p1_start": "ok",
+ "online": {
+  "roomId": "YWKCHFTM",
+  "rows": [
+   {
+    "h": 360,
+    "vw": 560,
+    "headW": 560,
+    "mode": "row",
+    "free": 150,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Next turn...",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 600,
+    "headW": 600,
+    "mode": "row",
+    "free": 190,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Next turn...",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 640,
+    "headW": 640,
+    "mode": "row",
+    "free": 230,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Next turn...",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 680,
+    "headW": 680,
+    "mode": "row",
+    "free": 270,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Next turn...",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 720,
+    "headW": 720,
+    "mode": "row",
+    "free": 310,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 760,
+    "headW": 760,
+    "mode": "header",
+    "free": 350,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 800,
+    "headW": 800,
+    "mode": "header",
+    "free": 390,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 844,
+    "headW": 844,
+    "mode": "header",
+    "free": 434,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 900,
+    "headW": 900,
+    "mode": "header",
+    "free": 490,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": true,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 360,
+    "vw": 1024,
+    "headW": 1024,
+    "mode": "header",
+    "free": 614,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": true,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 560,
+    "headW": 560,
+    "mode": "row",
+    "free": 150,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 600,
+    "headW": 600,
+    "mode": "row",
+    "free": 190,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 640,
+    "headW": 640,
+    "mode": "row",
+    "free": 230,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 680,
+    "headW": 680,
+    "mode": "row",
+    "free": 270,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 720,
+    "headW": 720,
+    "mode": "row",
+    "free": 310,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 760,
+    "headW": 760,
+    "mode": "header",
+    "free": 350,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 800,
+    "headW": 800,
+    "mode": "header",
+    "free": 390,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 844,
+    "headW": 844,
+    "mode": "header",
+    "free": 434,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 900,
+    "headW": 900,
+    "mode": "header",
+    "free": 490,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": true,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 420,
+    "vw": 1024,
+    "headW": 1024,
+    "mode": "header",
+    "free": 614,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:28",
+     "un-chat-drawer:28"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": true,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 560,
+    "headW": 560,
+    "mode": "row",
+    "free": 126,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40",
+     "un-chat-drawer:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 600,
+    "headW": 600,
+    "mode": "row",
+    "free": 166,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40",
+     "un-chat-drawer:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 640,
+    "headW": 640,
+    "mode": "row",
+    "free": 206,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40",
+     "un-chat-drawer:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 680,
+    "headW": 680,
+    "mode": "row",
+    "free": 246,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40",
+     "un-chat-drawer:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": true,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": false,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 720,
+    "headW": 720,
+    "mode": "row",
+    "free": 332,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": false,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 760,
+    "headW": 760,
+    "mode": "header",
+    "free": 372,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": false,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": false,
+    "fitsNotes": false,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 800,
+    "headW": 800,
+    "mode": "header",
+    "free": 412,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": false,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": false,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 844,
+    "headW": 844,
+    "mode": "header",
+    "free": 456,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": false,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": true,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 900,
+    "headW": 900,
+    "mode": "header",
+    "free": 512,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:40"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": false,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": true,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   },
+   {
+    "h": 768,
+    "vw": 1024,
+    "headW": 1024,
+    "mode": "header",
+    "free": 628,
+    "fixed": [
+     "un-btn:63",
+     "un-brand:40",
+     "un-code:100",
+     "un-btn:98",
+     "btn:48"
+    ],
+    "hasInvite": true,
+    "hasChatBtn": false,
+    "labels": {
+     "other_turn": 246,
+     "thinking": 288,
+     "mine_play": 311,
+     "mine_drawn": 335,
+     "mine_pend_w4_12": 382,
+     "other_pend_12": 341,
+     "other_drawn": 377,
+     "reconnecting": 319,
+     "note_mine_uno": 370,
+     "note_catch": 373,
+     "stress_drawn_W": 456
+    },
+    "longestRealistic": 382,
+    "fitsAllRealistic": true,
+    "fitsNotes": true,
+    "fitsStress": true,
+    "fitsTypical": true,
+    "actualText": "Hosty's turn",
+    "actualTruncated": false
+   }
+  ]
+ },
+ "reconnect": {
+  "before": {
+   "label": "Hosty's turn",
+   "cls": "un-strip row play",
+   "chips": [
+    "Turn"
+   ],
+   "your": false,
+   "cards": [
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc"
+   ]
+  },
+  "after": {
+   "label": "Hosty's turn",
+   "cls": "un-strip row play",
+   "chips": [
+    "Turn"
+   ],
+   "your": false,
+   "cards": [
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc",
+    "xbtn un-hc"
+   ]
+  },
+  "sameLabel": true,
+  "sameChips": true,
+  "samePlayable": true,
+  "sameYour": true
+ },
+ "sizes": [
+  {
+   "w": 320,
+   "h": 568,
+   "mode": "row",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": true,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 68,
+    "w": 320,
+    "h": 500
+   },
+   "handSlot": {
+    "x": 2,
+    "y": 463,
+    "w": 316,
+    "h": 105
+   },
+   "centre": {
+    "x": 60,
+    "y": 124,
+    "w": 200,
+    "h": 295
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 124,
+     "w": 56,
+     "h": 295
+    },
+    {
+     "x": 65,
+     "y": 68,
+     "w": 190,
+     "h": 56
+    },
+    {
+     "x": 264,
+     "y": 124,
+     "w": 56,
+     "h": 295
+    }
+   ],
+   "cardW": 67,
+   "minSlice": 41,
+   "nCards": 7,
+   "mine": true
+  },
+  {
+   "w": 360,
+   "h": 640,
+   "mode": "row",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": false,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 74,
+    "w": 360,
+    "h": 566
+   },
+   "handSlot": {
+    "x": 8,
+    "y": 522,
+    "w": 344,
+    "h": 118
+   },
+   "centre": {
+    "x": 60,
+    "y": 130,
+    "w": 240,
+    "h": 348
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 130,
+     "w": 56,
+     "h": 348
+    },
+    {
+     "x": 85,
+     "y": 74,
+     "w": 190,
+     "h": 56
+    },
+    {
+     "x": 304,
+     "y": 130,
+     "w": 56,
+     "h": 348
+    }
+   ],
+   "cardW": 92,
+   "minSlice": 39,
+   "nCards": 7,
+   "mine": true
+  },
+  {
+   "w": 390,
+   "h": 844,
+   "mode": "row",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": false,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 74,
+    "w": 390,
+    "h": 770
+   },
+   "handSlot": {
+    "x": 8,
+    "y": 688,
+    "w": 374,
+    "h": 156
+   },
+   "centre": {
+    "x": 60,
+    "y": 146,
+    "w": 270,
+    "h": 498
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 146,
+     "w": 56,
+     "h": 498
+    },
+    {
+     "x": 100,
+     "y": 74,
+     "w": 190,
+     "h": 72
+    },
+    {
+     "x": 334,
+     "y": 146,
+     "w": 56,
+     "h": 498
+    }
+   ],
+   "cardW": 123,
+   "minSlice": 38,
+   "nCards": 7,
+   "mine": true
+  },
+  {
+   "w": 568,
+   "h": 320,
+   "mode": "row",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": false,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 56,
+    "w": 568,
+    "h": 264
+   },
+   "handSlot": {
+    "x": 128,
+    "y": 241,
+    "w": 312,
+    "h": 79
+   },
+   "centre": {
+    "x": 60,
+    "y": 112,
+    "w": 448,
+    "h": 129
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 112,
+     "w": 56,
+     "h": 129
+    },
+    {
+     "x": 189,
+     "y": 56,
+     "w": 190,
+     "h": 56
+    },
+    {
+     "x": 512,
+     "y": 112,
+     "w": 56,
+     "h": 129
+    }
+   ],
+   "cardW": 62,
+   "minSlice": 30,
+   "nCards": 7,
+   "mine": true
+  },
+  {
+   "w": 640,
+   "h": 360,
+   "mode": "row",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": false,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 56,
+    "w": 640,
+    "h": 304
+   },
+   "handSlot": {
+    "x": 128,
+    "y": 281,
+    "w": 384,
+    "h": 79
+   },
+   "centre": {
+    "x": 60,
+    "y": 112,
+    "w": 520,
+    "h": 169
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 112,
+     "w": 56,
+     "h": 169
+    },
+    {
+     "x": 225,
+     "y": 56,
+     "w": 190,
+     "h": 56
+    },
+    {
+     "x": 584,
+     "y": 112,
+     "w": 56,
+     "h": 169
+    }
+   ],
+   "cardW": 62,
+   "minSlice": 30,
+   "nCards": 7,
+   "mine": true
+  },
+  {
+   "w": 667,
+   "h": 375,
+   "mode": "row",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": false,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 56,
+    "w": 667,
+    "h": 319
+   },
+   "handSlot": {
+    "x": 128,
+    "y": 296,
+    "w": 411,
+    "h": 79
+   },
+   "centre": {
+    "x": 60,
+    "y": 112,
+    "w": 547,
+    "h": 184
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 112,
+     "w": 56,
+     "h": 184
+    },
+    {
+     "x": 238,
+     "y": 56,
+     "w": 190,
+     "h": 56
+    },
+    {
+     "x": 611,
+     "y": 112,
+     "w": 56,
+     "h": 184
+    }
+   ],
+   "cardW": 62,
+   "minSlice": 30,
+   "nCards": 7,
+   "mine": true
+  },
+  {
+   "w": 844,
+   "h": 390,
+   "mode": "header",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": false,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 32,
+    "w": 844,
+    "h": 358
+   },
+   "handSlot": {
+    "x": 128,
+    "y": 311,
+    "w": 588,
+    "h": 79
+   },
+   "centre": {
+    "x": 67,
+    "y": 88,
+    "w": 710,
+    "h": 223
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 88,
+     "w": 63,
+     "h": 223
+    },
+    {
+     "x": 327,
+     "y": 32,
+     "w": 190,
+     "h": 56
+    },
+    {
+     "x": 781,
+     "y": 88,
+     "w": 63,
+     "h": 223
+    }
+   ],
+   "cardW": 62,
+   "minSlice": 30,
+   "nCards": 7,
+   "mine": true
+  },
+  {
+   "w": 1024,
+   "h": 768,
+   "mode": "header",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": false,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 52,
+    "w": 1024,
+    "h": 716
+   },
+   "handSlot": {
+    "x": 128,
+    "y": 627,
+    "w": 768,
+    "h": 141
+   },
+   "centre": {
+    "x": 81,
+    "y": 117,
+    "w": 862,
+    "h": 510
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 117,
+     "w": 77,
+     "h": 510
+    },
+    {
+     "x": 417,
+     "y": 52,
+     "w": 190,
+     "h": 65
+    },
+    {
+     "x": 947,
+     "y": 117,
+     "w": 77,
+     "h": 510
+    }
+   ],
+   "cardW": 111,
+   "minSlice": 54,
+   "nCards": 7,
+   "mine": true
+  },
+  {
+   "w": 1366,
+   "h": 768,
+   "mode": "header",
+   "label": "Your turn: stack a Draw 2 or draw 2",
+   "hscroll": false,
+   "stripVisible": true,
+   "stripTruncated": false,
+   "overlapSeat": false,
+   "overlapHand": false,
+   "table": {
+    "x": 0,
+    "y": 52,
+    "w": 1366,
+    "h": 716
+   },
+   "handSlot": {
+    "x": 128,
+    "y": 627,
+    "w": 1110,
+    "h": 141
+   },
+   "centre": {
+    "x": 106,
+    "y": 117,
+    "w": 1154,
+    "h": 510
+   },
+   "seats": [
+    {
+     "x": 0,
+     "y": 117,
+     "w": 102,
+     "h": 510
+    },
+    {
+     "x": 588,
+     "y": 52,
+     "w": 190,
+     "h": 65
+    },
+    {
+     "x": 1264,
+     "y": 117,
+     "w": 102,
+     "h": 510
+    }
+   ],
+   "cardW": 111,
+   "minSlice": 54,
+   "nCards": 7,
+   "mine": true
+  }
+ ],
+ "labels": {
+  "390x844": [
+   {
+    "text": "Your turn: play a card or draw",
+    "cls": "row mine play",
+    "your": true,
+    "chips": [],
+    "think": false,
+    "firstMs": 33
+   },
+   {
+    "text": "Next turn...",
+    "cls": "row wait",
+    "your": false,
+    "chips": [],
+    "think": false,
+    "firstMs": 3416
+   },
+   {
+    "text": "Zippy is thinking...",
+    "cls": "row thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 3795
+   },
+   {
+    "text": "Blaze is thinking...",
+    "cls": "row thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 5133
+   },
+   {
+    "text": "Nova is thinking...",
+    "cls": "row thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 6455
+   },
+   {
+    "text": "Blaze may stack or draw 4",
+    "cls": "row penalty",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 13841
+   }
+  ],
+  "1024x768": [
+   {
+    "text": "Next turn...",
+    "cls": "header wait",
+    "your": false,
+    "chips": [],
+    "think": false,
+    "firstMs": 30
+   },
+   {
+    "text": "Your turn: play a card or draw",
+    "cls": "header mine play",
+    "your": true,
+    "chips": [],
+    "think": false,
+    "firstMs": 217
+   },
+   {
+    "text": "Zippy is thinking...",
+    "cls": "header thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 4737
+   },
+   {
+    "text": "Zippy is deciding on a drawn card",
+    "cls": "header drawn",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 6066
+   },
+   {
+    "text": "Blaze is thinking...",
+    "cls": "header thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 6632
+   },
+   {
+    "text": "Nova is thinking...",
+    "cls": "header thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 7954
+   }
+  ],
+  "stack-390x844": [
+   {
+    "text": "Next turn...",
+    "cls": "row wait",
+    "your": false,
+    "chips": [],
+    "think": false,
+    "firstMs": 19
+   },
+   {
+    "text": "Your turn: play a card or draw",
+    "cls": "row mine play",
+    "your": true,
+    "chips": [],
+    "think": false,
+    "firstMs": 403
+   },
+   {
+    "cards": [
+     "Red Draw Two",
+     "Yellow 7",
+     "Yellow 7",
+     "Yellow 8",
+     "Yellow Reverse",
+     "Wild",
+     "Wild Draw Four"
+    ]
+   },
+   {
+    "text": "Your turn: play a card or draw",
+    "cls": "row mine play",
+    "your": true,
+    "chips": [],
+    "think": false
+   },
+   {
+    "cards": [
+     "Red Draw Two",
+     "Yellow 7",
+     "Yellow 7",
+     "Yellow 8",
+     "Yellow Reverse",
+     "Wild",
+     "Wild Draw Four"
+    ]
+   },
+   {
+    "text": "Your turn: play a card or draw",
+    "cls": "row mine play",
+    "your": true,
+    "chips": [],
+    "think": false
+   },
+   {
+    "cards": [
+     "Red Draw Two",
+     "Yellow 7",
+     "Yellow 7",
+     "Yellow 8",
+     "Yellow Reverse",
+     "Wild",
+     "Wild Draw Four"
+    ]
+   },
+   {
+    "text": "Your turn: play a card or draw",
+    "cls": "row mine play",
+    "your": true,
+    "chips": [],
+    "think": false
+   },
+   {
+    "text": "Zippy is thinking...",
+    "cls": "row thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 8733
+   },
+   {
+    "text": "Blaze is thinking...",
+    "cls": "row thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 10409
+   },
+   {
+    "text": "Nova is thinking...",
+    "cls": "row thinking",
+    "your": false,
+    "chips": [
+     "Turn"
+    ],
+    "think": true,
+    "firstMs": 11936
+   }
+  ]
+ }
+}

@@ -1,0 +1,60 @@
+{
+ "name": "reduced",
+ "port": "10103",
+ "checks": {
+  "reducedMotion": {
+   "pendingAt120ms": false,
+   "pendingLog": [
+    {
+     "at": 1,
+     "v": true
+    },
+    {
+     "at": 5,
+     "v": false
+    }
+   ],
+   "ghostBeforeEvent": 0,
+   "ghostAfterEvent": 4,
+   "tapToEvent": 2.399999976158142,
+   "eventToLanded": 176.20000004768372,
+   "pass": false
+  },
+  "mouse_3": {
+   "tapToHeld": {
+    "n": 1,
+    "min": 1,
+    "median": 1,
+    "max": 1
+   },
+   "eventToLanded": {
+    "n": 1,
+    "min": 165.8,
+    "median": 165.8,
+    "max": 165.8
+   },
+   "tapToEvent": {
+    "n": 1,
+    "min": 2.2,
+    "median": 2.2,
+    "max": 2.2
+   },
+   "discardUnchangedBeforeEvent": "1/1",
+   "refused": 0,
+   "rows": [
+    {
+     "tapToHeld": 1,
+     "tapToEvent": 2.199999988079071,
+     "eventToLanded": 165.80000001192093,
+     "tapToLanded": 168,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 180.80000001192093,
+     "sentPlayCard": 1,
+     "hand": 5
+    }
+   ]
+  }
+ },
+ "stallText": "Leave\nUNO\nUCEG-JMZM\n🦊\nYour turn: play a card or draw\n0:08\n🔇\n🤖\nBOT\nZippy\n×10\n↻ Clockwise\nDirection of play: Clockwise\n89\n+2\n◆\n+2\n◆\nACTIVE COLOUR:\n◆ BLUE\n0\n▲\n0\n▲\n0\n▲\n9\n▲\n9\n▲\n9\n▲\n9\n■\n9\n■\n9\n■\n+4\n+4\n+4\n+4\n+4\n+4\nYour turn\n8\nUNO!"
+}

@@ -13,6 +13,7 @@ import {
   type HousieLobby,
   type RoomState,
 } from '@myarena/shared';
+import { AudioControls } from '../../components/common/AudioControls';
 import { toast } from '../../components/common/Toast';
 import { ChatPanel } from '../../components/room/ChatPanel';
 import { HostControls } from '../../components/room/HostControls';
@@ -119,8 +120,10 @@ export function HousieLobby({ room, youId, invitePath, chat }: Props): ReactElem
         </span>
         <span className="spacer" />
         <span className="hz-chip">
-          {room.seats.filter((s) => s.occupant).length} / {room.capacity} people
+          {room.seats.filter((s) => s.occupant).length} / {room.capacity}
+          <span className="hz-people-word"> people</span>
         </span>
+        <AudioControls />
       </header>
 
       <div className="hz-lobby-body">

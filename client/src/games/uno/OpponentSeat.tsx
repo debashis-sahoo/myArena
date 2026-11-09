@@ -9,6 +9,7 @@
  *   thinking     a bot is thinking (table.thinking === seat.playerId).
  *   catchable    a catch window is open against this seat and the viewer may catch: shows "Catch [Name]!".
  *   banner       latest short overlay for this seat ("UNO!", "Caught!", "Skipped!", "+N"), or null.
+ *   turnChip     text chip beside the name on the seat that must act ("Turn", "Draws 4"), or null; a cue that does not rely on colour.
  * DOM: the root carries data-uno-seat="<playerId>" (flight target); the Catch button calls the store's catchPlayer.
  */
 import { useEffect, useRef, type CSSProperties, type ReactElement } from 'react';
@@ -37,6 +38,7 @@ export interface OpponentSeatProps {
   thinking: boolean;
   catchable: boolean;
   banner?: UnoBanner | null;
+  turnChip?: string | null;
 }
 
 const MAX_BACKS = 5;
@@ -92,7 +94,7 @@ function flashText(b: UnoBanner): string {
   return b.text;
 }
 
-export function OpponentSeat({ placement, seat, who, active, remainingMs, thinking, catchable, banner = null }: OpponentSeatProps): ReactElement {
+export function OpponentSeat({ placement, seat, who, active, remainingMs, thinking, catchable, banner = null, turnChip = null }: OpponentSeatProps): ReactElement {
   const { rect, edge } = placement;
   const rootRef = useRef<HTMLDivElement>(null);
   const side = edge !== 'top';
@@ -161,6 +163,7 @@ export function OpponentSeat({ placement, seat, who, active, remainingMs, thinki
               {active && !left ? '▶ ' : ''}
               {seat.name}
             </span>
+            {turnChip && active && !left ? <span className="un-seat-chip turn">{turnChip}</span> : null}
             {status ? <span className={`un-seat-chip ${statusKind}`}>{status}</span> : null}
           </div>
           {left ? null : (

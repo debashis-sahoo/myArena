@@ -123,3 +123,219 @@
   color: #ff9db0;
   font-size: 0.88rem;
 }
+
+/* ---------- audio controls (sound and music, one header button) ---------- */
+.audio-btn {
+  font-size: 1.2rem;
+}
+
+.audio-btn.compact {
+  width: 38px;
+  min-height: 38px;
+  font-size: 1.05rem;
+}
+
+/* A small note while Music is audible, and a dot while audio is not ready (the browser has not allowed it yet, or it is unavailable). */
+.audio-note {
+  position: absolute;
+  right: 4px;
+  bottom: 2px;
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--cyan);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.audio-btn.not-ready::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--yellow);
+  box-shadow: 0 0 0 2px #1a0d4d;
+}
+
+.audio-pop {
+  position: fixed;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  overflow: auto;
+  border-radius: 18px;
+  border: 2px solid var(--line);
+  background: #1a0d4d;
+  color: var(--text);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6);
+}
+
+.audio-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1rem;
+}
+
+.audio-close {
+  width: 44px;
+  height: 44px;
+  margin: -8px -10px -8px 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.audio-close:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.audio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.audio-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 800;
+}
+
+.audio-row.is-off .audio-row-label {
+  color: var(--muted);
+}
+
+.audio-switch {
+  width: 60px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.audio-switch-track {
+  display: block;
+  position: relative;
+  width: 48px;
+  height: 28px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 2px var(--line);
+  transition: background 0.15s;
+}
+
+.audio-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s;
+}
+
+.audio-switch[aria-checked='true'] .audio-switch-track {
+  background: linear-gradient(135deg, #2ee59d, #b6ff3b);
+  box-shadow: none;
+}
+
+.audio-switch[aria-checked='true'] .audio-switch-knob {
+  transform: translateX(20px);
+}
+
+.audio-slider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.audio-slider input[type='range'] {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: pan-y;
+}
+
+.audio-slider input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cyan) var(--fill, 50%), rgba(255, 255, 255, 0.2) var(--fill, 50%));
+}
+
+.audio-slider input[type='range']::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.audio-slider input[type='range']::-moz-range-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--cyan);
+}
+
+.audio-slider input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  margin-top: -9px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.audio-slider input[type='range']::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.audio-row.is-off .audio-slider input[type='range'] {
+  opacity: 0.55;
+}
+
+.audio-value {
+  flex: 0 0 3.2em;
+  text-align: right;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-row.is-off .audio-value {
+  color: var(--muted);
+}
+
+.audio-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 217, 61, 0.12);
+  color: #ffe9a3;
+  font-size: 0.88rem;
+}

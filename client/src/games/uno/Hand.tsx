@@ -17,7 +17,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactElement } from 'react';
 import { sortUnoHand, unoCardLabel, unoCardOf } from '@myarena/shared';
 import { CardFace } from './CardFace';
-import { playCard } from './unoStore';
+import { getAttempt, playCard } from './unoStore';
 import { HAND_PAD, clamp, handPad, planHand, type HandPlan } from './useFit';
 import './Hand.css';
 
@@ -154,6 +154,8 @@ export function Hand({ playerId, hand, playable, yourTurn, drawn = null, width, 
   }, []);
 
   const fire = useCallback((id: number): void => {
+    // One staged play at a time: further activations while a card is held, finishing or returning are ignored.
+    if (getAttempt()) return;
     const { ok: playableIds, onWild: openWheel } = live.current;
     // Only a card the server listed as playable opens the wheel; any other tap goes to the server for its refusal.
     if (playableIds.has(id) && unoCardOf(id).color === null) {
@@ -175,7 +177,7 @@ export function Hand({ playerId, hand, playable, yourTurn, drawn = null, width, 
   };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>): void => {
-    if (press.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (press.current || getAttempt() || (e.pointerType === 'mouse' && e.button !== 0)) return;
     const index = indexAt(e.clientX);
     const id = live.current.cards[index];
     if (index < 0 || id === undefined) return;

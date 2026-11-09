@@ -26,7 +26,7 @@ export function ActivityLog({ entries }: { entries: ActivityEntry[] }): ReactEle
       >
         {entries.map((e) => (
           <li key={e.id} className={`activity-item ${e.kind}`} style={{ ['--c' as string]: COLOR_HEX[e.color ?? ''] ?? 'var(--muted)' } as CSSProperties}>
-            <span className="dot" aria-hidden="true" />
+            {e.kind === 'match' ? null : <span className="dot" aria-hidden="true" />}
             <span className="activity-text">{e.text}</span>
           </li>
         ))}

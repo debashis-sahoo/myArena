@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { UNO_BANNER_MS, type UnoAction, type UnoColor, type UnoEvent, type UnoView } from '@myarena/shared';
+import { UNO_BANNER_MS, UNO_HOLD_TIMEOUT_MS, type UnoAction, type UnoColor, type UnoEvent, type UnoView } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
 import { toast } from '../../components/common/Toast';
 import { resyncRoom, sendGameAction } from '../../state/roomStore';
@@ -29,6 +29,20 @@ export interface UnoCatch {
   closesAt: number;
 }
 
+/**
+ * A playable card the player just activated (specs/007 US2). `held`: the card hovers toward the pile while the server answers;
+ * `confirming`: the server's `play` event arrived and the throw is finishing; `returning`: it flies back (refusal or no answer).
+ * Nothing in the hand, the pile or the turn changes while an attempt exists; only the server event does that.
+ */
+export interface PlayAttempt {
+  card: number;
+  color?: UnoColor;
+  phase: 'held' | 'confirming' | 'returning';
+  startedAt: number;
+  /** Refusal text to show (bounce, shake, reason) once the return flight is done. */
+  refusal?: string;
+}
+
 export interface UnoState {
   /** Latest server view: the newest event or snapshot, whether or not it has been shown yet. */
   view: UnoView | null;
@@ -44,12 +58,14 @@ export interface UnoState {
   rejection: UnoRejection | null;
   /** Increments on every refused play, draw or keep. */
   shakeKey: number;
+  /** The staged play in flight, or null. */
+  attempt: PlayAttempt | null;
 }
 
 export const REJECTION_MS = 2500;
 const MAX_BANNERS = 4;
 
-const EMPTY: UnoState = { view: null, catchOpen: null, shown: null, queue: [], lastSeq: 0, banners: [], rejection: null, shakeKey: 0 };
+const EMPTY: UnoState = { view: null, catchOpen: null, shown: null, queue: [], lastSeq: 0, banners: [], rejection: null, shakeKey: 0, attempt: null };
 let state: UnoState = EMPTY;
 const listeners = new Set<() => void>();
 const timers = new Set<number>();
@@ -127,7 +143,7 @@ export function commitUno(view: UnoView, consumed: number): void {
 export function skipUnoToLatest(): void {
   if (!state.view) return;
   if (state.queue.length === 0 && state.shown === state.view) return;
-  set({ shown: state.view, queue: [] });
+  set({ shown: state.view, queue: [], attempt: null });
 }
 
 // ---------- banners and refusals ----------
@@ -175,11 +191,58 @@ async function send(key: string, action: UnoAction): Promise<Ack | null> {
 }
 
 export async function playCard(card: number, color?: UnoColor): Promise<boolean> {
+  // A card the server listed as playable starts a staged attempt at once; anything else goes to the server for its refusal and the bounce.
+  const staged = state.shown?.you?.playable.includes(card) ?? false;
+  if (staged) {
+    if (state.attempt || inflight.has('play')) return false;
+    startAttempt(card, color);
+  }
   const res = await send('play', color ? { type: 'playCard', card, color } : { type: 'playCard', card });
   if (!res) return false;
   if (res.ok) return true;
+  if (state.attempt?.card === card && state.attempt.phase === 'held') {
+    performance.mark('uno:refused');
+    // The card flies back first; the animator then calls finishReturn(), which plays the bounce, the shake and the reason.
+    set({ attempt: { ...state.attempt, phase: 'returning', refusal: res.message } });
+    return false;
+  }
   refuse(res.message, card);
   return false;
+}
+
+function startAttempt(card: number, color?: UnoColor): void {
+  performance.mark('uno:tap');
+  const startedAt = performance.now();
+  set({ attempt: { card, ...(color ? { color } : {}), phase: 'held', startedAt } });
+  later(UNO_HOLD_TIMEOUT_MS, () => {
+    const a = state.attempt;
+    if (!a || a.startedAt !== startedAt || a.phase !== 'held') return;
+    toast('Connection is slow, try again');
+    set({ attempt: { ...a, phase: 'returning' } });
+    resyncRoom();
+  });
+}
+
+export function getAttempt(): PlayAttempt | null {
+  return state.attempt;
+}
+
+/** The server's `play` event for the held card arrived: the throw is finishing. */
+export function confirmAttempt(): void {
+  if (state.attempt) set({ attempt: { ...state.attempt, phase: 'confirming' } });
+}
+
+/** The attempt is over (landed, removed or replaced by a newer state). */
+export function endAttempt(): void {
+  if (state.attempt) set({ attempt: null });
+}
+
+/** The return flight finished: end the attempt and, after a refusal, play the bounce, the shake and the reason. */
+export function finishReturn(): void {
+  const a = state.attempt;
+  if (!a) return;
+  set({ attempt: null });
+  if (a.refusal) refuse(a.refusal, a.card);
 }
 
 export async function drawCard(): Promise<boolean> {
@@ -234,13 +297,13 @@ function reset(): void {
 
 function onSnapshot(raw: unknown): void {
   const view = raw as UnoView;
-  set({ view, catchOpen: trackCatch(view), shown: view, queue: [], lastSeq: view.seq, banners: [], rejection: null });
+  set({ view, catchOpen: trackCatch(view), shown: view, queue: [], lastSeq: view.seq, banners: [], rejection: null, attempt: null });
 }
 
 /** A gap or an event for a match we never saw: show its state at once and take a fresh view from the server. */
 function jumpTo(e: UnoEvent): void {
   const view = unoViewOf(e);
-  set({ view, catchOpen: trackCatch(view), shown: view, queue: [], lastSeq: e.seq });
+  set({ view, catchOpen: trackCatch(view), shown: view, queue: [], lastSeq: e.seq, attempt: null });
   resyncRoom();
 }
 

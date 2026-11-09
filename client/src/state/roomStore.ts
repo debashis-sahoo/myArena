@@ -15,6 +15,7 @@ import {
 } from '@myarena/shared';
 import { sfx } from '../audio/sfx';
 import { getGameFeed, resetGameFeeds } from '../games/feeds';
+import { clearDraft } from './chatDraft';
 import { guestInfo } from './guest';
 import { connectSocket, disconnectSocket, emitWithAck, socketInstance, type ClientAck, type ClientErrorCode } from './socket';
 
@@ -133,7 +134,10 @@ function statusFor(code: ClientErrorCode, message: string, retryAfterMs?: number
 }
 
 function endSession(status: RoomStatus): void {
-  if (session) markRoom(session.roomId, false);
+  if (session) {
+    markRoom(session.roomId, false);
+    clearDraft(session.roomId);
+  }
   session = null;
   joinedOnce = false;
   resetGameFeeds();
@@ -297,6 +301,7 @@ export function leaveRoom(): void {
   if (session) {
     leftRoomId = session.roomId;
     markRoom(session.roomId, false);
+    clearDraft(session.roomId);
   }
   session = null;
   joinedOnce = false;

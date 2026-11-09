@@ -1,4 +1,4 @@
-import { getGame } from '@myarena/shared';
+import { getGame, type SystemCode } from '@myarena/shared';
 import { createBingoEngine } from './bingo/engine.js';
 import { createHousieEngine } from './housie/engine.js';
 import { createLudoEngine } from './ludo/engine.js';
@@ -35,8 +35,10 @@ export interface GameContext {
   emitTo(playerId: string, event: unknown): void;
   /** The current host's playerId; it changes on host handover, so authorise callers with it at action time. */
   hostId(): string;
-  /** One system chat line (code game_notice), sanitised and rate limited. The only way a game writes to chat. */
-  notice(text: string): void;
+  /** One system chat line, sanitised and rate limited (at most 5 per second per room). `code` defaults to 'game_notice'; 'humor' marks playful lines. */
+  notice(text: string, code?: 'game_notice' | 'humor'): void;
+  /** True while the participant has a live connection; bots are always connected; unknown ids are false. */
+  isConnected(playerId: string): boolean;
 }
 
 /** Server half of the platform-to-game contract. The engine is the only authority for rules. */
@@ -58,6 +60,12 @@ export interface GameEngine {
   onSeatReleased(match: unknown, playerId: string): void;
   onBotTurn(match: unknown, botPlayerId: string): void;
   dispose(match: unknown): void;
+  /**
+   * Optional. A routine room line (joined, left, disconnected, reconnected, removed, host_changed, seat_released, capacity_changed)
+   * that the platform suppressed because the game is a quiet-chat game with a running match. The game may record it in its own
+   * activity feed but must not write chat in response.
+   */
+  onRoomNotice?(match: unknown, code: SystemCode, text: string): void;
 }
 
 const engines = new Map<string, GameEngine>([

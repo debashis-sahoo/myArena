@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { COLOR_HEX, COLOR_ORDER, formatRoomCode, type ChatMessage, type LudoColor, type RoomState } from '@myarena/shared';
 import { Avatar } from '../../art/Avatars';
+import { AudioControls } from '../../components/common/AudioControls';
 import { toast } from '../../components/common/Toast';
 import { leaveRoom, useRoom } from '../../state/roomStore';
 import { useMediaQuery, useReducedMotion } from '../../state/viewport';
@@ -14,6 +15,7 @@ import { PlayerPanels } from './PlayerPanels';
 import { usePlayerInfo, type PlayerInfo } from './playerInfo';
 import { Pawns, type Fx } from './Pawns';
 import { ResultsOverlay } from './ResultsOverlay';
+import { buildReplayPreview } from './replayPreview';
 import { SidePanel } from './SidePanel';
 import { useBoardFit } from './useBoardFit';
 import { useLudo, type ReadyLudo } from './useLudo';
@@ -72,6 +74,7 @@ function Header(props: {
         ))}
       </ul>
       <div className="head-actions">
+        <AudioControls compact />
         <button type="button" className="btn ghost small" onClick={onLobby}>
           Lobby
         </button>
@@ -122,6 +125,9 @@ export function LudoScreen({ room, youId, invitePath, chat }: MatchScreenProps):
 
   const state = ludo.state;
   const ready: ReadyLudo | null = state ? { ...ludo, state } : null;
+  const isHost = room.hostPlayerId === youId;
+  const hostName = info.get(room.hostPlayerId)?.name ?? 'the host';
+  const preview = state ? buildReplayPreview(state, info) : null;
 
   const corners = {} as Record<LudoColor, CornerLabel | null>;
   for (const c of COLOR_ORDER) corners[c] = null;
@@ -228,7 +234,19 @@ export function LudoScreen({ room, youId, invitePath, chat }: MatchScreenProps):
         {announce}
       </p>
 
-      {state && <ResultsOverlay state={state} info={info} youId={youId} onHub={toHub} />}
+      {state && preview && (
+        <ResultsOverlay
+          state={state}
+          info={info}
+          youId={youId}
+          onHub={toHub}
+          isHost={isHost}
+          hostName={hostName}
+          preview={preview}
+          pending={ludo.againPending}
+          onAgain={ludo.playAgain}
+        />
+      )}
       <LobbyDialog open={lobbyOpen} onClose={() => setLobbyOpen(false)} room={room} youId={youId} invitePath={invitePath} />
       <QuitDialog open={quitOpen} onClose={() => setQuitOpen(false)} onQuit={toHub} />
       {!state && (

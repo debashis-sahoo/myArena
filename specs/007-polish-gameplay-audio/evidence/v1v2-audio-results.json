@@ -1,0 +1,408 @@
+[
+ {
+  "name": "Hub header has the audio button",
+  "expected": "present",
+  "observed": "Audio settings. Sound on, music off",
+  "status": "PASS"
+ },
+ {
+  "name": "defaults: Sound on at 80, Music off at 30; dialog, switches and sliders labelled",
+  "expected": "sw true,false; 80 and 30",
+  "observed": {
+   "role": "dialog",
+   "label": "Audio settings",
+   "sw": [
+    "true",
+    "false"
+   ],
+   "rg": [
+    {
+     "v": "80",
+     "min": "0",
+     "max": "100",
+     "step": "5",
+     "vt": "80 percent",
+     "label": "Sound effects volume"
+    },
+    {
+     "v": "30",
+     "min": "0",
+     "max": "100",
+     "step": "5",
+     "vt": "Off",
+     "label": "Music volume"
+    }
+   ],
+   "w": 320
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "first run writes defaults to myarena.audio.v1",
+  "expected": "v1 sound .8 on, music .3 off",
+  "observed": {
+   "v": 1,
+   "sound": {
+    "on": true,
+    "volume": 0.8,
+    "last": 0.8
+   },
+   "music": {
+    "on": false,
+    "volume": 0.3,
+    "last": 0.3
+   }
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "Music switch on restores 30% and leaves Sound alone",
+  "expected": "music on .3, sound on .8",
+  "observed": {
+   "v": 1,
+   "sound": {
+    "on": true,
+    "volume": 0.8,
+    "last": 0.8
+   },
+   "music": {
+    "on": true,
+    "volume": 0.3,
+    "last": 0.3
+   }
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "Sound slider to 0 turns Sound off, keeps last (80) and leaves Music on",
+  "expected": "sound off vol 0 last .8; music on",
+  "observed": {
+   "v": 1,
+   "sound": {
+    "on": false,
+    "volume": 0,
+    "last": 0.8
+   },
+   "music": {
+    "on": true,
+    "volume": 0.3,
+    "last": 0.3
+   }
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "Sound switch on after 0% restores the previous level (80%)",
+  "expected": "on .8",
+  "observed": {
+   "on": true,
+   "volume": 0.8,
+   "last": 0.8
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "mute keeps the level, switching on returns it",
+  "expected": "off vol .8 then on .8",
+  "observed": {
+   "on": false,
+   "volume": 0.8,
+   "last": 0.8
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "sliders move in steps of 5 and independently",
+  "expected": "sound .5, music .5",
+  "observed": {
+   "s": 0.5,
+   "m": 0.5
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "slider announces its value as text",
+  "expected": "50 percent",
+  "observed": "50 percent",
+  "status": "PASS"
+ },
+ {
+  "name": "Escape closes the popover and returns focus to the button",
+  "expected": true,
+  "observed": true,
+  "status": "PASS"
+ },
+ {
+  "name": "preferences survive a reload",
+  "expected": "50 and 50",
+  "observed": [
+   "50",
+   "50"
+  ],
+  "status": "PASS"
+ },
+ {
+  "name": "reload inside a room with Music on: needs-tap dot shown and no music before the first tap",
+  "expected": "dot true, rate ~0",
+  "observed": {
+   "dot": true,
+   "idleRate": 0
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "the first tap starts the music and clears the dot",
+  "expected": "rate > 5, dot false",
+  "observed": {
+   "playRate": 16.7,
+   "dot2": false
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "hiding the tab stops the music; showing it resumes (Music still audible)",
+  "expected": "hidden ~0, shown ~ playing rate",
+  "observed": {
+   "hiddenRate": 0,
+   "shownRate": 16.7,
+   "playRate": 16.7
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "turning Music off silences the theme within about a second",
+  "expected": "rate ~0",
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "turning Music on again restarts exactly one theme (same rate as before)",
+  "expected": "about 16.7",
+  "observed": 17.7,
+  "status": "PASS"
+ },
+ {
+  "name": "the Hub never plays music (after leaving the room)",
+  "expected": "rate ~0",
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "ten rapid room switches leave one theme playing (rate not doubled)",
+  "expected": "<= 26.7",
+  "observed": {
+   "rapidRate": 17.3,
+   "playRate": 16.7,
+   "ratio": 1.04
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "housie lobby at 390x844: audio button present and inside the viewport",
+  "expected": ">= 1 and visible",
+  "observed": {
+   "present": 1,
+   "box": {
+    "x": 338,
+    "y": 8,
+    "w": 40,
+    "h": 40
+   }
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "housie lobby at 320x568: audio button present and inside the viewport",
+  "expected": ">= 1 and visible",
+  "observed": {
+   "present": 1,
+   "box": {
+    "x": 268,
+    "y": 8,
+    "w": 40,
+    "h": 40
+   }
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "housie match at 390x844: audio button present",
+  "expected": ">= 1",
+  "observed": {
+   "startOk": true,
+   "present": 1,
+   "w": 36,
+   "h": 36
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "housie match at 320x568: audio button present, header does not overflow the page",
+  "expected": "present, no horizontal scroll",
+  "observed": {
+   "present": 1,
+   "overflow": false
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "bingo lobby at 390x844: audio button present and inside the viewport",
+  "expected": ">= 1 and visible",
+  "observed": {
+   "present": 1,
+   "box": {
+    "x": 338,
+    "y": 8,
+    "w": 40,
+    "h": 40
+   }
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "bingo lobby at 320x568: audio button present and inside the viewport",
+  "expected": ">= 1 and visible",
+  "observed": {
+   "present": 1,
+   "box": {
+    "x": 268,
+    "y": 8,
+    "w": 40,
+    "h": 40
+   }
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "bingo match at 390x844: audio button present",
+  "expected": ">= 1",
+  "observed": {
+   "startOk": true,
+   "present": 1,
+   "w": 40,
+   "h": 40
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "bingo match at 320x568: audio button present, header does not overflow the page",
+  "expected": "present, no horizontal scroll",
+  "observed": {
+   "present": 1,
+   "overflow": false
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "ludo match at 320x568: audio button inside the viewport, no page scroll",
+  "expected": "visible, right <= width",
+  "observed": {
+   "has": true,
+   "x": 140,
+   "right": 178,
+   "w": 38,
+   "h": 38,
+   "hscroll": false,
+   "iw": 320
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "ludo match at 844x390: audio button inside the viewport, no page scroll",
+  "expected": "visible, right <= width",
+  "observed": {
+   "has": true,
+   "x": 664,
+   "right": 702,
+   "w": 38,
+   "h": 38,
+   "hscroll": false,
+   "iw": 844
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "ludo match at 1366x768: audio button inside the viewport, no page scroll",
+  "expected": "visible, right <= width",
+  "observed": {
+   "has": true,
+   "x": 1182,
+   "right": 1220,
+   "w": 38,
+   "h": 38,
+   "hscroll": false,
+   "iw": 1366
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "uno match at 320x568: audio button inside the viewport, no page scroll",
+  "expected": "visible, right <= width",
+  "observed": {
+   "has": true,
+   "x": 272,
+   "right": 312,
+   "w": 40,
+   "h": 40,
+   "hscroll": false,
+   "iw": 320
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "uno match at 844x390: audio button inside the viewport, no page scroll",
+  "expected": "visible, right <= width",
+  "observed": {
+   "has": true,
+   "x": 808,
+   "right": 836,
+   "w": 28,
+   "h": 28,
+   "hscroll": false,
+   "iw": 844
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "uno match at 1366x768: audio button inside the viewport, no page scroll",
+  "expected": "visible, right <= width",
+  "observed": {
+   "has": true,
+   "x": 1310,
+   "right": 1358,
+   "w": 48,
+   "h": 48,
+   "hscroll": false,
+   "iw": 1366
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "migration: soundOn:false in the old profile starts with Sound off",
+  "expected": "sound.on false",
+  "observed": {
+   "on": false,
+   "volume": 0.8,
+   "last": 0.8
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "blocked storage: the page still loads and the controls work for the session",
+  "expected": "no page errors; switch on",
+  "observed": {
+   "errs": [],
+   "musicOnBlocked": "true"
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "Web Audio unavailable: no errors and the control says it is not available",
+  "expected": "no errors; status text",
+  "observed": {
+   "errs2": [],
+   "statusText": "Audio is not available in this browser. Play continues without it."
+  },
+  "status": "PASS"
+ }
+]

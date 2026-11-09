@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { Logo } from '../../art/Logo';
 import { GuestProfile } from './GuestProfile';
-import { SoundToggle } from './SoundToggle';
+import { AudioControls } from '../common/AudioControls';
 
 export function Header(): ReactElement {
   return (
@@ -11,7 +11,7 @@ export function Header(): ReactElement {
         <Logo />
       </div>
       <div className="sound">
-        <SoundToggle />
+        <AudioControls />
       </div>
     </header>
   );

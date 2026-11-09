@@ -1,0 +1,279 @@
+[
+ {
+  "name": "1024x768: docked chat with a Minimize button",
+  "expected": "dock 1, aria-label Minimize chat",
+  "observed": {
+   "docked": 1,
+   "label": "Minimize chat",
+   "w1": 772
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "1024x768: Minimize collapses to the 44 px rail and the table re-fits within 0.5 s",
+  "expected": "rail 1, width 44, refit < 500 ms, table wider",
+  "observed": {
+   "rail": 1,
+   "railW": 44,
+   "refitMs": 1,
+   "tableBefore": 772,
+   "tableAfter": 968
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "1024x768: the rail shows the unread count",
+  "expected": "Open chat, 2 unread",
+  "observed": "Open chat, 2 unread",
+  "status": "PASS"
+ },
+ {
+  "name": "1024x768: Restore returns the column with the draft, both messages, and clears the count",
+  "expected": "draft kept, 2 messages, no badge, table back to the first width",
+  "observed": {
+   "dv": "half a mess",
+   "msgs": [
+    "first hello",
+    "second hello"
+   ],
+   "unreadBadge": 0,
+   "w3": 772,
+   "w1": 772
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "1366x768: docked chat with a Minimize button",
+  "expected": "dock 1, aria-label Minimize chat",
+  "observed": {
+   "docked": 1,
+   "label": "Minimize chat",
+   "w1": 1054
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "1366x768: Minimize collapses to the 44 px rail and the table re-fits within 0.5 s",
+  "expected": "rail 1, width 44, refit < 500 ms, table wider",
+  "observed": {
+   "rail": 1,
+   "railW": 44,
+   "refitMs": 1,
+   "tableBefore": 1054,
+   "tableAfter": 1310
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "1366x768: the rail shows the unread count",
+  "expected": "Open chat, 2 unread",
+  "observed": "Open chat, 2 unread",
+  "status": "PASS"
+ },
+ {
+  "name": "1366x768: Restore returns the column with the draft, both messages, and clears the count",
+  "expected": "draft kept, 2 messages, no badge, table back to the first width",
+  "observed": {
+   "dv": "half a mess",
+   "msgs": [
+    "first hello",
+    "second hello"
+   ],
+   "unreadBadge": 0,
+   "w3": 1054,
+   "w1": 1054
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "ten minimize and restore cycles lose no draft",
+  "expected": 0,
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "reload keeps the minimized state",
+  "expected": "rail 1",
+  "observed": 1,
+  "status": "PASS"
+ },
+ {
+  "name": "resize to a phone then back keeps the choice (drawer closed while minimized, rail again on return)",
+  "expected": "phone: bar 1 sheet 0; back: rail 1",
+  "observed": {
+   "phone": {
+    "bar": 1,
+    "sheet": 0,
+    "rail": 0
+   },
+   "back": 1
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "1920x1080: docked chat with a Minimize button",
+  "expected": "dock 1, aria-label Minimize chat",
+  "observed": {
+   "docked": 1,
+   "label": "Minimize chat",
+   "w1": 1568
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "1920x1080: Minimize collapses to the 44 px rail and the table re-fits within 0.5 s",
+  "expected": "rail 1, width 44, refit < 500 ms, table wider",
+  "observed": {
+   "rail": 1,
+   "railW": 44,
+   "refitMs": 2,
+   "tableBefore": 1568,
+   "tableAfter": 1864
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "1920x1080: the rail shows the unread count",
+  "expected": "Open chat, 2 unread",
+  "observed": "Open chat, 2 unread",
+  "status": "PASS"
+ },
+ {
+  "name": "1920x1080: Restore returns the column with the draft, both messages, and clears the count",
+  "expected": "draft kept, 2 messages, no badge, table back to the first width",
+  "observed": {
+   "dv": "half a mess",
+   "msgs": [
+    "first hello",
+    "second hello"
+   ],
+   "unreadBadge": 0,
+   "w3": 1568,
+   "w1": 1568
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "320x568: drawer sheet has Minimize; minimizing closes it and the icon keeps its badge",
+  "expected": "bar 1, no dock, sheet 1 then 0, badge 2",
+  "observed": {
+   "bar": 1,
+   "dock": 0,
+   "sheet": 1,
+   "minLabel": "Minimize chat",
+   "closed": 0,
+   "badge": "2",
+   "lab": "Open chat, 2 unread"
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "320x568: reopening shows the draft and both messages and clears the count",
+  "expected": "draft kept, 2 messages, no badge",
+  "observed": {
+   "dv": "half a mess",
+   "msgs": [
+    "first hello",
+    "second hello"
+   ],
+   "badge2": 0
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "320x568: Escape closes the sheet",
+  "expected": "sheet 0",
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "320x568: reload keeps the minimized state (sheet stays closed)",
+  "expected": "sheet 0",
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "390x844: drawer sheet has Minimize; minimizing closes it and the icon keeps its badge",
+  "expected": "bar 1, no dock, sheet 1 then 0, badge 2",
+  "observed": {
+   "bar": 1,
+   "dock": 0,
+   "sheet": 1,
+   "minLabel": "Minimize chat",
+   "closed": 0,
+   "badge": "2",
+   "lab": "Open chat, 2 unread"
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "390x844: reopening shows the draft and both messages and clears the count",
+  "expected": "draft kept, 2 messages, no badge",
+  "observed": {
+   "dv": "half a mess",
+   "msgs": [
+    "first hello",
+    "second hello"
+   ],
+   "badge2": 0
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "390x844: Escape closes the sheet",
+  "expected": "sheet 0",
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "390x844: reload keeps the minimized state (sheet stays closed)",
+  "expected": "sheet 0",
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "667x375: drawer sheet has Minimize; minimizing closes it and the icon keeps its badge",
+  "expected": "bar 1, no dock, sheet 1 then 0, badge 2",
+  "observed": {
+   "bar": 1,
+   "dock": 0,
+   "sheet": 1,
+   "minLabel": "Minimize chat",
+   "closed": 0,
+   "badge": "2",
+   "lab": "Open chat, 2 unread"
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "667x375: reopening shows the draft and both messages and clears the count",
+  "expected": "draft kept, 2 messages, no badge",
+  "observed": {
+   "dv": "half a mess",
+   "msgs": [
+    "first hello",
+    "second hello"
+   ],
+   "badge2": 0
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "667x375: Escape closes the sheet",
+  "expected": "sheet 0",
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "667x375: reload keeps the minimized state (sheet stays closed)",
+  "expected": "sheet 0",
+  "observed": 0,
+  "status": "PASS"
+ },
+ {
+  "name": "Play with AI: no chat, rail or icon",
+  "expected": 0,
+  "observed": 0,
+  "status": "PASS"
+ }
+]

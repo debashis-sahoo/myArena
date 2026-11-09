@@ -103,7 +103,8 @@ export type SystemCode =
   | 'capacity_changed'
   | 'match_started'
   | 'seat_released'
-  | 'game_notice';
+  | 'game_notice'
+  | 'humor';
 
 export interface ChatMessage {
   id: number;

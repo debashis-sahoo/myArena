@@ -5,8 +5,9 @@ import { useNavigate } from 'react-router';
 import { formatRoomCode, getGame, unoCardOf, type RoomState, type UnoSeatView } from '@myarena/shared';
 import { toast } from '../../components/common/Toast';
 import { Modal } from '../../components/common/Modal';
-import { SoundToggle } from '../../components/hub/SoundToggle';
+import { AudioControls } from '../../components/common/AudioControls';
 import { leaveRoom } from '../../state/roomStore';
+import { useChatPref } from '../../state/chatPrefs';
 import { useLayoutMode, useReducedMotion } from '../../state/viewport';
 import type { MatchScreenProps } from '../ludo/LudoScreen';
 import { usePlayerInfo, type PlayerInfo } from '../ludo/playerInfo';
@@ -16,10 +17,12 @@ import { OpponentSeat, type SeatWho } from './OpponentSeat';
 import { ResultsOverlay } from './ResultsOverlay';
 import { TableCenter } from './TableCenter';
 import { TopLayer } from './TopLayer';
+import { TurnStrip } from './TurnStrip';
+import { describeTurn } from './turnLabel';
 import { UnoChat } from './UnoChat';
 import { UnoControls } from './UnoControls';
 import { playCard, useUno, type UnoBanner } from './unoStore';
-import { useRegionSize, useUnoFit, type UnoChatMode } from './useFit';
+import { STRIP_MIN_W, useRegionSize, useUnoFit, type UnoChatMode } from './useFit';
 import { useUnoAnimator } from './useUnoAnimator';
 
 const SEAT_COLORS = getGame('uno')?.seatColors ?? [];
@@ -104,7 +107,9 @@ function UnoMatch({ room, youId, invitePath, chat }: MatchScreenProps): ReactEle
   const table = shown?.table ?? null;
   const you = shown?.you ?? null;
   const solo = room.mode === 'ai';
-  const chatMode: UnoChatMode = solo ? 'none' : dockedChat ? 'dock' : 'drawer';
+  // Docked: expanded unless the player minimized it (then the 44 px rail). On phones the drawer follows the same preference (open or closed).
+  const [chatPref] = useChatPref('uno');
+  const chatMode: UnoChatMode = solo ? 'none' : dockedChat ? (chatPref === 'minimized' ? 'rail' : 'dock') : 'drawer';
   const opponents = useMemo(() => (table ? opponentsOf(table.players, youId) : []), [table, youId]);
   const fit = useUnoFit(region, opponents.length, { chat: chatMode });
 
@@ -130,6 +135,12 @@ function UnoMatch({ room, youId, invitePath, chat }: MatchScreenProps): ReactEle
   const centreBanner = newest(banners.filter((b) => !b.playerId || b.playerId === youId));
   const wildTitle = wild !== null && unoCardOf(wild).kind === 'wild4' ? 'Wild Draw Four: pick a colour' : 'Wild: pick a colour';
 
+  const turnSeat = table.players.find((p) => p.playerId === table.turn) ?? null;
+  const turnWho = turnSeat ? whoOf(room, info, turnSeat) : null;
+  // The header strip on screens narrower than STRIP_MIN_W (short landscape phones) has little room, so it uses the shorter wording.
+  const label = describeTurn(table, you, wild !== null, turnWho?.connection ?? 'connected', fit.turnStrip === 'header' && fit.width < STRIP_MIN_W);
+  const actorWho = label.actorId && turnSeat && turnWho ? turnWho : null;
+
   const frameStyle = { '--hh': `${fit.headerH}px` } as CSSProperties;
 
   return (
@@ -143,18 +154,28 @@ function UnoMatch({ room, youId, invitePath, chat }: MatchScreenProps): ReactEle
           <span className="un-code" title="Room code" aria-label={`Room code ${room.roomId.split('').join(' ')}`}>
             {formatRoomCode(room.roomId)}
           </span>
-          <span className="un-spacer" />
+          {fit.turnStrip === 'header' ? (
+            <TurnStrip label={label} avatar={actorWho?.avatar ?? null} color={actorWho?.color ?? null} variant="header" />
+          ) : (
+            <span className="un-spacer" />
+          )}
           {invitePath && (
             <button type="button" className="un-btn" aria-label="Copy invite link" onClick={() => void copyInvite(invitePath)}>
               {compact ? <span aria-hidden="true">🔗</span> : 'Copy invite'}
             </button>
           )}
-          <SoundToggle />
+          <AudioControls compact={tiny} />
           {chatMode === 'drawer' && <UnoChat messages={chat} youId={youId} mode="drawer" />}
         </header>
 
+        {fit.turnStrip === 'row' && fit.stripH > 0 && (
+          <div className="un-strip-row" style={{ top: fit.headerH, height: fit.stripH }}>
+            <TurnStrip label={label} avatar={actorWho?.avatar ?? null} color={actorWho?.color ?? null} variant="row" />
+          </div>
+        )}
+
         {fit.ready && (
-          <div className="un-table" data-uno-table="" style={{ top: fit.headerH, width: fit.tableWidth, height: fit.tableHeight }}>
+          <div className="un-table" data-uno-table="" style={{ top: fit.headerH + fit.stripH, width: fit.tableWidth, height: fit.tableHeight }}>
             {opponents.map((seat, i) => {
               const placement = fit.seats[i];
               if (!placement) return null;
@@ -170,6 +191,7 @@ function UnoMatch({ room, youId, invitePath, chat }: MatchScreenProps): ReactEle
                   thinking={table.thinking === seat.playerId}
                   catchable={catchOpen?.victim === seat.playerId && you !== null}
                   banner={newest(banners.filter((b) => b.playerId === seat.playerId))}
+                  turnChip={label.actorId === seat.playerId ? (label.kind === 'auto' ? `Draws ${table.pending?.total ?? ''}`.trim() : 'Turn') : null}
                 />
               );
             })}
@@ -186,7 +208,7 @@ function UnoMatch({ room, youId, invitePath, chat }: MatchScreenProps): ReactEle
             </div>
 
             {you && (
-              <div className="un-hand-slot" style={{ left: Math.round((fit.tableWidth - hand.width) / 2), top: hand.bandRect.y, width: hand.width, height: hand.bandH }}>
+              <div className={`un-hand-slot${yourTurn ? ' your-turn' : ''}`} style={{ left: Math.round((fit.tableWidth - hand.width) / 2), top: hand.bandRect.y, width: hand.width, height: hand.bandH }}>
                 <Hand playerId={you.playerId} hand={you.hand} playable={you.playable} yourTurn={yourTurn} drawn={you.drawn} width={hand.width} cardH={hand.cardH} pad={hand.pad} onWild={setWild} />
               </div>
             )}
@@ -197,9 +219,9 @@ function UnoMatch({ room, youId, invitePath, chat }: MatchScreenProps): ReactEle
           </div>
         )}
 
-        {fit.ready && chatMode === 'dock' && (
-          <div className="un-chat-col" style={{ top: fit.headerH, width: fit.chat.width, height: fit.tableHeight }}>
-            <UnoChat messages={chat} youId={youId} mode="dock" />
+        {fit.ready && (chatMode === 'dock' || chatMode === 'rail') && (
+          <div className="un-chat-col" style={{ top: fit.headerH + fit.stripH, width: fit.chat.width, height: fit.tableHeight }}>
+            <UnoChat messages={chat} youId={youId} mode={chatMode} />
           </div>
         )}
       </div>

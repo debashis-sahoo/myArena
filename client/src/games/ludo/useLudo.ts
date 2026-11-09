@@ -34,6 +34,10 @@ export interface LudoApi {
   notice: string | null;
   roll: () => void;
   move: (pawn: number) => void;
+  /** Host only, after the results: start the next match with the players still seated. */
+  playAgain: () => void;
+  /** A playAgain request is waiting for the server. */
+  againPending: boolean;
 }
 
 /** `useLudo` once a game snapshot exists. */
@@ -80,6 +84,7 @@ export function useLudo(youId: string): LudoApi {
   const { state, queue } = game;
   const [anim, setAnim] = useState<AnimState | null>(null);
   const [pending, setPending] = useState<'roll' | 'move' | null>(null);
+  const [againPending, setAgainPending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const busy = useRef(false);
@@ -172,12 +177,18 @@ export function useLudo(youId: string): LudoApi {
   const rev = state?.matchRev;
   useEffect(() => {
     setPending(null);
+    setAgainPending(false);
   }, [rev]);
   useEffect(() => {
     if (!pending) return;
     const id = window.setTimeout(() => setPending(null), 6000);
     return () => window.clearTimeout(id);
   }, [pending]);
+  useEffect(() => {
+    if (!againPending) return;
+    const id = window.setTimeout(() => setAgainPending(false), 6000);
+    return () => window.clearTimeout(id);
+  }, [againPending]);
 
   // Local countdown from the snapshot's remaining duration.
   const timed = state?.remainingMs !== null && state?.remainingMs !== undefined;
@@ -196,8 +207,8 @@ export function useLudo(youId: string): LudoApi {
   const canRoll = isMyTurn && settled && !pending && state?.phase === 'waiting_roll' && state.remainingMs !== null;
   const eligible = isMyTurn && settled && !pending && state?.phase === 'waiting_move' ? state.eligible : [];
 
-  const latest = useRef({ canRoll, eligible });
-  latest.current = { canRoll, eligible };
+  const latest = useRef({ canRoll, eligible, canAgain: false });
+  latest.current = { canRoll, eligible, canAgain: state?.phase === 'finished' && !againPending };
 
   const roll = useCallback((): void => {
     if (!latest.current.canRoll) return;
@@ -222,5 +233,16 @@ export function useLudo(youId: string): LudoApi {
     });
   }, []);
 
-  return { state, anim, youId, isMyTurn, canRoll, eligible, countdownMs, pending, notice, roll, move };
+  const playAgain = useCallback((): void => {
+    if (!latest.current.canAgain) return;
+    setAgainPending(true);
+    void sendGameAction({ type: 'playAgain' }).then((res) => {
+      if (!res.ok) {
+        setAgainPending(false);
+        toast(res.message);
+      }
+    });
+  }, []);
+
+  return { state, anim, youId, isMyTurn, canRoll, eligible, countdownMs, pending, notice, roll, move, playAgain, againPending };
 }

@@ -3,6 +3,7 @@ import { useEffect, useState, type CSSProperties, type ReactElement } from 'reac
 import { useNavigate } from 'react-router';
 import { formatRoomCode, type ChatMessage, type RoomState } from '@myarena/shared';
 import { Modal } from '../../components/common/Modal';
+import { AudioControls } from '../../components/common/AudioControls';
 import { leaveRoom, resetRoom } from '../../state/roomStore';
 import { toast } from '../../components/common/Toast';
 import { useMediaQuery } from '../../state/viewport';
@@ -128,6 +129,7 @@ export function HousieScreen({ room, youId, invitePath, chat }: Props): ReactEle
         <button type="button" className="hz-btn small" onClick={() => setLobbyOpen(true)}>
           Lobby
         </button>
+        <AudioControls />
       </header>
 
       <div className="hz-main">

@@ -1,7 +1,7 @@
 import type { MouseEvent, ReactElement } from 'react';
 import type { Ticket as TicketData } from '@myarena/shared';
 import { Ticket } from './Ticket';
-import { planTickets, useRegionSize } from './useFit';
+import { WIDE_FROM, planTickets, useRegionSize } from './useFit';
 import './TicketArea.css';
 
 export interface TicketAreaProps {
@@ -14,7 +14,7 @@ export interface TicketAreaProps {
 
 export function TicketArea({ tickets, marks, selected, onSelect, onToggle }: TicketAreaProps): ReactElement {
   const { ref, width, height } = useRegionSize<HTMLDivElement>();
-  const plan = planTickets(width, height, tickets.length);
+  const plan = planTickets(width, height, tickets.length, typeof window === 'undefined' ? WIDE_FROM : window.innerWidth);
   const sel = Math.min(Math.max(0, selected), Math.max(0, tickets.length - 1));
 
   const renderTicket = (i: number): ReactElement | null => {
@@ -38,6 +38,8 @@ export function TicketArea({ tickets, marks, selected, onSelect, onToggle }: Tic
           marks={marks[i] ?? 0}
           ink={i % 2 === 0 ? 'red' : 'blue'}
           cell={plan.cell}
+          rowH={plan.rowH}
+          fontPx={plan.fontPx}
           compact={plan.mode === 'tabs' || tickets.length === 1}
           label={`Ticket #${i + 1}`}
           selected={i === sel}
@@ -50,7 +52,7 @@ export function TicketArea({ tickets, marks, selected, onSelect, onToggle }: Tic
   const indices = tickets.map((_, i) => i);
 
   return (
-    <div ref={ref} className="hz-ta" data-mode={plan.mode}>
+    <div ref={ref} className={`hz-ta${plan.scrollY ? ' is-scroll' : ''}`} data-mode={plan.mode}>
       {width > 0 && plan.mode === 'stack' && <div className="hz-ta__stack">{indices.map(renderTicket)}</div>}
       {width > 0 && plan.mode === 'grid' && <div className="hz-ta__grid">{indices.map(renderTicket)}</div>}
       {width > 0 && plan.mode === 'tabs' && (

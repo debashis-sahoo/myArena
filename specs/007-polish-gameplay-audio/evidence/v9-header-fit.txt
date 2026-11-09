@@ -1,0 +1,44 @@
+PASS :: housie match header 320x568 :: audioRight=316 iw=320 scrollW=312 clientW=312
+PASS :: housie match header 360x640 :: audioRight=356 iw=360 scrollW=352 clientW=352
+PASS :: housie match header 390x844 :: audioRight=386 iw=390 scrollW=382 clientW=382
+PASS :: housie match header 568x320 :: audioRight=564 iw=568 scrollW=560 clientW=560
+PASS :: housie match header 844x390 :: audioRight=836 iw=844 scrollW=828 clientW=828
+PASS :: bingo match header 320x568 :: audioRight=316 iw=320 scrollW=312 clientW=312
+PASS :: bingo match header 360x640 :: audioRight=356 iw=360 scrollW=352 clientW=352
+PASS :: bingo match header 390x844 :: audioRight=386 iw=390 scrollW=382 clientW=382
+PASS :: bingo match header 568x320 :: audioRight=562 iw=568 scrollW=556 clientW=556
+PASS :: bingo match header 844x390 :: audioRight=838 iw=844 scrollW=832 clientW=832
+PASS :: uno match header 320x568 :: audioRight=266 iw=320 scrollW=320 clientW=320
+PASS :: uno match header 360x640 :: audioRight=306 iw=360 scrollW=360 clientW=360
+PASS :: uno match header 390x844 :: audioRight=336 iw=390 scrollW=390 clientW=390
+PASS :: uno match header 568x320 :: audioRight=526 iw=568 scrollW=568 clientW=568
+PASS :: uno match header 844x390 :: audioRight=802 iw=844 scrollW=844 clientW=844
+PASS :: ludo match header 320x568 :: audioRight=178 iw=320 scrollW=320 clientW=320
+PASS :: ludo match header 360x640 :: audioRight=178 iw=360 scrollW=360 clientW=360
+PASS :: ludo match header 390x844 :: audioRight=186 iw=390 scrollW=390 clientW=390
+PASS :: ludo match header 568x320 :: audioRight=361 iw=568 scrollW=568 clientW=568
+PASS :: ludo match header 844x390 :: audioRight=702 iw=844 scrollW=844 clientW=844
+PASS :: housie lobby header 320x568 :: audioRight=308 iw=320 scrollW=296 clientW=296
+PASS :: housie lobby header 360x640 :: audioRight=348 iw=360 scrollW=336 clientW=336
+PASS :: housie lobby header 390x844 :: audioRight=378 iw=390 scrollW=366 clientW=366
+PASS :: housie lobby header 568x320 :: audioRight=556 iw=568 scrollW=544 clientW=544
+PASS :: housie lobby header 844x390 :: audioRight=832 iw=844 scrollW=820 clientW=820
+PASS :: bingo lobby header 320x568 :: audioRight=308 iw=320 scrollW=296 clientW=296
+PASS :: bingo lobby header 360x640 :: audioRight=348 iw=360 scrollW=336 clientW=336
+PASS :: bingo lobby header 390x844 :: audioRight=378 iw=390 scrollW=366 clientW=366
+PASS :: bingo lobby header 568x320 :: audioRight=556 iw=568 scrollW=544 clientW=544
+PASS :: bingo lobby header 844x390 :: audioRight=832 iw=844 scrollW=820 clientW=820
+PASS :: uno lobby header 320x568 :: audioRight=310 iw=320 scrollW=300 clientW=300
+PASS :: uno lobby header 360x640 :: audioRight=350 iw=360 scrollW=340 clientW=340
+PASS :: uno lobby header 390x844 :: audioRight=380 iw=390 scrollW=370 clientW=370
+PASS :: uno lobby header 568x320 :: audioRight=558 iw=568 scrollW=548 clientW=548
+PASS :: uno lobby header 844x390 :: audioRight=834 iw=844 scrollW=824 clientW=824
+PASS :: ludo lobby header 320x568 :: audioRight=310 iw=320 scrollW=300 clientW=300
+PASS :: ludo lobby header 360x640 :: audioRight=350 iw=360 scrollW=340 clientW=340
+PASS :: ludo lobby header 390x844 :: audioRight=380 iw=390 scrollW=370 clientW=370
+PASS :: ludo lobby header 568x320 :: audioRight=558 iw=568 scrollW=548 clientW=548
+PASS :: ludo lobby header 844x390 :: audioRight=834 iw=844 scrollW=824 clientW=824
+PASS :: hub header 320x568 :: {"scrollW":300,"clientW":300,"iw":320,"audioRight":310,"docScroll":false}
+PASS :: hub header 360x640 :: {"scrollW":340,"clientW":340,"iw":360,"audioRight":350,"docScroll":false}
+PASS :: hub header 390x844 :: {"scrollW":370,"clientW":370,"iw":390,"audioRight":380,"docScroll":false}
+PASS :: hub header 568x320 :: {"scrollW":548,"clientW":548,"iw":568,"audioRight":558,"docScroll":false}

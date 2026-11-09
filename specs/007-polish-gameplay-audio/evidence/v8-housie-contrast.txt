@@ -1,0 +1,39 @@
+Ink #2a1a0a on ticket cell backgrounds (WCAG 2.x, need >= 4.5)
+background                                state             bg       ratio   AA text
+blank on paper #f7ecd0                    -                 #efdeb9  12.69   PASS
+blank hatch stripe on paper #f7ecd0       -                 #ceb990  8.79    PASS
+blank on paper #e8d5a8                    -                 #e2ca96  10.50   PASS
+blank hatch stripe on paper #e8d5a8       -                 #c4ab77  7.54    PASS
+col 1 (1-9)                               unmarked number   #fff1c9  14.93   PASS
+col 1 (1-9)                               marked number     #e0d4b1  11.37   PASS
+col 2 (10-19)                             unmarked number   #ffe0d2  13.47   PASS
+col 2 (10-19)                             marked number     #e0c5b9  10.28   PASS
+col 3 (20-29)                             unmarked number   #fdd9e6  12.99   PASS
+col 3 (20-29)                             marked number     #dfbfca  9.95    PASS
+col 4 (30-39)                             unmarked number   #ead9fb  12.65   PASS
+col 4 (30-39)                             marked number     #cebfdd  9.69    PASS
+col 5 (40-49)                             unmarked number   #d9e3ff  13.10   PASS
+col 5 (40-49)                             marked number     #bfc8e0  10.04   PASS
+col 6 (50-59)                             unmarked number   #d2f1f7  14.13   PASS
+col 6 (50-59)                             marked number     #b9d4d9  10.78   PASS
+col 7 (60-69)                             unmarked number   #d4f5dd  14.32   PASS
+col 7 (60-69)                             marked number     #bbd8c2  10.97   PASS
+col 8 (70-79)                             unmarked number   #e9f5c8  14.68   PASS
+col 8 (70-79)                             marked number     #cdd8b0  11.23   PASS
+col 9 (80-90)                             unmarked number   #ffe8b8  13.98   PASS
+col 9 (80-90)                             marked number     #e0cca2  10.66   PASS
+min ratio 7.54 -> ALL PASS
+
+Mark ring/tick ink vs marked fill (non-text, need >= 3.0)
+ink-red #d6283e      worst on marked fill: 2.86 (col 4 (30-39)) FAIL
+ink-blue #2b4fd0     worst on marked fill: 3.87 (col 4 (30-39)) PASS
+Marked fill vs unmarked fill (shape cues also present: ring, corner tick, cross)
+col 1 (1-9)      #fff1c9 -> #e0d4b1  ratio 1.31
+col 2 (10-19)    #ffe0d2 -> #e0c5b9  ratio 1.31
+col 3 (20-29)    #fdd9e6 -> #dfbfca  ratio 1.31
+col 4 (30-39)    #ead9fb -> #cebfdd  ratio 1.30
+col 5 (40-49)    #d9e3ff -> #bfc8e0  ratio 1.30
+col 6 (50-59)    #d2f1f7 -> #b9d4d9  ratio 1.31
+col 7 (60-69)    #d4f5dd -> #bbd8c2  ratio 1.31
+col 8 (70-79)    #e9f5c8 -> #cdd8b0  ratio 1.31
+col 9 (80-90)    #ffe8b8 -> #e0cca2  ratio 1.31

@@ -91,6 +91,21 @@ html.uno-active body {
   min-width: 0;
 }
 
+/* Online rooms on narrow phones: Leave, code, invite, audio and chat stay on one row (the brand gives way first, then the code tightens). */
+@media (max-width: 420px), (max-height: 420px) {
+  .un .un-head .un-brand {
+    display: none;
+  }
+}
+
+@media (max-width: 340px) {
+  .un .un-head .un-code {
+    padding: 2px 6px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+}
+
 .un .un-head .btn.icon {
   flex: none;
   width: var(--btn-h);
@@ -111,6 +126,13 @@ html.uno-active body {
 }
 
 /* ---------- table ---------- */
+.un .un-strip-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 20;
+}
+
 .un .un-table {
   position: absolute;
   left: 0;

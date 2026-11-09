@@ -1,0 +1,65 @@
+[
+ {
+  "name": "housie lobby: a typed message is sent, the draft clears and the host receives it",
+  "expected": "cleared, received",
+  "observed": {
+   "cleared": "",
+   "hostGot": true
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "housie match: typed chat round trip works",
+  "expected": "sent, cleared, reply visible",
+  "observed": {
+   "startOk": true,
+   "cleared": "",
+   "hostGot": true,
+   "replySeen": true,
+   "systemLinesInMatch": 2
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "bingo lobby: a typed message is sent, the draft clears and the host receives it",
+  "expected": "cleared, received",
+  "observed": {
+   "cleared": "",
+   "hostGot": true
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "bingo match: typed chat round trip works",
+  "expected": "sent, cleared, reply visible",
+  "observed": {
+   "startOk": true,
+   "cleared": "",
+   "hostGot": true,
+   "replySeen": true,
+   "systemLinesInMatch": 0
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "ludo lobby: a typed message is sent, the draft clears and the host receives it",
+  "expected": "cleared, received",
+  "observed": {
+   "cleared": "",
+   "hostGot": true
+  },
+  "status": "PASS"
+ },
+ {
+  "name": "ludo match: typed chat round trip works",
+  "expected": "sent, cleared, reply visible",
+  "observed": {
+   "startOk": true,
+   "cleared": "",
+   "hostGot": true,
+   "replySeen": true,
+   "systemLinesInMatch": 2
+  },
+  "status": "PASS"
+ }
+]

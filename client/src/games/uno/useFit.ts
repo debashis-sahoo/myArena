@@ -12,6 +12,8 @@ export const UNO_ROW_H = 44;
 /** Table margin around the centre area (the contract's "- 8"). */
 export const CENTRE_MARGIN = 8;
 export const CHAT_GAP = 12;
+/** Width of the minimized chat column (the rail with the chat icon, the unread count and Open chat). */
+export const CHAT_RAIL_W = 44;
 /** Each side of the hand band keeps this much padding. */
 export const HAND_PAD = 8;
 /** Below this table width the hand band keeps only HAND_PAD_NARROW, so seven cards still show a 40 px slice at 320 px. */
@@ -23,6 +25,17 @@ export const TRACK_TOP_CLEAR = 6;
 export const END_BUTTONS_W = 120;
 export const MAX_TOP_SEAT_W = 190;
 export const MAX_HAND_ROTATION = 18;
+/**
+ * Turn strip (specs/007 US1): at least this screen width it sits in the header's free space (no table height used); below it, it is a
+ * full-width row under the header. Measured in V3 (online room, header with Leave, brand, code, invite, audio and chat): at 760 the free
+ * width is 350 to 372 px against 382 px for the longest label ("Your turn: stack a Wild Draw 4 or draw 12"), at 800 it is 390 to 412 px.
+ * Short landscape phones (height up to SHORT_LANDSCAPE_H, width from SHORT_LANDSCAPE_MIN_W) also use the header, with shorter labels.
+ */
+export const STRIP_MIN_W = 800;
+export const SHORT_LANDSCAPE_H = 420;
+export const SHORT_LANDSCAPE_MIN_W = 560;
+export const STRIP_H = 30;
+export const STRIP_H_SHORT = 24;
 
 /** Room under the fan for the lower corner of a tilted end card (about 8.2% of the card height at 18 degrees). */
 export const handPad = (cardH: number): number => Math.ceil(0.085 * cardH);
@@ -30,7 +43,7 @@ export const handPad = (cardH: number): number => Math.ceil(0.085 * cardH);
 const SIDE_BY_SIDE = 2 * CARD_ASPECT + PILE_GAP; // pile pair width over card height (1.46)
 const STACKED = 2 + PILE_GAP; // pile pair height over card height (2.08)
 
-export type UnoChatMode = 'dock' | 'drawer' | 'none';
+export type UnoChatMode = 'dock' | 'drawer' | 'rail' | 'none';
 
 export interface Rect {
   x: number;
@@ -252,6 +265,10 @@ export interface UnoFit {
   portrait: boolean;
   chat: { mode: UnoChatMode; width: number; gap: number };
   headerH: number;
+  /** Where the turn strip sits: in the header's free space or as a row under it. */
+  turnStrip: 'header' | 'row';
+  /** Height of the strip row (0 when it sits in the header). The table box starts at headerH + stripH. */
+  stripH: number;
   /** All rects below are in table coordinates: origin at the table's top-left, just under the header. */
   topBand: Rect;
   sideW: number;
@@ -277,11 +294,16 @@ export function planUnoTable(input: UnoFitInput): UnoFit {
   const H = Math.max(0, Math.floor(input.height) - safe.top - safe.bottom);
   const opponents = clamp(0, Math.floor(input.opponents), 4);
 
-  const chatW = chat === 'dock' ? Math.floor(clamp(240, 0.22 * W, 340)) : 0;
-  const tableW = chat === 'dock' ? Math.max(0, W - chatW - CHAT_GAP) : W;
+  // A column beside the table: the full dock, or the 44 px rail while the chat is minimized. Either way the table gets what is left.
+  const column = chat === 'dock' || chat === 'rail';
+  const chatW = chat === 'dock' ? Math.floor(clamp(240, 0.22 * W, 340)) : chat === 'rail' ? CHAT_RAIL_W : 0;
+  const tableW = column ? Math.max(0, W - chatW - CHAT_GAP) : W;
   const portrait = isPortrait(tableW, H);
 
   const headerH = H <= 420 ? 32 : W >= 1024 ? 52 : 44;
+  // Short landscape phones put the strip in the header too (shorter labels, no brand) instead of spending 24 px of table height on a row.
+  const turnStrip: 'header' | 'row' = W >= STRIP_MIN_W || (H <= SHORT_LANDSCAPE_H && W >= SHORT_LANDSCAPE_MIN_W) ? 'header' : 'row';
+  const stripH = turnStrip === 'row' ? (H <= 600 ? STRIP_H_SHORT : STRIP_H) : 0;
   const topH = Math.round(clamp(56, 0.085 * H, 92));
   const sideW = opponents >= 3 ? Math.round(clamp(56, 0.075 * tableW, 110)) : 0;
 
@@ -292,9 +314,9 @@ export function planUnoTable(input: UnoFitInput): UnoFit {
   const rowH = portrait ? UNO_ROW_H : 0;
   const endW = portrait ? 0 : END_BUTTONS_W;
 
-  const tableH = Math.max(0, H - headerH);
+  const tableH = Math.max(0, H - headerH - stripH);
   const centreW = Math.max(0, tableW - 2 * sideW - CENTRE_MARGIN);
-  const centreH = Math.max(0, H - headerH - topH - bandH - rowH);
+  const centreH = Math.max(0, H - headerH - stripH - topH - bandH - rowH);
   const band = Math.round(clamp(18, 0.09 * Math.min(centreW, centreH), 34));
   const centre: Rect = { x: sideW + CENTRE_MARGIN / 2, y: topH, width: centreW, height: centreH };
 
@@ -311,8 +333,10 @@ export function planUnoTable(input: UnoFitInput): UnoFit {
     tableWidth: tableW,
     tableHeight: tableH,
     portrait,
-    chat: { mode: chat, width: chatW, gap: chat === 'dock' ? CHAT_GAP : 0 },
+    chat: { mode: chat, width: chatW, gap: column ? CHAT_GAP : 0 },
     headerH,
+    turnStrip,
+    stripH,
     topBand: { x: 0, y: 0, width: tableW, height: topH },
     sideW,
     seats: planSeats(opponents, tableW, topH, sideW, centreH),

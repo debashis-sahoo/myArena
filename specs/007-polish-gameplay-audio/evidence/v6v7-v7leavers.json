@@ -1,0 +1,39 @@
+{
+ "rows": [
+  {
+   "name": "1 leaver(s): 3 players restart with original colours, empty corner(s), slots 1..3",
+   "expected": "3 players",
+   "observed": {
+    "ok": true,
+    "n": 3,
+    "colorsKept": true,
+    "phase": "rolling",
+    "first": true,
+    "ids": true,
+    "divider": "Match 2 started: L1Host, L1Ben and L1Cy"
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "2 leaver(s): 2 players restart with original colours, empty corner(s), slots 1..2",
+   "expected": "2 players",
+   "observed": {
+    "ok": true,
+    "n": 2,
+    "colorsKept": true,
+    "phase": "rolling",
+    "first": true,
+    "ids": true,
+    "divider": "Match 2 started: L2Host and L2Cy"
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "3 leavers (one player left): Play again refused with \"At least two players are needed to play again.\"",
+   "expected": "refused",
+   "observed": "{\"ok\":false,\"error\":{\"code\":\"INVALID_STATE\",\"message\":\"At least two players are needed to play again.\"}}",
+   "status": "PASS"
+  }
+ ],
+ "results": []
+}

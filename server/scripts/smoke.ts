@@ -40,6 +40,8 @@ interface Client {
   last?: RoomState;
   playerId?: string;
   chat: ChatMessage[];
+  /** Ludo game events carrying an activity entry (kind and text). */
+  activity: { kind: string; text: string }[];
   closed: ClosedReason[];
   removed: number[];
 }
@@ -56,7 +58,7 @@ async function connect(url: string, name: string, guest = newGuest(name)): Promi
     reconnection: false,
     extraHeaders: { 'x-forwarded-for': `10.${(n >> 16) & 255}.${(n >> 8) & 255}.${n & 255}` },
   });
-  const client: Client = { socket, guest, chat: [], closed: [], removed: [] };
+  const client: Client = { socket, guest, chat: [], activity: [], closed: [], removed: [] };
   socket.on(EVENTS.ROOM_STATE, (state: RoomState) => {
     client.last = state;
     const hosts = state.seats.filter((s) => s.occupant?.isHost).length;
@@ -64,6 +66,9 @@ async function connect(url: string, name: string, guest = newGuest(name)): Promi
     if (hosts !== 1 || !hostOk) hostViolations++;
   });
   socket.on(EVENTS.CHAT_MESSAGE, (m: ChatMessage) => client.chat.push(m));
+  socket.on(EVENTS.GAME_EVENT, (e: { entry?: { kind: string; text: string } }) => {
+    if (e.entry) client.activity.push({ kind: e.entry.kind, text: e.entry.text });
+  });
   socket.on(EVENTS.ROOM_CLOSED, (d: { reason: ClosedReason }) => client.closed.push(d.reason));
   socket.on(EVENTS.PLAYER_REMOVED, (d: { cooldownMs: number }) => client.removed.push(d.cooldownMs));
   await new Promise<void>((resolve, reject) => {
@@ -213,7 +218,9 @@ const scenarios: Scenario[] = [
       const started = until('guests see start', () => g1.c.last?.state === 'in_progress' && g2.c.last?.state === 'in_progress');
       ok(await emit(host, EVENTS.ROOM_START, {}));
       await started;
-      assert(g1.c.chat.some((m) => m.systemCode === 'match_started'), 'start announcement');
+      // Ludo is a quiet-chat game: no automatic line in Chat once the match runs; the match start is an Activity entry.
+      assert(!g1.c.chat.some((m) => m.systemCode === 'match_started'), 'no start line in chat during a quiet match');
+      assert(g1.c.activity.some((a) => a.kind === 'turn' && a.text === 'Match started'), 'match start recorded in activity');
       const late = await joinRoom(url, code, 'Late');
       fail(late.res, 'MATCH_IN_PROGRESS');
       fail(await emit(host, EVENTS.ROOM_SET_CAPACITY, { capacity: 4 }), 'INVALID_STATE');
@@ -330,7 +337,8 @@ const scenarios: Scenario[] = [
       await sleep(WINDOW_MS + 600);
       assert(host.last?.state === 'in_progress', 'match should continue');
       assert(host.last?.seats.filter((s) => s.occupant).length === 2, 'seat released');
-      assert(host.chat.some((m) => m.systemCode === 'seat_released'), 'seat release announcement');
+      assert(!host.chat.some((m) => m.systemCode === 'seat_released'), 'no release line in chat during a quiet match');
+      assert(host.activity.some((a) => a.kind === 'released'), 'seat release recorded in activity');
       const rejoin = await joinRoom(url, code, 'Ben', b.c.guest);
       fail(rejoin.res, 'MATCH_IN_PROGRESS');
       closeAll(host, a.c, b.c, rejoin.c);

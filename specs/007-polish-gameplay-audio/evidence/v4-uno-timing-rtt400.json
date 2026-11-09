@@ -1,0 +1,265 @@
+{
+ "name": "rtt400",
+ "port": "10123",
+ "checks": {
+  "mouse_10": {
+   "tapToHeld": {
+    "n": 0
+   },
+   "eventToLanded": {
+    "n": 0
+   },
+   "tapToEvent": {
+    "n": 0
+   },
+   "discardUnchangedBeforeEvent": "0/10",
+   "refused": 0,
+   "rows": [
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 9
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 9
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 9
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 10
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 10
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 10
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 10
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 11
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 11
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 11
+    }
+   ]
+  },
+  "touch_10": {
+   "tapToHeld": {
+    "n": 4,
+    "min": 1.2,
+    "median": 1.6,
+    "max": 2.5
+   },
+   "eventToLanded": {
+    "n": 4,
+    "min": 253.3,
+    "median": 255,
+    "max": 265.7
+   },
+   "tapToEvent": {
+    "n": 4,
+    "min": 414.9,
+    "median": 418.4,
+    "max": 427.8
+   },
+   "discardUnchangedBeforeEvent": "4/10",
+   "refused": 0,
+   "rows": [
+    {
+     "tapToHeld": 2.5,
+     "tapToEvent": 425.5,
+     "eventToLanded": 255,
+     "tapToLanded": 680.5,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 260.60000002384186,
+     "sentPlayCard": 1,
+     "hand": 6
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 6
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 6
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 6
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 7
+    },
+    {
+     "tapToHeld": 1.7000000476837158,
+     "tapToEvent": 427.80000001192093,
+     "eventToLanded": 253.30000001192093,
+     "tapToLanded": 681.1000000238419,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 261.19999998807907,
+     "sentPlayCard": 1,
+     "hand": 6
+    },
+    {
+     "tapToHeld": 1.600000023841858,
+     "tapToEvent": 414.89999997615814,
+     "eventToLanded": 265.7000000476837,
+     "tapToLanded": 680.6000000238419,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 269.9000000357628,
+     "sentPlayCard": 1,
+     "hand": 6
+    },
+    {
+     "tapToHeld": 1.2000000476837158,
+     "tapToEvent": 418.4000000357628,
+     "eventToLanded": 262.69999998807907,
+     "tapToLanded": 681.1000000238419,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 267.80000001192093,
+     "sentPlayCard": 1,
+     "hand": 9
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 1,
+     "hand": 9
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 1,
+     "hand": 9
+    }
+   ]
+  }
+ }
+}

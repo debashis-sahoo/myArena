@@ -1,0 +1,115 @@
+{
+ "rows": [
+  {
+   "name": "lobby: join lines still appear in Chat before the match",
+   "expected": ">= 2",
+   "observed": 2,
+   "status": "PASS"
+  },
+  {
+   "name": "match chat: every system line is humor (no routine events in Chat) after 12+ lines",
+   "expected": 0,
+   "observed": [],
+   "status": "PASS"
+  },
+  {
+   "name": "humor lines are all from the approved pools (general or addressed with a display name)",
+   "expected": 12,
+   "observed": {
+    "total": 12,
+    "general": 4,
+    "addressed": 8
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "no humor line repeats within five",
+   "expected": 0,
+   "observed": 0,
+   "status": "PASS"
+  },
+  {
+   "name": "humor text is the same for every client and the activity list has no humor entries",
+   "expected": true,
+   "observed": {
+    "sameCount": true
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "dev humor timer (2000 ms): gaps are near 2 s",
+   "expected": "1.5 to 3 s",
+   "observed": {
+    "min": 2000,
+    "max": 2014
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "disconnect: \"lost connection\" is an Activity entry of kind room",
+   "expected": "present",
+   "observed": [
+    "V6Ben lost connection"
+   ],
+   "status": "PASS"
+  },
+  {
+   "name": "reconnect: \"is back\" is an Activity entry of kind room",
+   "expected": "present",
+   "observed": true,
+   "status": "PASS"
+  },
+  {
+   "name": "disconnect and reconnect never reach Chat as system lines",
+   "expected": 0,
+   "observed": [],
+   "status": "PASS"
+  },
+  {
+   "name": "the snapshot a reconnecting client gets lists those Activity entries",
+   "expected": "contains lost connection + is back",
+   "observed": [
+    "V6Ben lost connection",
+    "V6Ben is back"
+   ],
+   "status": "PASS"
+  },
+  {
+   "name": "host change: \"is now the host\" is an Activity entry of kind room",
+   "expected": "present",
+   "observed": [
+    "V6Ann is now the host"
+   ],
+   "status": "PASS"
+  },
+  {
+   "name": "a seat released after a long disconnect is recorded in Activity",
+   "expected": ">= 1 entry",
+   "observed": [
+    "released:V6Host left the match"
+   ],
+   "status": "PASS"
+  },
+  {
+   "name": "host change and release never reach Chat as system lines",
+   "expected": 0,
+   "observed": [],
+   "status": "PASS"
+  },
+  {
+   "name": "a player who leaves is recorded in Activity",
+   "expected": ">= 1 entry mentioning left",
+   "observed": [
+    "V6Host left the match",
+    "V6Ben left the match"
+   ],
+   "status": "PASS"
+  },
+  {
+   "name": "still zero routine system lines in Chat for the whole run",
+   "expected": 0,
+   "observed": [],
+   "status": "PASS"
+  }
+ ]
+}

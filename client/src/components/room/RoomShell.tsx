@@ -1,9 +1,11 @@
 import type { ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { formatRoomCode, getGame } from '@myarena/shared';
+import { useRoomMusic } from '../../audio/useRoomMusic';
 import { getLobbyScreen, getMatchScreen } from '../../games/registry';
 import { leaveRoom, useRoom } from '../../state/roomStore';
 import { useLayoutMode } from '../../state/viewport';
+import { AudioControls } from '../common/AudioControls';
 import { ChatDrawer } from './ChatDrawer';
 import { ChatPanel } from './ChatPanel';
 import { GameStage } from './GameStage';
@@ -18,6 +20,8 @@ export function RoomShell(): ReactElement | null {
   const { room, you, invitePath, chat } = useRoom();
   const layout = useLayoutMode();
   const navigate = useNavigate();
+  // The only place a game theme starts or stops: it follows the open room, so every game screen (lobby, match, results) shares it.
+  useRoomMusic(room?.gameId ?? null);
   if (!room || !you) return null;
 
   const MatchScreen = room.state === 'in_progress' ? getMatchScreen(room.gameId) : undefined;
@@ -41,9 +45,12 @@ export function RoomShell(): ReactElement | null {
           <strong>{game?.name ?? 'Game'}</strong>
           <span className="tag mode-tag">{room.mode === 'ai' ? 'vs AI' : 'Private room'}</span>
         </div>
-        <span className="code-chip" title="Room code" aria-label={`Room code ${room.roomId.split('').join(' ')}`}>
-          {formatRoomCode(room.roomId)}
-        </span>
+        <div className="room-head-end">
+          <span className="code-chip" title="Room code" aria-label={`Room code ${room.roomId.split('').join(' ')}`}>
+            {formatRoomCode(room.roomId)}
+          </span>
+          <AudioControls />
+        </div>
       </header>
 
       <section className="stage-area" aria-label="Game area">

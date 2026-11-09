@@ -13,6 +13,7 @@ import {
   type RoomState,
 } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
+import { AudioControls } from '../../components/common/AudioControls';
 import { toast } from '../../components/common/Toast';
 import { ChatDrawer } from '../../components/room/ChatDrawer';
 import { ChatPanel } from '../../components/room/ChatPanel';
@@ -314,6 +315,7 @@ export function BingoLobby({ room, youId, invitePath, chat }: Props): ReactEleme
         <span className="bz-chip" aria-label={`${seated} of ${room.capacity} people`}>
           {seated} / {room.capacity}<span className="bz-people-word"> people</span>
         </span>
+        <AudioControls />
       </header>
 
       <div className="bz-lobby-body">

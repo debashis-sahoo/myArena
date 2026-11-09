@@ -20,6 +20,13 @@
   min-width: 0;
 }
 
+.room-head-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
 .room-title {
   display: flex;
   align-items: center;

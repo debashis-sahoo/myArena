@@ -32,6 +32,14 @@ export const UNO_FLARE_MS = 600;
 export const UNO_AURA_MS = 350;
 export const UNO_BANNER_MS = 900;
 
+/** Staged card play: the card lifts to a hold pose while the server answers, then the throw finishes (specs/007). */
+export const UNO_HOLD_LIFT_MS = 120;
+/** Share of the distance to the Discard Pile covered by the hold pose. */
+export const UNO_HOLD_FRACTION = 0.4;
+export const UNO_FINISH_THROW_MS = 220;
+export const UNO_RETURN_MS = 220;
+export const UNO_HOLD_TIMEOUT_MS = 4_000;
+
 /** Server pause before the next turn starts. */
 export const UNO_SETTLE_DEAL_MS = 1_500;
 export const UNO_SETTLE_PLAY_MS = 600;

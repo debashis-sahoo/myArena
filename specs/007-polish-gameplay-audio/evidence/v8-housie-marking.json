@@ -1,0 +1,114 @@
+{
+  "started": "2026-11-09T11:30:20.363Z",
+  "layout": [],
+  "font": [],
+  "marking": {
+    "mouse": {
+      "before": {
+        "pressed": "false",
+        "cls": "hz-tk-cell",
+        "bg": "rgb(217, 227, 255)",
+        "ring": "none",
+        "tick": "none",
+        "hasCross": false,
+        "label": "Row 1, column 5, number 43"
+      },
+      "marked": {
+        "pressed": "true",
+        "cls": "hz-tk-cell is-marked",
+        "bg": "rgb(191, 200, 224)",
+        "ring": "rgb(214, 40, 62) 0px 0px 0px 2px inset",
+        "tick": "\"\"",
+        "hasCross": true,
+        "label": "Row 1, column 5, number 43, crossed"
+      },
+      "unmarked": {
+        "pressed": "false",
+        "cls": "hz-tk-cell",
+        "bg": "rgb(217, 227, 255)",
+        "ring": "none",
+        "tick": "none",
+        "hasCross": false,
+        "label": "Row 1, column 5, number 43"
+      },
+      "pass": true
+    },
+    "keyboard": {
+      "tabsToReachCell": 1,
+      "focused": {
+        "cell": true,
+        "pressed": "false",
+        "hasCross": false,
+        "tick": "none",
+        "ring": "none",
+        "label": "Row 1, column 2, number 12"
+      },
+      "afterEnter": {
+        "cell": true,
+        "pressed": "true",
+        "hasCross": true,
+        "tick": "\"\"",
+        "ring": "rgb(43, 79, 208) 0px 0px 0px 2px inset",
+        "label": "Row 1, column 2, number 12, crossed"
+      },
+      "afterEnter2": {
+        "cell": true,
+        "pressed": "false",
+        "hasCross": false,
+        "tick": "none",
+        "ring": "none",
+        "label": "Row 1, column 2, number 12"
+      },
+      "afterSpace": {
+        "cell": true,
+        "pressed": "true",
+        "hasCross": true,
+        "tick": "\"\"",
+        "ring": "rgb(43, 79, 208) 0px 0px 0px 2px inset",
+        "label": "Row 1, column 2, number 12, crossed"
+      },
+      "afterSpace2": {
+        "cell": true,
+        "pressed": "false",
+        "hasCross": false,
+        "tick": "none",
+        "ring": "none",
+        "label": "Row 1, column 2, number 12"
+      },
+      "pass": true
+    },
+    "touch": {
+      "before": {
+        "pressed": "false",
+        "hasCross": false,
+        "tick": "none",
+        "ring": "none"
+      },
+      "cellSize": "38x30",
+      "marked": {
+        "pressed": "true",
+        "hasCross": true,
+        "tick": "\"\"",
+        "ring": "rgb(214, 40, 62) 0px 0px 0px 2px inset"
+      },
+      "unmarked": {
+        "pressed": "false",
+        "hasCross": false,
+        "tick": "none",
+        "ring": "none"
+      },
+      "pass": true
+    }
+  },
+  "screenshots": [],
+  "notes": [
+    {
+      "n": 2,
+      "setCeiling": true,
+      "hostTickets": true,
+      "guestTickets": true,
+      "start": true
+    }
+  ],
+  "finished": "2026-11-09T11:30:27.338Z"
+}

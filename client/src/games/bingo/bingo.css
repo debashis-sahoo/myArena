@@ -310,9 +310,15 @@
   flex: 1;
 }
 
-/* The word "people" gives way on very narrow screens so the header chips fit. */
-@media (max-width: 380px) {
+/* The word "people" gives way on phones, then the title, so the header chips and the audio button fit from 320 px. */
+@media (max-width: 430px) {
   .bz-lobby-head .bz-people-word {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .bz-lobby-head h1 {
     display: none;
   }
 }
@@ -585,7 +591,9 @@
   white-space: nowrap;
 }
 
-.bz-head .btn.icon {
+.bz-head .btn.icon,
+.bz-lobby-head .btn.icon {
+  flex: none;
   width: 40px;
   min-height: 40px;
 }

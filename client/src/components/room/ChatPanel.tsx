@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { CHAT_TEXT_MAX, COLOR_HEX, type ChatMessage } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
-import { sendChat } from '../../state/roomStore';
+import { getDraft, setDraft, useDraft } from '../../state/chatDraft';
+import { sendChat, useRoom } from '../../state/roomStore';
 
 interface Props {
   messages: ChatMessage[];
@@ -19,7 +20,12 @@ function time(ts: number): string {
  * Message text is only ever rendered as text, so markup in a message is shown literally.
  */
 export function ChatPanel({ messages, youId, className = '' }: Props): ReactElement {
-  const [text, setText] = useState('');
+  // The draft lives in a store keyed by room, so closing a drawer or collapsing a dock (which unmounts this panel) never loses it.
+  const roomId = useRoom().room?.roomId ?? null;
+  const text = useDraft(roomId);
+  const setText = (value: string): void => {
+    if (roomId) setDraft(roomId, value);
+  };
   const [error, setError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const logRef = useRef<HTMLDivElement>(null);
@@ -46,7 +52,7 @@ export function ChatPanel({ messages, youId, className = '' }: Props): ReactElem
     const res = await sendChat(clean);
     if (res.ok) return;
     sfx.error();
-    setText((current) => current || clean);
+    if (roomId && !getDraft(roomId)) setDraft(roomId, clean);
     if (res.retryAfterMs) setCooldown(res.retryAfterMs);
     setError(res.message);
   };
@@ -68,9 +74,18 @@ export function ChatPanel({ messages, youId, className = '' }: Props): ReactElem
         {messages.length === 0 && <p className="hint chat-empty">No messages yet. Say hello!</p>}
         {messages.map((m) =>
           m.kind === 'system' ? (
-            <div key={m.id} className="chat-system">
-              {m.text}
-            </div>
+            m.systemCode === 'humor' ? (
+              <div key={m.id} className="chat-system chat-humor">
+                <span className="chat-humor-icon" aria-hidden="true">
+                  🎲
+                </span>
+                <span>{m.text}</span>
+              </div>
+            ) : (
+              <div key={m.id} className="chat-system">
+                {m.text}
+              </div>
+            )
           ) : (
             <div key={m.id} className={`bubble-row ${m.playerId === youId ? 'mine' : ''}`}>
               <div className="bubble" style={{ ['--c' as string]: COLOR_HEX[m.color] ?? '#fff' }}>

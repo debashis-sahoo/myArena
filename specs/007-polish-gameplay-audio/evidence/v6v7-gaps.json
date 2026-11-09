@@ -1,0 +1,32 @@
+{
+ "rows": [
+  {
+   "name": "default timer: consecutive humor gaps (seconds) are all between 45 and 90",
+   "expected": "5 gaps in [45, 90]",
+   "observed": [
+    50,
+    57.5,
+    48,
+    88.9,
+    55.5,
+    52.7
+   ],
+   "status": "PASS"
+  },
+  {
+   "name": "first humor line arrives no earlier than 45 s after the match starts",
+   "expected": ">= 45 s",
+   "observed": 7,
+   "status": "PASS"
+  }
+ ],
+ "gaps": [
+  50,
+  57.5,
+  48,
+  88.9,
+  55.5,
+  52.7
+ ],
+ "matchPhaseAtEnd": "moving"
+}

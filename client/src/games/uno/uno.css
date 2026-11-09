@@ -347,6 +347,11 @@
   transform-origin: 50% 50%;
 }
 
+/* A card held over the table while the server answers: a gold ring, not yet on the pile. */
+.un-ghost-held > .un-card {
+  box-shadow: 0 0 0 2px #fff1b0, 0 0 18px 4px rgba(255, 207, 61, 0.85);
+}
+
 .un-ghost-shadow {
   position: absolute;
   left: 0;

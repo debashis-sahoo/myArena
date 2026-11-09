@@ -94,6 +94,11 @@ html.ludo-active body {
   margin-left: 0;
 }
 
+.head-actions .audio-btn {
+  width: 40px;
+  min-height: 36px;
+}
+
 .ludo-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -1059,6 +1064,35 @@ html.ludo-active body {
   font-weight: 900;
 }
 
+/* Presence and host lines recorded from the room: quieter than game events. */
+.activity-item.room .activity-text {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* A new match in the same room: a full-width divider. */
+.activity-item.match {
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.activity-item.match::before,
+.activity-item.match::after {
+  content: '';
+  flex: 1 1 0;
+  height: 1px;
+  background: var(--line);
+}
+
+.activity-item.match .activity-text {
+  flex: none;
+  max-width: 80%;
+  text-align: center;
+}
+
 .peek-drawer {
   position: fixed;
   left: 0;
@@ -1175,6 +1209,36 @@ html.ludo-active body {
 }
 
 .standing-home {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.next-match {
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.results-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.results-actions .btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+.results-reason,
+.results-wait {
+  margin: 0;
+  text-align: center;
   font-size: 0.85rem;
   color: var(--muted);
 }

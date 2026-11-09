@@ -1,0 +1,153 @@
+{
+ "rows": [
+  {
+   "name": "refused before the end: host gets \"The match is not over.\"",
+   "expected": "The match is not over.",
+   "observed": "The match is not over.",
+   "status": "PASS"
+  },
+  {
+   "name": "refused for a non-host: \"Only the host can do that.\"",
+   "expected": "Only the host can do that.",
+   "observed": "{\"ok\":false,\"error\":{\"code\":\"INVALID_STATE\",\"message\":\"Only the host can do that.\"}}",
+   "status": "PASS"
+  },
+  {
+   "name": "a disconnected human blocks Play again with \"Waiting for <name> to reconnect.\"",
+   "expected": "Waiting for",
+   "observed": "{\"ok\":false,\"error\":{\"code\":\"INVALID_STATE\",\"message\":\"Waiting for T1Ben to reconnect.\"}}",
+   "status": "PASS"
+  },
+  {
+   "name": "v7online trial 1: fresh board within 2 s, same players, colours and seats, P1 first, no lobby, divider present, exactly one start",
+   "expected": "no problems",
+   "observed": {
+    "bad": [],
+    "ms": [
+     1,
+     1,
+     1
+    ],
+    "oneStart": true
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "double click: exactly one request starts a match, the other is refused",
+   "expected": "1 ok",
+   "observed": [
+    true,
+    false
+   ],
+   "status": "PASS"
+  },
+  {
+   "name": "v7online trial 2: fresh board within 2 s, same players, colours and seats, P1 first, no lobby, divider present, exactly one start",
+   "expected": "no problems",
+   "observed": {
+    "bad": [],
+    "ms": [
+     1,
+     1,
+     1
+    ],
+    "oneStart": true
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "v7online trial 3: fresh board within 2 s, same players, colours and seats, P1 first, no lobby, divider present, exactly one start",
+   "expected": "no problems",
+   "observed": {
+    "bad": [],
+    "ms": [
+     1,
+     1,
+     1
+    ],
+    "oneStart": true
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "v7online trial 4: fresh board within 2 s, same players, colours and seats, P1 first, no lobby, divider present, exactly one start",
+   "expected": "no problems",
+   "observed": {
+    "bad": [],
+    "ms": [
+     1,
+     1,
+     1
+    ],
+    "oneStart": true
+   },
+   "status": "PASS"
+  },
+  {
+   "name": "v7online trial 5: fresh board within 2 s, same players, colours and seats, P1 first, no lobby, divider present, exactly one start",
+   "expected": "no problems",
+   "observed": {
+    "bad": [],
+    "ms": [
+     1,
+     1,
+     1
+    ],
+    "oneStart": true
+   },
+   "status": "PASS"
+  }
+ ],
+ "results": [
+  {
+   "trial": 1,
+   "bad": [],
+   "ms": [
+    1,
+    1,
+    1
+   ],
+   "oneStart": true
+  },
+  {
+   "trial": 2,
+   "bad": [],
+   "ms": [
+    1,
+    1,
+    1
+   ],
+   "oneStart": true
+  },
+  {
+   "trial": 3,
+   "bad": [],
+   "ms": [
+    1,
+    1,
+    1
+   ],
+   "oneStart": true
+  },
+  {
+   "trial": 4,
+   "bad": [],
+   "ms": [
+    1,
+    1,
+    1
+   ],
+   "oneStart": true
+  },
+  {
+   "trial": 5,
+   "bad": [],
+   "ms": [
+    1,
+    1,
+    1
+   ],
+   "oneStart": true
+  }
+ ]
+}

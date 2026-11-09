@@ -9,10 +9,14 @@ export interface TicketProps {
   /** 27-bit mask, bit row*9+col. */
   marks: number;
   ink: 'red' | 'blue';
-  /** Drops the side label tab and trims borders and gaps so cells stay at least 32px on very narrow screens. */
+  /** Drops the side label tab and trims borders and gaps so cells stay at least 29px on very narrow screens. */
   compact?: boolean;
-  /** Cell width in px; cell height is cell * 0.62. */
+  /** Cell width in px. */
   cell: number;
+  /** Cell height in px. */
+  rowH: number;
+  /** Number size in px. */
+  fontPx: number;
   label: string;
   selected?: boolean;
   /** Absent = read only. */
@@ -69,6 +73,7 @@ function Cell(p: CellProps): ReactElement {
       ref={p.setRef}
       type="button"
       className={`hz-tk-cell${p.marked ? ' is-marked' : ''}${p.readOnly ? ' is-readonly' : ''}`}
+      data-col={p.col}
       aria-pressed={p.marked}
       aria-label={`Row ${r}, column ${c}, number ${p.value}${p.marked ? ', crossed' : ''}`}
       tabIndex={p.tabbable ? 0 : -1}
@@ -95,7 +100,7 @@ function Cell(p: CellProps): ReactElement {
 }
 
 export function Ticket(props: TicketProps): ReactElement {
-  const { ticket, marks, ink, cell, label, selected, onToggle, compact } = props;
+  const { ticket, marks, ink, cell, rowH, fontPx, label, selected, onToggle, compact } = props;
   const reduced = useReducedMotion();
   const refs = useRef(new Map<number, HTMLButtonElement>());
 
@@ -144,17 +149,17 @@ export function Ticket(props: TicketProps): ReactElement {
 
   const style = {
     '--tk-cell-w': `${cell}px`,
-    '--tk-cell-h': `${cell * 0.62}px`,
+    '--tk-cell-h': `${rowH}px`,
+    '--tk-font': `${fontPx}px`,
     '--tk-ink': ink === 'red' ? 'var(--hz-ink-red)' : 'var(--hz-ink-blue)',
   } as CSSProperties;
 
   return (
     <div className={`hz-tk${selected ? ' is-selected' : ''}${compact ? ' compact' : ''}`} style={style} role="group" aria-label={label}>
-      {!compact && (
-        <div className="hz-tk-tab" aria-hidden="true">
-          <span>{label}</span>
-        </div>
-      )}
+      <div className="hz-tk-ribbon" aria-hidden="true">
+        <span>Housie</span>
+        <span>{label}</span>
+      </div>
       <div className="hz-tk-grid">
         {ticket.map((row, r) =>
           row.map((value, c) => {

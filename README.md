@@ -72,6 +72,10 @@ and hopping pawns. The server decides every roll and move; clients only send `ro
 wire protocol are in [specs/002-ludo-game-module](specs/002-ludo-game-module/); the browser verification guide is
 [quickstart.md](specs/002-ludo-game-module/quickstart.md).
 
+Ludo's Chat shows only what people type, plus an occasional playful line from the server (one every 45 to 90 seconds while someone is
+connected); rolls, moves, captures, connection changes and the like are listed in the **Activity** tab. When a match ends, the host can
+press **Play again**, which deals a new match at once to everyone still seated (at least two players), skipping the lobby.
+
 ## Housie (Tambola)
 
 Play Online from the Hub. The host sets the player limit (2 to 200, counting the host), the most tickets each person may take
@@ -115,6 +119,18 @@ client. At the end the standings show and the host can press **Play again**, whi
 moving one seat. Chat shows only typed messages in online rooms and is hidden in solo rooms. Design, protocol and the browser
 verification guide are in [specs/006-uno-game-module](specs/006-uno-game-module/).
 
+A turn strip always says whose turn it is (and what is pending, such as a Draw 2 to stack), your hand is framed on your turn, and a
+tapped card lifts at once and is thrown only when the server confirms the move. In online rooms the chat can be minimized to a narrow
+rail (or closed, on phones) and restored without losing the half-typed message or the unread count.
+
+## Audio
+
+Every room header and the Hub header have one audio button that opens two controls: **Sound effects** and **Music**, each with its own
+switch and a 0 to 100% volume slider. By default Sound is on at 80% and Music is off at 30%. Choices stay on this device (they
+survive reloads and changing games). Music is optional and generated in the browser (a different theme for Ludo, Housie, Bingo and UNO;
+no audio files); it plays only while a game is open and the page is visible. Browsers only allow audio after a tap or key press, so a
+room opened directly with Music on starts it on your first tap.
+
 ## Environment variables
 
 | Variable | Default | Purpose |
@@ -141,6 +157,7 @@ These make browser verification repeatable. They are read only when `NODE_ENV` i
 | `LUDO_DEV_DICE` | `6,6,4,6,3,2,6` | Die values used in order for each new match, then random dice resume |
 | `LUDO_DEV_SCENARIO` | `endgame` | Each player starts with three pawns home and one at progress 50 |
 | `LUDO_TURN_MS` | `3000` | Replaces the 15 s countdown (auto-play, warning and removal checks) |
+| `LUDO_DEV_HUMOR_MS` | `2000` | Replaces the 45 to 90 s gap between humor lines in Ludo's Chat (at least 500) |
 
 ```powershell
 $env:LUDO_DEV_DICE = "6,6,4,6,3,2,6"; npm start

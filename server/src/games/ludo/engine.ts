@@ -17,10 +17,13 @@ import {
   type LudoColor,
   type LudoEvent,
   type LudoState,
+  type PlayerState,
+  type SystemCode,
 } from '@myarena/shared';
 import type { ActionResult, GameContext, GameEngine, MatchSeat } from '../registry.js';
-import { chooseBotPawn, phrase, type Phrase } from './bot.js';
-import { createDice, devTurnMs, endgameScenario, warnIfDevControlsSet, type Dice } from './dice.js';
+import { chooseBotPawn } from './bot.js';
+import { createDice, devHumorMs, devTurnMs, endgameScenario, warnIfDevControlsSet, type Dice } from './dice.js';
+import { createHumorPicker, humorDelayMs, type HumorContext, type HumorPicker } from './humor.js';
 import {
   applyMove,
   assignColors,
@@ -45,6 +48,8 @@ interface Match {
   dice: Dice;
   turnMs: number;
   humanCount: number;
+  /** 1 for the first match; a replay in the same room increments it. */
+  matchNo: number;
   seq: number;
   nextEntryId: number;
   /** Absolute ctx.now() time at which the running countdown ends, or null. */
@@ -54,6 +59,9 @@ interface Match {
   /** An action was auto-played in the current turn (counted once as a missed turn). */
   autoThisTurn: boolean;
   releasing: Map<string, 'inactive'>;
+  /** Cancels the pending humor line, or null. */
+  humorCancel: (() => void) | null;
+  humor: HumorPicker;
   disposed: boolean;
 }
 
@@ -108,10 +116,32 @@ export function createLudoEngine(): GameEngine {
     m.deadline = null;
   }
 
-  function say(m: Match, playerId: string, kind: Phrase, victim?: string): void {
-    const p = playerOf(m.state, playerId);
-    if (!p || p.kind !== 'bot') return;
-    m.ctx.say(playerId, phrase(kind, { n: nameOf(m, playerId), ...(victim ? { v: victim } : {}) }));
+  function cancelHumor(m: Match): void {
+    m.humorCancel?.();
+    m.humorCancel = null;
+  }
+
+  /**
+   * One humor line at a random interval (45 to 90 s). The timer re-arms before it posts, and posts only while the match runs and a
+   * human is connected, so a quiet or empty room never builds a backlog.
+   */
+  function armHumor(m: Match): void {
+    cancelHumor(m);
+    m.humorCancel = m.ctx.schedule(devHumorMs() ?? humorDelayMs(Math.random), () => {
+      m.humorCancel = null;
+      if (m.disposed || m.state.phase === 'finished') return;
+      armHumor(m);
+      const active = m.state.players.filter((p) => p.status === 'active');
+      if (!active.some((p) => p.kind === 'human' && m.ctx.isConnected(p.playerId))) return;
+      const mostHome = Math.max(0, ...active.map((p) => p.home));
+      const contexts: HumorContext[] = active.map((p) => ({
+        name: nameOf(m, p.playerId),
+        home: p.home,
+        allInBase: p.pawns.every((progress) => progress === BASE_PROGRESS),
+        soleLeader: p.home >= 1 && p.home === mostHome && active.filter((q) => q.home === mostHome).length === 1,
+      }));
+      m.ctx.notice(m.humor.next(contexts), 'humor');
+    });
   }
 
   // ---------- turn flow ----------
@@ -183,7 +213,6 @@ export function createLudoEngine(): GameEngine {
     if (!s.turn || !s.roll) return;
     const by = s.turn;
     const roll = s.roll.value;
-    if (roll === 6) say(m, by, 'six');
 
     if (s.sixStreak >= 3) {
       s.phase = 'waiting_roll';
@@ -199,7 +228,6 @@ export function createLudoEngine(): GameEngine {
       s.phase = 'waiting_roll';
       const e = entry(m, 'skip', `${nameOf(m, by)} has no move`, by);
       emit(m, { type: 'no_move', reason: 'blocked' }, e);
-      say(m, by, 'skip');
       if (roll === 6) {
         later(m, NO_MOVE_PAUSE_MS, () => startTurn(m, 'bonus'));
       } else {
@@ -265,10 +293,6 @@ export function createLudoEngine(): GameEngine {
 
     const duration = moveDurationMs(result.path.length, result.captured.length > 0) + (result.reachedHome ? HOME_CELEBRATE_MS : 0);
     later(m, duration, () => {
-      const victim = result.captured[0];
-      if (victim) say(m, by, 'capture', nameOf(m, victim.playerId));
-      else if (result.reachedHome) say(m, by, 'home');
-
       if (winnerOf(s) === by) {
         finish(m, by);
       } else if (result.bonus) {
@@ -287,8 +311,8 @@ export function createLudoEngine(): GameEngine {
     s.standings = standingsOf(s);
     s.eligible = [];
     m.deadline = null;
+    cancelHumor(m);
     const e = entry(m, 'win', `${nameOf(m, winner)} wins the match!`, winner);
-    say(m, winner, 'win');
     emit(m, { type: 'finished', winner, standings: s.standings }, e);
     m.ctx.log('info', { players: s.players.length }, 'ludo match finished');
   }
@@ -377,6 +401,57 @@ export function createLudoEngine(): GameEngine {
     emit(m, { type: 'released', player: playerId, reason }, e);
   }
 
+  // ---------- play again ----------
+
+  /** "A", "A and B" or "A, B and C". */
+  function listNames(names: string[]): string {
+    if (names.length <= 1) return names[0] ?? '';
+    return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  }
+
+  /** Host only, once the match is over, with at least two players still seated and every human connected (specs/007 research R9). */
+  function playAgain(m: Match, playerId: string): ActionResult {
+    if (playerId !== m.ctx.hostId()) return { ok: false, reason: 'Only the host can do that.' };
+    const s = m.state;
+    if (s.phase !== 'finished') return { ok: false, reason: 'The match is not over.' };
+    const active = s.players.filter((p) => p.status === 'active');
+    if (active.length < 2) return { ok: false, reason: 'At least two players are needed to play again.' };
+    const away = active.find((p) => p.kind === 'human' && !m.ctx.isConnected(p.playerId));
+    if (away) return { ok: false, reason: `Waiting for ${nameOf(m, away.playerId)} to reconnect.` };
+    restart(m, active);
+    return { ok: true };
+  }
+
+  /** A fresh match for the players still seated: same ids, colours and kinds, slots renumbered 1..N; the Activity list is kept. */
+  function restart(m: Match, active: PlayerState[]): void {
+    stopTimer(m);
+    const prior = m.state.activity;
+    const state = createInitialState(
+      active.map((p) => ({ playerId: p.playerId, color: p.color, kind: p.kind })),
+      m.turnMs,
+    );
+    if (endgameScenario()) {
+      for (const p of state.players) {
+        p.pawns = [HOME_PROGRESS, HOME_PROGRESS, HOME_PROGRESS, 50];
+        p.home = 3;
+      }
+    }
+    state.activity = prior;
+    m.state = state;
+    m.matchNo += 1;
+    m.humanCount = active.filter((p) => p.kind === 'human').length;
+    m.missed.clear();
+    m.autoThisTurn = false;
+    m.releasing.clear();
+    m.deadline = null;
+    m.humor.reset();
+    const e = entry(m, 'match', `Match ${m.matchNo} started: ${listNames(active.map((p) => nameOf(m, p.playerId)))}`);
+    m.ctx.log('info', { players: state.players.length, matchNo: m.matchNo }, 'ludo match replayed');
+    emit(m, { type: 'match_started' }, e);
+    startTurn(m, 'start');
+    armHumor(m);
+  }
+
   // ---------- GameEngine ----------
 
   return {
@@ -410,6 +485,7 @@ export function createLudoEngine(): GameEngine {
         dice: createDice(),
         turnMs,
         humanCount: seats.filter((s) => s.kind === 'human').length,
+        matchNo: 1,
         seq: 0,
         nextEntryId: 1,
         deadline: null,
@@ -417,12 +493,15 @@ export function createLudoEngine(): GameEngine {
         missed: new Map(),
         autoThisTurn: false,
         releasing: new Map(),
+        humorCancel: null,
+        humor: createHumorPicker(),
         disposed: false,
       };
       const e = entry(m, 'turn', 'Match started');
       ctx.log('info', { players: state.players.length, bots: state.players.length - m.humanCount }, 'ludo match started');
       emit(m, { type: 'match_started' }, e);
       startTurn(m, 'start');
+      armHumor(m);
       return m;
     },
 
@@ -434,6 +513,7 @@ export function createLudoEngine(): GameEngine {
       const m = match as Match;
       const s = m.state;
       const a = action as { type?: string; pawn?: number };
+      if (a.type === 'playAgain') return playAgain(m, playerId);
       if (s.phase === 'finished') return { ok: false, reason: 'The match is over' };
       if (s.turn !== playerId) return { ok: false, reason: 'It is not your turn' };
 
@@ -462,6 +542,15 @@ export function createLudoEngine(): GameEngine {
       if (!m.disposed) release(m, playerId);
     },
 
+    /** Connection and host changes are routine, so they go to Activity instead of Chat (departures are recorded by onSeatReleased). */
+    onRoomNotice(match: unknown, code: SystemCode, text: string): void {
+      const m = match as Match;
+      if (m.disposed) return;
+      if (code !== 'disconnected' && code !== 'reconnected' && code !== 'host_changed') return;
+      const e = entry(m, 'room', text);
+      emit(m, { type: 'notice' }, e);
+    },
+
     onBotTurn(): void {
       /* bots are scheduled by the engine itself */
     },
@@ -470,6 +559,7 @@ export function createLudoEngine(): GameEngine {
       const m = match as Match;
       m.disposed = true;
       stopTimer(m);
+      cancelHumor(m);
     },
   };
 }

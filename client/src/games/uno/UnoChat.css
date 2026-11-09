@@ -21,11 +21,100 @@
 }
 
 .un .un-chat-panel .panel-title {
-  margin: 0 0 4px;
+  display: none;
+}
+
+/* Header row: the title and the Minimize button (the platform panel's own title is hidden). */
+.un .un-chat-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  margin-bottom: 4px;
+}
+
+.un .un-chat-title {
+  margin: 0;
   color: var(--un-gold);
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.un .un-chat-min {
+  appearance: none;
+  position: relative;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--un-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--un-text);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* A 44 px touch target around the 36 px button. */
+.un .un-chat-min::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.un .un-chat-min:hover {
+  filter: brightness(1.2);
+}
+
+.un .un-chat-min:focus-visible,
+.un .un-chat-rail:focus-visible {
+  outline: 2px solid var(--un-gold);
+  outline-offset: 2px;
+}
+
+/* The minimized chat: a 44 px column that fills its parent. */
+.un .un-chat-rail {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  padding: 10px 0;
+  border: 1px solid var(--un-line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(45, 24, 101, 0.82), rgba(29, 15, 64, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 18px rgba(0, 0, 0, 0.35);
+  color: var(--un-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: filter 0.15s ease;
+}
+
+.un .un-chat-rail:hover {
+  filter: brightness(1.15);
+}
+
+.un .un-chat-rail-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+
+.un .un-chat-rail-text {
+  writing-mode: vertical-rl;
+  color: var(--un-gold);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -124,7 +213,8 @@
     animation: none;
   }
 
-  .un .un-chat-bar {
+  .un .un-chat-bar,
+  .un .un-chat-rail {
     transition: none;
   }
 }

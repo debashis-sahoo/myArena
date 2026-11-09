@@ -1,0 +1,278 @@
+{
+ "name": "direct",
+ "port": "10103",
+ "checks": {
+  "mouse_10": {
+   "tapToHeld": {
+    "n": 7,
+    "min": 1.1,
+    "median": 1.2,
+    "max": 1.6
+   },
+   "eventToLanded": {
+    "n": 7,
+    "min": 264.9,
+    "median": 265.2,
+    "max": 266.7
+   },
+   "tapToEvent": {
+    "n": 7,
+    "min": 5.3,
+    "median": 13.8,
+    "max": 15.6
+   },
+   "discardUnchangedBeforeEvent": "7/10",
+   "refused": 0,
+   "rows": [
+    {
+     "tapToHeld": 1.300000011920929,
+     "tapToEvent": 12.5,
+     "eventToLanded": 266.69999998807907,
+     "tapToLanded": 279.19999998807907,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 273.60000002384186,
+     "sentPlayCard": 1,
+     "hand": 7
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 1,
+     "hand": 9
+    },
+    {
+     "tapToHeld": 1.5,
+     "tapToEvent": 15.099999964237213,
+     "eventToLanded": 265.19999998807907,
+     "tapToLanded": 280.2999999523163,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 280.69999998807907,
+     "sentPlayCard": 1,
+     "hand": 8
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 1,
+     "hand": 8
+    },
+    {
+     "tapToHeld": 1.5999999642372131,
+     "tapToEvent": 15.599999964237213,
+     "eventToLanded": 265.10000002384186,
+     "tapToLanded": 280.69999998807907,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 270.19999998807907,
+     "sentPlayCard": 1,
+     "hand": 7
+    },
+    {
+     "tapToHeld": 1.199999988079071,
+     "tapToEvent": 13.799999952316284,
+     "eventToLanded": 265.10000002384186,
+     "tapToLanded": 278.89999997615814,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 271,
+     "sentPlayCard": 1,
+     "hand": 6
+    },
+    {
+     "tapToHeld": 1.199999988079071,
+     "tapToEvent": 14.399999976158142,
+     "eventToLanded": 264.9000000357628,
+     "tapToLanded": 279.30000001192093,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 270.7000000476837,
+     "sentPlayCard": 1,
+     "hand": 6
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 1,
+     "hand": 6
+    },
+    {
+     "tapToHeld": 1.199999988079071,
+     "tapToEvent": 5.300000011920929,
+     "eventToLanded": 265.5999999642372,
+     "tapToLanded": 270.89999997615814,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 270.89999997615814,
+     "sentPlayCard": 1,
+     "hand": 5
+    },
+    {
+     "tapToHeld": 1.100000023841858,
+     "tapToEvent": 12.600000023841858,
+     "eventToLanded": 265.39999997615814,
+     "tapToLanded": 278,
+     "refused": false,
+     "discardChangedBeforeEvent": false,
+     "discardChangeAfterEventMs": 271.0999999642372,
+     "sentPlayCard": 1,
+     "hand": 4
+    }
+   ]
+  },
+  "touch_10": {
+   "tapToHeld": {
+    "n": 0
+   },
+   "eventToLanded": {
+    "n": 0
+   },
+   "tapToEvent": {
+    "n": 0
+   },
+   "discardUnchangedBeforeEvent": "0/4",
+   "refused": 0,
+   "rows": [
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 7
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 7
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 7
+    },
+    {
+     "tapToHeld": null,
+     "tapToEvent": null,
+     "eventToLanded": null,
+     "tapToLanded": null,
+     "refused": false,
+     "discardChangedBeforeEvent": null,
+     "discardChangeAfterEventMs": null,
+     "sentPlayCard": 0,
+     "hand": 8
+    }
+   ]
+  },
+  "double": {
+   "n": 10,
+   "committedOnce": 1,
+   "sentCounts": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1
+   ],
+   "handDeltas": [
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1,
+    -1,
+    0
+   ],
+   "gap": {
+    "n": 10,
+    "min": 1.2,
+    "median": 1.4,
+    "max": 4.9
+   },
+   "pass": false
+  },
+  "keyboard": {
+   "tabbedToCard": true,
+   "onPlayable": true,
+   "label": "Yellow Draw Two",
+   "tapToHeld": 1.4000000357627869,
+   "tapToEvent": 21,
+   "eventToLanded": 265.4000000357628,
+   "tapToLanded": 286.4000000357628,
+   "refused": false,
+   "discardChangedBeforeEvent": false,
+   "discardChangeAfterEventMs": 274.5,
+   "sentPlayCard": 1,
+   "hand": 7,
+   "pass": true
+  },
+  "wild": {
+   "card": "Wild Draw Four",
+   "wheelOpenMs": null,
+   "wheelOpen": false,
+   "handBefore": 12,
+   "handAfter": 11,
+   "wheelClosedAfterEscape": true,
+   "sentAfterCancel": 1,
+   "ghostsDuringWheel": 4,
+   "playableAfter": 0,
+   "pass": false
+  },
+  "outOfTurn": {
+   "note": "bot turn window not caught",
+   "pass": null
+  },
+  "cut": {
+   "handBefore": 11,
+   "ghostVisibleAt2s": false,
+   "handAt2s": 11,
+   "ghostGoneAtMs": null,
+   "toastAtMs": null,
+   "ghostStill": false,
+   "hand": 11,
+   "bodyHasToast": false,
+   "playable": 6,
+   "pass": false
+  }
+ },
+ "stallText": "Leave\nUNO\nME9D-28ME\n🤖\nZippy is thinking...\n🔇\n🤖\n▶ Zippy\nTurn\n×3\nDirection of play: Clockwise\n85\n+2\n◆\n+2\n◆\nACTIVE COLOUR:\n◆ BLUE\n1\n▲\n1\n▲\n1\n▲\n2\n▲\n2\n▲\n2\n▲\n3\n▲\n3\n▲\n3\n▲\n▲\n▲\n2\n●\n2\n●\n2\n●\n8\n●\n8\n●\n8\n●\n5\n■\n5\n■\n5\n■\n2\n◆\n2\n◆\n2\n◆\n4\n◆\n4\n◆\n4\n◆\n4\n◆\n4\n◆\n4\n◆\n8\n◆\n8\n◆\n8\n◆\n+4\n+4\n+4\n+4\n+4\n+4\nUNO!\n\nIt is not your turn.\n\nYour turn\n\nZippy's turn\n\nYou drew 6 cards\n\nIt is not your turn.\n\n5\n◆\n5\n◆\n5\n◆"
+}

@@ -26,7 +26,11 @@ export type ActivityKind =
   | 'timeout'
   | 'warning'
   | 'released'
-  | 'win';
+  | 'win'
+  /** A presence or host line recorded from the platform. */
+  | 'room'
+  /** A match boundary (a replay starts a new match in the same room). */
+  | 'match';
 
 export interface ActivityEntry {
   id: number;
@@ -66,7 +70,7 @@ export interface LudoState {
   activity: ActivityEntry[];
 }
 
-export type LudoAction = { type: 'roll' } | { type: 'move'; pawn: number };
+export type LudoAction = { type: 'roll' } | { type: 'move'; pawn: number } | { type: 'playAgain' };
 
 export interface CapturedPawn {
   playerId: string;
@@ -100,6 +104,8 @@ export type LudoEvent =
   | (EventBase & { type: 'timeout'; by: string; action: 'roll' | 'move' })
   | (EventBase & { type: 'warning'; player: string })
   | (EventBase & { type: 'released'; player: string; reason: 'left' | 'timeout' | 'inactive' | 'removed' })
-  | (EventBase & { type: 'finished'; winner: string; standings: StandingEntry[] });
+  | (EventBase & { type: 'finished'; winner: string; standings: StandingEntry[] })
+  /** Carries `entry` only; the state is unchanged (a presence or host line for the Activity list). */
+  | (EventBase & { type: 'notice' });
 
 export type LudoEventType = LudoEvent['type'];

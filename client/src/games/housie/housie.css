@@ -11,7 +11,7 @@
   --hz-paper: #f7ecd0;
   --hz-paper-2: #e8d5a8;
   --hz-ink: #2b1f0c;
-  --hz-ink-red: #d6283e;
+  --hz-ink-red: #c01d33;
   --hz-ink-blue: #2b4fd0;
   --hz-empty: #16204f;
   --hz-text: #f4efe0;
@@ -162,6 +162,19 @@
 
 .hz-lobby-head .spacer {
   flex: 1;
+}
+
+/* Phones: the lobby header (Leave, title, code, people, audio) stays on one row from 320 px. */
+@media (max-width: 430px) {
+  .hz-lobby-head .hz-people-word {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .hz-lobby-head h1 {
+    display: none;
+  }
 }
 
 .hz-lobby-body {
@@ -459,6 +472,13 @@
   white-space: nowrap;
 }
 
+.hz-head .btn.icon,
+.hz-lobby-head .btn.icon {
+  flex: none;
+  width: 40px;
+  min-height: 40px;
+}
+
 .hz-match.narrow .hz-left,
 .hz-match.narrow .hz-right {
   display: contents;
@@ -474,4 +494,42 @@
 
 .hz-match.narrow .hz-left-bottom {
   order: 3;
+}
+
+/* Short landscape phones use the narrow column: give the tickets the space (the ball row and the tiles are the compressible parts). */
+@media (max-height: 520px) {
+  .hz-match.narrow .hz-main {
+    grid-template-rows: minmax(60px, 18dvh) minmax(0, 1fr) minmax(96px, 30dvh);
+  }
+
+  .hz-match.narrow.is-host .hz-main {
+    grid-template-rows: minmax(110px, 26dvh) minmax(0, 1fr) minmax(96px, 30dvh);
+  }
+}
+
+/* Portrait phones: the host header (Quit, Board/Tickets, Lobby, audio) must stay on one row from 320 px, so the people count chip goes
+   (the Lobby dialog lists everyone) and the buttons tighten. */
+@media (max-width: 430px) {
+  .hz-match .hz-head {
+    gap: 6px;
+  }
+
+  .hz-match .hz-head .hz-chip {
+    display: none;
+  }
+
+  .hz-match .hz-head .hz-btn.small {
+    padding: 3px 8px;
+  }
+
+  .hz-match .hz-head .hz-seg button {
+    min-width: 0;
+    padding: 2px 7px;
+    font-size: 0.85rem;
+  }
+
+  .hz-match .hz-head .btn.icon {
+    width: 36px;
+    min-height: 36px;
+  }
 }

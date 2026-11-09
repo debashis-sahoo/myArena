@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { ballLetter, formatRoomCode, getBingoPattern, type BingoView, type ChatMessage, type RoomState } from '@myarena/shared';
 import { Modal } from '../../components/common/Modal';
 import { toast } from '../../components/common/Toast';
-import { SoundToggle } from '../../components/hub/SoundToggle';
+import { AudioControls } from '../../components/common/AudioControls';
 import { leaveRoom, resetRoom } from '../../state/roomStore';
 import { useMediaQuery } from '../../state/viewport';
 import { LobbyDialog } from '../ludo/MatchDialogs';
@@ -211,7 +211,7 @@ function BingoMatch({ room, youId, invitePath, chat, view }: Props & { view: Bin
           Lobby
         </button>
         {!wide && <BingoChat messages={chat} youId={youId} mode="drawer" />}
-        <SoundToggle />
+        <AudioControls />
       </header>
 
       <div ref={main.ref} className="bz-main" style={mainStyle}>

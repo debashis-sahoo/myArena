@@ -6,7 +6,7 @@ import { logger } from '../../logger.js';
  * Development-only controls (research R10). They are read only outside production and ignored, with a startup
  * warning, in production, so no environment or client can influence real results.
  */
-const DEV_VARS = ['LUDO_DEV_DICE', 'LUDO_DEV_SCENARIO', 'LUDO_TURN_MS'] as const;
+const DEV_VARS = ['LUDO_DEV_DICE', 'LUDO_DEV_SCENARIO', 'LUDO_TURN_MS', 'LUDO_DEV_HUMOR_MS'] as const;
 
 export function warnIfDevControlsSet(): void {
   if (!config.isProd) return;
@@ -47,6 +47,13 @@ export function endgameScenario(): boolean {
 /** LUDO_TURN_MS replaces the 15 s countdown (outside production). */
 export function devTurnMs(): number | undefined {
   const raw = devValue('LUDO_TURN_MS');
+  const n = raw ? Number.parseInt(raw, 10) : NaN;
+  return Number.isFinite(n) && n >= 500 ? n : undefined;
+}
+
+/** LUDO_DEV_HUMOR_MS replaces the 45 to 90 s humor interval (outside production, at least 500 ms). */
+export function devHumorMs(): number | undefined {
+  const raw = devValue('LUDO_DEV_HUMOR_MS');
   const n = raw ? Number.parseInt(raw, 10) : NaN;
   return Number.isFinite(n) && n >= 500 ? n : undefined;
 }
