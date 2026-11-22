@@ -9,11 +9,7 @@ export function Header({ entryMode }: { entryMode: HubEntryMode }): ReactElement
     <header className="hub-top">
       <GuestProfile />
       <div className="logo-wrap">
-        <Logo />
-        <span className={`role-chip ${entryMode}`}>
-          <span aria-hidden="true">{entryMode === 'host' ? '♛' : '✦'}</span>
-          {entryMode === 'host' ? 'Host Arena' : 'Player Hub'}
-        </span>
+        <Logo entryMode={entryMode} />
       </div>
       <div className="sound">
         <AudioControls />
