@@ -13,6 +13,13 @@ export default defineConfig({
     host: true,
     port: 5173,
     proxy: {
+      '^/host$': {
+        target: 'http://localhost:10000',
+        changeOrigin: false,
+        configure(proxy) {
+          proxy.on('proxyReq', (request) => request.setHeader('X-MyArena-Vite-Host', '1'));
+        },
+      },
       '/socket.io': { target: 'http://localhost:10000', ws: true, changeOrigin: true },
     },
   },

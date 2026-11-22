@@ -1,7 +1,8 @@
 /** Shared constants. Values mirror specs/001-platform-hub-rooms/data-model.md. */
 
 export const ROOM_ID_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'; // 31 characters, no 0/O/1/I/L
-export const ROOM_ID_LENGTH = 8;
+/** Six-character uppercase room code, unique among live rooms. */
+export const ROOM_ID_LENGTH = 6;
 
 export const DISPLAY_NAME_MIN = 1;
 export const DISPLAY_NAME_MAX = 20;

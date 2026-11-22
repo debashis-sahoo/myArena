@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DISPLAY_NAME_MAX } from '@myarena/shared';
+import { DISPLAY_NAME_MAX, isRoomCode } from '@myarena/shared';
 
 // eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u001F\u007F]/g;
@@ -20,6 +20,11 @@ const guest = z
   .strict();
 
 const gameId = z.string().min(1).max(40);
+const roomId = z
+  .string()
+  .min(1)
+  .max(32)
+  .refine((value) => isRoomCode(value), 'Room code must contain exactly six valid characters');
 
 export const createRoomSchema = z
   .object({
@@ -33,8 +38,8 @@ export const createRoomSchema = z
 
 export const joinRoomSchema = z
   .object({
-    gameId,
-    roomId: z.string().min(1).max(32),
+    gameId: gameId.optional(),
+    roomId,
     guest,
   })
   .strict();

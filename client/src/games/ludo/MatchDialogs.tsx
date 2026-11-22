@@ -17,7 +17,7 @@ export function LobbyDialog({ open, onClose, room, youId, invitePath }: LobbyPro
   return (
     <Modal open={open} title="Lobby" onClose={onClose}>
       <h2 className="modal-title">Lobby</h2>
-      {invitePath && <InviteBar invitePath={invitePath} />}
+      {invitePath && <InviteBar roomId={room.roomId} invitePath={invitePath} />}
       <Lobby room={room} youId={youId} invitePath={null} />
     </Modal>
   );

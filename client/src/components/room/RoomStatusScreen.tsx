@@ -21,6 +21,11 @@ const COPY: Record<RoomStatus['kind'], { emoji: string; title: string; body: str
     title: 'You were removed for inactivity',
     body: 'You missed three turns in a row, so your seat was released.',
   },
+  host_left: {
+    emoji: '👋',
+    title: 'The host left',
+    body: 'This room needs its designated host and has ended. Head back to the Hub to join another room.',
+  },
   ended: { emoji: '🏁', title: 'This room has ended', body: 'The room closed, or the server restarted. Head back to the Hub to start a new one.' },
   taken_over: { emoji: '🪟', title: 'Open in another tab', body: 'You joined this room from another window, so this one has been disconnected.' },
   error: { emoji: '⚠️', title: 'Something went wrong', body: 'We could not reach the room.' },

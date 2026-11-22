@@ -4,9 +4,10 @@ import express, { type Express } from 'express';
 import helmet from 'helmet';
 import { config } from './config.js';
 import { healthHandler, type HealthStats } from './health.js';
+import type { HostEntryCapability } from './sockets/entryCapability.js';
 
 /** Express app: security headers, /healthz, static client bundle, SPA fallback. */
-export function buildApp(getStats: () => HealthStats): Express {
+export function buildApp(getStats: () => HealthStats, hostEntry: HostEntryCapability): Express {
   const app = express();
   app.disable('x-powered-by');
   // Behind Render's proxy: use forwarded client IPs and protocol.
@@ -40,6 +41,26 @@ export function buildApp(getStats: () => HealthStats): Express {
 
   // Registered before static files and the SPA fallback (FR-036).
   app.get('/healthz', healthHandler(getStats));
+  app.get('/host', async (req, res, next) => {
+    res.setHeader('Set-Cookie', hostEntry.cookie(config.isProd));
+    if (!config.isProd && req.get('x-myarena-vite-host') === '1') {
+      try {
+        const originHost = req.get('host') ?? '';
+        if (!/^(localhost|127\.0\.0\.1|\[::1\]):\d+$/.test(originHost)) {
+          throw new Error('Unrecognized Vite origin');
+        }
+        const vite = await fetch(`http://${originHost}/`);
+        const html = await vite.text();
+        res.removeHeader('Content-Security-Policy');
+        res.status(vite.status).type('text/html').send(html);
+        return;
+      } catch {
+        res.status(503).type('text/plain').send('Vite host page is not ready.');
+        return;
+      }
+    }
+    next();
+  });
 
   const indexHtml = path.join(config.clientDist, 'index.html');
   if (fs.existsSync(indexHtml)) {

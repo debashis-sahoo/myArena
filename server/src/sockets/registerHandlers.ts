@@ -16,6 +16,7 @@ import { logger } from '../logger.js';
 import { Room, RoomError, type RoomEvents } from '../rooms/room.js';
 import { RoomStore } from '../rooms/roomStore.js';
 import { KeyedLimiter, TokenBucket, type TakeResult } from './rateLimit.js';
+import type { HostEntryCapability } from './entryCapability.js';
 import {
   chatSendSchema,
   createRoomSchema,
@@ -32,6 +33,7 @@ interface SocketData {
   joinBucket?: TokenBucket;
   chatBucket?: TokenBucket;
   actionBucket?: TokenBucket;
+  hostEntry?: boolean;
 }
 
 function dataOf(socket: Socket): SocketData {
@@ -50,7 +52,7 @@ function enforce(result: TakeResult, message: string): void {
 }
 
 /** Builds the room store (events fan out through Socket.IO) and registers all socket handlers. */
-export function createRealtime(io: Server): { store: RoomStore } {
+export function createRealtime(io: Server, hostEntry: HostEntryCapability): { store: RoomStore } {
   const events: RoomEvents = {
     stateChanged: (room) => {
       io.to(room.roomId).emit(EVENTS.ROOM_STATE, room.projection());
@@ -137,8 +139,12 @@ export function createRealtime(io: Server): { store: RoomStore } {
     d.joinBucket = new TokenBucket(10, 1);
     d.chatBucket = new TokenBucket(CHAT_BURST, CHAT_REFILL_PER_SEC);
     d.actionBucket = new TokenBucket(10, 5);
+    d.hostEntry = hostEntry.validFromCookieHeader(socket.handshake.headers.cookie);
 
     handler(socket, EVENTS.ROOM_CREATE, createRoomSchema, (p) => {
+      if (!d.hostEntry) {
+        throw new RoomError('HOST_ENTRY_REQUIRED', 'Open the host page to create a room.');
+      }
       enforce(createLimiter.take(clientIp(socket)), 'You are creating rooms too quickly.');
       if (io.engine.clientsCount > config.maxSockets) {
         throw new RoomError('SERVER_BUSY', 'The arena is busy right now. Please try again soon.');
@@ -163,7 +169,7 @@ export function createRealtime(io: Server): { store: RoomStore } {
       enforce(joinLimiter.take(ip), 'Too many join attempts. Please slow down.');
       enforce(d.joinBucket!.take(), 'Too many join attempts. Please slow down.');
       const roomId = normalizeRoomCode(p.roomId);
-      const room = store.get(p.gameId, roomId);
+      const room = store.find(roomId, p.gameId);
       if (!room) throw new RoomError('ROOM_NOT_FOUND', 'We could not find that room.');
       // Returning guests (an existing seat) are never turned away: they must always get their snapshot.
       if (!room.hasGuest(p.guest.guestId) && io.engine.clientsCount > config.maxSockets) {

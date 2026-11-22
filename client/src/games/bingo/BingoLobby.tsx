@@ -374,7 +374,7 @@ export function BingoLobby({ room, youId, invitePath, chat }: Props): ReactEleme
         </section>
 
         <section className="bz-people" aria-label="People">
-          {invitePath ? <InviteBar invitePath={invitePath} /> : <span />}
+          {invitePath ? <InviteBar roomId={room.roomId} invitePath={invitePath} /> : <span />}
           {isHost ? (
             <StartPanel room={room} lobby={lobby} />
           ) : (

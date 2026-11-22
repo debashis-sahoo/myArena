@@ -19,7 +19,7 @@ export function Lobby({ room, youId, invitePath }: Props): ReactElement {
 
   return (
     <div className="lobby">
-      {invitePath && inLobby && <InviteBar invitePath={invitePath} />}
+      {invitePath && inLobby && <InviteBar roomId={room.roomId} invitePath={invitePath} />}
       <section aria-label="Players">
         <h3 className="panel-title">
           Players{' '}

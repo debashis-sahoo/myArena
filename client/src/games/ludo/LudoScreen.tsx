@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router';
 import { COLOR_HEX, COLOR_ORDER, formatRoomCode, type ChatMessage, type LudoColor, type RoomState } from '@myarena/shared';
 import { Avatar } from '../../art/Avatars';
 import { AudioControls } from '../../components/common/AudioControls';
-import { toast } from '../../components/common/Toast';
+import { InviteBar } from '../../components/room/InviteBar';
 import { leaveRoom, useRoom } from '../../state/roomStore';
 import { useMediaQuery, useReducedMotion } from '../../state/viewport';
 import { Board, type CornerLabel } from './Board';
@@ -29,16 +29,6 @@ export interface MatchScreenProps {
 
 const NO_FX: Fx = { route: new Set(), landing: null };
 
-async function copyInvite(invitePath: string): Promise<void> {
-  const link = `${window.location.origin}${invitePath}`;
-  try {
-    await navigator.clipboard.writeText(link);
-    toast('Invite link copied');
-  } catch {
-    toast('Could not copy. Open Lobby to see the link.');
-  }
-}
-
 function Header(props: {
   room: RoomState;
   info: Map<string, PlayerInfo>;
@@ -59,11 +49,7 @@ function Header(props: {
           {formatRoomCode(room.roomId)}
         </span>
       </div>
-      {invitePath && (
-        <button type="button" className="btn ghost small copy-invite" onClick={() => void copyInvite(invitePath)}>
-          Copy invite link
-        </button>
-      )}
+      {invitePath && <InviteBar roomId={room.roomId} invitePath={invitePath} compact />}
       <ul className="head-avatars" aria-label="Players in the room">
         {room.seats.flatMap((s) =>
           s.occupant ? [s.occupant] : [],

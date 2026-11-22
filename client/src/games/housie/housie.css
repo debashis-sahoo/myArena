@@ -171,6 +171,20 @@
   }
 }
 
+.hz-head,
+.hz-panel,
+.hz-bc,
+.hz-cc {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0 22px rgba(39, 224, 255, 0.12);
+}
+
+.hz-title,
+.hz-combos-title {
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35), 0 0 14px rgba(255, 217, 61, 0.22);
+}
+
 @media (max-width: 380px) {
   .hz-lobby-head h1 {
     display: none;

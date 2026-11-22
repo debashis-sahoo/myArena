@@ -19,7 +19,16 @@ import { clearDraft } from './chatDraft';
 import { guestInfo } from './guest';
 import { connectSocket, disconnectSocket, emitWithAck, socketInstance, type ClientAck, type ClientErrorCode } from './socket';
 
-export type StatusKind = 'not_found' | 'full' | 'in_progress' | 'removed' | 'inactive' | 'ended' | 'taken_over' | 'error';
+export type StatusKind =
+  | 'not_found'
+  | 'full'
+  | 'in_progress'
+  | 'removed'
+  | 'inactive'
+  | 'host_left'
+  | 'ended'
+  | 'taken_over'
+  | 'error';
 
 export interface RoomStatus {
   kind: StatusKind;
@@ -169,7 +178,9 @@ function applyJoined(gameId: string, data: JoinedData): void {
 }
 
 function reasonStatus(reason: ClosedReason): RoomStatus {
-  return reason === 'taken_over' ? { kind: 'taken_over' } : { kind: 'ended' };
+  if (reason === 'taken_over') return { kind: 'taken_over' };
+  if (reason === 'host_left') return { kind: 'host_left' };
+  return { kind: 'ended' };
 }
 
 function wire(): void {
@@ -285,6 +296,27 @@ export async function joinRoom(gameId: string, roomId: string): Promise<void> {
     return;
   }
   applyJoined(gameId, res.data);
+}
+
+export async function joinRoomByCode(
+  roomId: string,
+): Promise<{ ok: true; gameId: string; roomId: string } | { ok: false; message: string }> {
+  wire();
+  set({ ...IDLE, phase: 'joining' });
+  pendingConnects += 1;
+  let res: ClientAck<JoinedData>;
+  try {
+    res = await emitWithAck<JoinedData>(EVENTS.ROOM_JOIN, { roomId, guest: guestInfo() }, 90_000);
+  } finally {
+    pendingConnects -= 1;
+  }
+  if (!res.ok) {
+    set({ ...IDLE });
+    disconnectSocket();
+    return { ok: false, message: res.error.message };
+  }
+  applyJoined(res.data.room.gameId, res.data);
+  return { ok: true, gameId: res.data.room.gameId, roomId: res.data.room.roomId };
 }
 
 /** Takes a fresh server view of the room and game (used when a game feed notices a gap in its events). */

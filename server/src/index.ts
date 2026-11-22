@@ -6,12 +6,14 @@ import { config } from './config.js';
 import { logger } from './logger.js';
 import { setServerPhase } from './serverState.js';
 import { installShutdown } from './shutdown.js';
+import { createHostEntryCapability } from './sockets/entryCapability.js';
 import { createRealtime } from './sockets/registerHandlers.js';
 
 let io: Server | undefined;
 let roomCount = (): number => 0;
+const hostEntry = createHostEntryCapability();
 
-const app = buildApp(() => ({ rooms: roomCount(), connections: io?.engine.clientsCount ?? 0 }));
+const app = buildApp(() => ({ rooms: roomCount(), connections: io?.engine.clientsCount ?? 0 }), hostEntry);
 const httpServer = createServer(app);
 
 // Socket.IO heartbeat doubles as the keepalive: the client's replies are inbound traffic on Render (FR-039 to FR-041).
@@ -22,7 +24,7 @@ io = new Server(httpServer, {
   maxHttpBufferSize: 10_000,
 });
 
-const { store } = createRealtime(io);
+const { store } = createRealtime(io, hostEntry);
 roomCount = () => store.size;
 installShutdown(httpServer, io, store);
 

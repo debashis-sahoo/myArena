@@ -3,9 +3,9 @@ import './UnoScreen.css';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { formatRoomCode, getGame, unoCardOf, type RoomState, type UnoSeatView } from '@myarena/shared';
-import { toast } from '../../components/common/Toast';
 import { Modal } from '../../components/common/Modal';
 import { AudioControls } from '../../components/common/AudioControls';
+import { InviteBar } from '../../components/room/InviteBar';
 import { leaveRoom } from '../../state/roomStore';
 import { useChatPref } from '../../state/chatPrefs';
 import { useLayoutMode, useReducedMotion } from '../../state/viewport';
@@ -26,16 +26,6 @@ import { STRIP_MIN_W, useRegionSize, useUnoFit, type UnoChatMode } from './useFi
 import { useUnoAnimator } from './useUnoAnimator';
 
 const SEAT_COLORS = getGame('uno')?.seatColors ?? [];
-
-async function copyInvite(invitePath: string): Promise<void> {
-  const link = `${window.location.origin}${invitePath}`;
-  try {
-    await navigator.clipboard.writeText(link);
-    toast('Invite link copied');
-  } catch {
-    toast('Could not copy the invite link');
-  }
-}
 
 /** Seat order clockwise from the viewer: the players after me in slot order, wrapping (FR-025). */
 function opponentsOf(players: readonly UnoSeatView[], me: string): UnoSeatView[] {
@@ -129,7 +119,6 @@ function UnoMatch({ room, youId, invitePath, chat }: MatchScreenProps): ReactEle
   };
   const canPlayAgain = solo || room.hostPlayerId === youId;
   const { hand } = fit;
-  const compact = fit.width < 440;
   const tiny = fit.width < 360;
   const ctlTop = hand.rowRect ? hand.rowRect.y : hand.bandRect.y;
   const centreBanner = newest(banners.filter((b) => !b.playerId || b.playerId === youId));
@@ -159,11 +148,7 @@ function UnoMatch({ room, youId, invitePath, chat }: MatchScreenProps): ReactEle
           ) : (
             <span className="un-spacer" />
           )}
-          {invitePath && (
-            <button type="button" className="un-btn" aria-label="Copy invite link" onClick={() => void copyInvite(invitePath)}>
-              {compact ? <span aria-hidden="true">🔗</span> : 'Copy invite'}
-            </button>
-          )}
+          {invitePath && <InviteBar roomId={room.roomId} invitePath={invitePath} compact />}
           <AudioControls compact={tiny} />
           {chatMode === 'drawer' && <UnoChat messages={chat} youId={youId} mode="drawer" />}
         </header>

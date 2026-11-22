@@ -50,13 +50,28 @@ function newGuest(name: string): GuestInfo {
   return { guestId: randomUUID(), displayName: name, avatar: 'fox' };
 }
 
-async function connect(url: string, name: string, guest = newGuest(name)): Promise<Client> {
+async function hostCookie(url: string): Promise<string> {
+  const response = await fetch(`${url}/host`, { redirect: 'manual' });
+  const value = response.headers.get('set-cookie');
+  if (!value) throw new Error('GET /host did not set a host capability cookie');
+  return value.split(';')[0] ?? value;
+}
+
+async function connect(
+  url: string,
+  name: string,
+  guest = newGuest(name),
+  cookieHeader?: string,
+): Promise<Client> {
   // A unique forwarded IP per client keeps per-IP limits from affecting the test.
   const n = ipCounter++;
   const socket = connectClient(url, {
     transports: ['websocket'],
     reconnection: false,
-    extraHeaders: { 'x-forwarded-for': `10.${(n >> 16) & 255}.${(n >> 8) & 255}.${n & 255}` },
+    extraHeaders: {
+      'x-forwarded-for': `10.${(n >> 16) & 255}.${(n >> 8) & 255}.${n & 255}`,
+      ...(cookieHeader ? { cookie: cookieHeader } : {}),
+    },
   });
   const client: Client = { socket, guest, chat: [], activity: [], closed: [], removed: [] };
   socket.on(EVENTS.ROOM_STATE, (state: RoomState) => {
@@ -76,6 +91,10 @@ async function connect(url: string, name: string, guest = newGuest(name)): Promi
     socket.once('connect_error', (e) => reject(e));
   });
   return client;
+}
+
+async function connectHost(url: string, name: string, guest = newGuest(name)): Promise<Client> {
+  return connect(url, name, guest, await hostCookie(url));
 }
 
 function emit<T = unknown>(c: Client, event: string, payload: object = {}): Promise<Ack<T>> {
@@ -109,16 +128,16 @@ function assert(cond: unknown, message: string): void {
 }
 
 async function createOnline(url: string, name = 'Host'): Promise<{ host: Client; code: string; joined: JoinedData }> {
-  const host = await connect(url, name);
+  const host = await connectHost(url, name);
   const joined = ok(await emit<JoinedData>(host, EVENTS.ROOM_CREATE, { gameId: 'ludo', mode: 'online', guest: host.guest }));
   host.last = joined.room;
   host.playerId = joined.you.playerId;
   return { host, code: joined.room.roomId, joined };
 }
 
-async function joinRoom(url: string, code: string, name: string, guest?: GuestInfo) {
-  const c = await connect(url, name, guest);
-  const res = await emit<JoinedData>(c, EVENTS.ROOM_JOIN, { gameId: 'ludo', roomId: code, guest: c.guest });
+async function joinRoom(url: string, code: string, name: string, guest?: GuestInfo, gameId = 'ludo', cookieHeader?: string) {
+  const c = await connect(url, name, guest, cookieHeader);
+  const res = await emit<JoinedData>(c, EVENTS.ROOM_JOIN, { gameId, roomId: code, guest: c.guest });
   return { c, res };
 }
 
@@ -139,17 +158,50 @@ const scenarios: Scenario[] = [
     },
   ],
   [
+    'host entry: unauthorised sockets cannot create rooms',
+    async (url) => {
+      const visitor = await connect(url, 'Visitor');
+      fail(
+        await emit(visitor, EVENTS.ROOM_CREATE, { gameId: 'ludo', mode: 'online', guest: visitor.guest }),
+        'HOST_ENTRY_REQUIRED',
+      );
+      closeAll(visitor);
+    },
+  ],
+  [
     'create: unique code, invite path, single host, default capacity',
     async (url) => {
       const a = await createOnline(url);
       const b = await createOnline(url);
-      assert(/^[2-9A-HJKMNP-Z]{8}$/.test(a.code), `bad room code ${a.code}`);
+      assert(/^[2-9A-HJKMNP-Z]{6}$/.test(a.code), `bad room code ${a.code}`);
       assert(a.code !== b.code, 'room codes must differ');
       assert(a.joined.invitePath === `/room/ludo/${a.code}`, `invitePath ${a.joined.invitePath}`);
       assert(a.joined.room.capacity === 4 && a.joined.room.inviteEnabled, 'capacity/invite');
       assert(a.joined.room.hostPlayerId === a.joined.you.playerId, 'creator must be host');
       assert(a.joined.room.seats.filter((s) => s.occupant?.isHost).length === 1, 'exactly one host');
-      closeAll(a.host, b.host);
+
+      const codeOnly = await connect(url, 'CodeOnly');
+      const joined = ok(
+        await emit<JoinedData>(codeOnly, EVENTS.ROOM_JOIN, {
+          roomId: `  ${a.code.toLowerCase()}  `,
+          guest: codeOnly.guest,
+        }),
+      );
+      assert(joined.room.gameId === 'ludo' && joined.room.roomId === a.code, 'code-only join returns authoritative game');
+      fail(
+        await emit(
+          codeOnly,
+          EVENTS.ROOM_JOIN,
+          { gameId: 'uno', roomId: b.code, guest: codeOnly.guest },
+        ),
+        'ROOM_NOT_FOUND',
+      );
+      const unavailable = await connect(url, 'Unavailable');
+      fail(
+        await emit<JoinedData>(unavailable, EVENTS.ROOM_JOIN, { roomId: 'ZZZZZZ', guest: unavailable.guest }),
+        'ROOM_NOT_FOUND',
+      );
+      closeAll(a.host, b.host, codeOnly, unavailable);
     },
   ],
   [
@@ -282,47 +334,51 @@ const scenarios: Scenario[] = [
     },
   ],
   [
-    'host handover keeps exactly one host; room closes when empty',
+    'host departure closes instead of promoting an ordinary player',
     async (url) => {
       const { host, code } = await createOnline(url);
       const { c: guest } = await joinRoom(url, code, 'Heir');
       await until('guest seated', () => host.last?.seats.filter((s) => s.occupant).length === 2);
       ok(await emit(host, EVENTS.ROOM_LEAVE, {}));
-      const heir = await until('guest becomes host', () =>
-        guest.last?.seats.find((s) => s.occupant?.displayName === 'Heir' && s.occupant.isHost),
-      );
-      assert(heir.occupant?.isHost, 'guest should be host');
-      assert(guest.chat.some((m) => m.systemCode === 'host_changed'), 'host change announcement');
-
-      // Former host returns as a regular player.
-      const back = await joinRoom(url, code, 'Host', host.guest);
-      ok(back.res);
-      await until('two seated', () => guest.last?.seats.filter((s) => s.occupant).length === 2);
-      assert(guest.last?.seats.filter((s) => s.occupant?.isHost).length === 1, 'still exactly one host');
-      assert(!guest.last?.seats.find((s) => s.occupant?.displayName === 'Host')?.occupant?.isHost, 'returning host is a regular player');
-
-      // Everyone leaves: room closes immediately and the link is dead.
-      ok(await emit(back.c, EVENTS.ROOM_LEAVE, {}));
-      ok(await emit(guest, EVENTS.ROOM_LEAVE, {}));
+      await until('guest receives host departure', () => guest.closed.includes('host_left'));
+      assert(!guest.last?.seats.some((s) => s.occupant?.displayName === 'Heir' && s.occupant.isHost), 'guest was not promoted');
       const dead = await joinRoom(url, code, 'Late');
       fail(dead.res, 'ROOM_NOT_FOUND');
-      closeAll(host, guest, back.c, dead.c);
+      closeAll(host, guest, dead.c);
     },
   ],
   [
-    'host disconnect past the window hands over; all disconnected closes the room',
+    'host disconnect past the window closes without player promotion',
     async (url) => {
       const { host, code } = await createOnline(url);
       const { c: guest } = await joinRoom(url, code, 'Steady');
       await until('guest seated', () => host.last?.seats.filter((s) => s.occupant).length === 2);
       host.socket.close();
       await sleep(WINDOW_MS + 600);
-      assert(guest.last?.seats.find((s) => s.occupant?.displayName === 'Steady')?.occupant?.isHost, 'guest should now be host');
-      guest.socket.close();
-      await sleep(WINDOW_MS + 600);
+      await until('guest receives host departure', () => guest.closed.includes('host_left'));
+      assert(!guest.last?.seats.some((s) => s.occupant?.displayName === 'Steady' && s.occupant.isHost), 'guest was not promoted');
       const dead = await joinRoom(url, code, 'Late');
       fail(dead.res, 'ROOM_NOT_FOUND');
       closeAll(host, guest, dead.c);
+    },
+  ],
+  [
+    'host reconnect preserves the host seat; a host cookie does not promote a fresh invite joiner',
+    async (url) => {
+      const { host, code } = await createOnline(url);
+      const creatorCookie = await hostCookie(url);
+      const fresh = await joinRoom(url, code, 'CookiePlayer', undefined, 'ludo', creatorCookie);
+      ok(fresh.res);
+      assert(
+        !fresh.c.last?.seats.some((s) => s.occupant?.playerId === ok(fresh.res).you.playerId && s.occupant?.isHost),
+        'fresh cookie joiner is not host',
+      );
+      host.socket.close();
+      const resumed = await joinRoom(url, code, 'Host', host.guest, 'ludo', creatorCookie);
+      const resumedData = ok(resumed.res);
+      assert(resumedData.resumed && resumedData.room.hostPlayerId === resumedData.you.playerId, 'creator resumes as host');
+      fail(await emit(fresh.c, EVENTS.ROOM_START, {}), 'NOT_HOST');
+      closeAll(host, fresh.c, resumed.c);
     },
   ],
   [
@@ -347,7 +403,7 @@ const scenarios: Scenario[] = [
   [
     'AI room: bots seated, no invite, closed to others, closes when the human leaves',
     async (url) => {
-      const human = await connect(url, 'Solo');
+      const human = await connectHost(url, 'Solo');
       const created = ok(
         await emit<JoinedData>(human, EVENTS.ROOM_CREATE, { gameId: 'ludo', mode: 'ai', botCount: 2, guest: human.guest }),
       );
@@ -369,7 +425,7 @@ const scenarios: Scenario[] = [
   [
     'UNO AI room: starts at once with a 7-card hand and no other hand in the payload',
     async (url) => {
-      const human = await connect(url, 'Solo');
+      const human = await connectHost(url, 'Solo');
       const created = ok(
         await emit<JoinedData>(human, EVENTS.ROOM_CREATE, { gameId: 'uno', mode: 'ai', botCount: 3, guest: human.guest }),
       );
@@ -387,8 +443,8 @@ const scenarios: Scenario[] = [
   [
     'invalid requests: unknown fields, unavailable game, not in a room',
     async (url) => {
-      const c = await connect(url, 'Odd');
-      fail(await emit(c, EVENTS.ROOM_JOIN, { gameId: 'ludo', roomId: 'ABCDEFGH', guest: c.guest, extra: 1 }), 'INVALID_PAYLOAD');
+      const c = await connectHost(url, 'Odd');
+      fail(await emit(c, EVENTS.ROOM_JOIN, { gameId: 'ludo', roomId: 'ABCDEF', guest: c.guest, extra: 1 }), 'INVALID_PAYLOAD');
       fail(await emit(c, EVENTS.ROOM_CREATE, { gameId: 'snakes-and-ladders', mode: 'online', guest: c.guest }), 'GAME_UNAVAILABLE');
       fail(await emit(c, EVENTS.ROOM_CREATE, { gameId: 'ludo', mode: 'online', guest: { ...c.guest, guestId: 'nope' } }), 'INVALID_PAYLOAD');
       fail(await emit(c, EVENTS.CHAT_SEND, { text: 'hi' }), 'NOT_IN_ROOM');

@@ -31,6 +31,11 @@ export class RoomStore {
     return room && room.game.id === gameId ? room : undefined;
   }
 
+  find(roomId: string, gameId?: string): Room | undefined {
+    const room = this.rooms.get(roomId);
+    return room && (!gameId || room.game.id === gameId) ? room : undefined;
+  }
+
   all(): Room[] {
     return [...this.rooms.values()];
   }

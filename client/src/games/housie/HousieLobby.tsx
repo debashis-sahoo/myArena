@@ -242,7 +242,7 @@ export function HousieLobby({ room, youId, invitePath, chat }: Props): ReactElem
         </section>
 
         <section className="hz-people" aria-label="People">
-          {invitePath ? <InviteBar invitePath={invitePath} /> : <span />}
+          {invitePath ? <InviteBar roomId={room.roomId} invitePath={invitePath} /> : <span />}
           {isHost ? (
             <HostControls room={room} />
           ) : (

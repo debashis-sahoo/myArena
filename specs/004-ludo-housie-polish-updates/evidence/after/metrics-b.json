@@ -1,0 +1,178 @@
+[
+ {
+  "size": "390x844",
+  "set": "default",
+  "who": "player",
+  "tileCount": 6,
+  "minCell": 35,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 14.5,
+  "short": 0,
+  "maxLines": 1,
+  "sample": []
+ },
+ {
+  "size": "390x844",
+  "set": "default",
+  "who": "host",
+  "tileCount": 6,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 14.5,
+  "short": 0,
+  "maxLines": 1,
+  "sample": []
+ },
+ {
+  "size": "390x844",
+  "set": "mid",
+  "who": "player",
+  "tileCount": 13,
+  "minCell": 39,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 10,
+  "short": 2,
+  "maxLines": 1,
+  "sample": []
+ },
+ {
+  "size": "390x844",
+  "set": "mid",
+  "who": "host",
+  "tileCount": 13,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 13,
+  "minFont": 10,
+  "short": 13,
+  "maxLines": 1,
+  "sample": [
+   "Early 5",
+   "Early 7",
+   "Early 10"
+  ]
+ },
+ {
+  "size": "360x640",
+  "set": "default",
+  "who": "player",
+  "tileCount": 6,
+  "minCell": 36,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 13.5,
+  "short": 0,
+  "maxLines": 1,
+  "sample": []
+ },
+ {
+  "size": "360x640",
+  "set": "default",
+  "who": "host",
+  "tileCount": 6,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 13.5,
+  "short": 0,
+  "maxLines": 1,
+  "sample": []
+ },
+ {
+  "size": "360x640",
+  "set": "mid",
+  "who": "player",
+  "tileCount": 13,
+  "minCell": 36,
+  "noScroll": true,
+  "cutTiles": 13,
+  "minFont": 10,
+  "short": 0,
+  "maxLines": 2,
+  "sample": [
+   "Early Five",
+   "Early Seven",
+   "Early Ten"
+  ]
+ },
+ {
+  "size": "360x640",
+  "set": "mid",
+  "who": "host",
+  "tileCount": 13,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 13,
+  "minFont": 10,
+  "short": 0,
+  "maxLines": 2,
+  "sample": [
+   "Early Five",
+   "Early Seven",
+   "Early Ten"
+  ]
+ },
+ {
+  "size": "320x568",
+  "set": "default",
+  "who": "player",
+  "tileCount": 6,
+  "minCell": 32,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 11.5,
+  "short": 0,
+  "maxLines": 1,
+  "sample": []
+ },
+ {
+  "size": "320x568",
+  "set": "default",
+  "who": "host",
+  "tileCount": 6,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 11.5,
+  "short": 0,
+  "maxLines": 1,
+  "sample": []
+ },
+ {
+  "size": "320x568",
+  "set": "mid",
+  "who": "player",
+  "tileCount": 13,
+  "minCell": 32,
+  "noScroll": true,
+  "cutTiles": 13,
+  "minFont": 10,
+  "short": 0,
+  "maxLines": 2,
+  "sample": [
+   "Early Five",
+   "Early Seven",
+   "Early Ten"
+  ]
+ },
+ {
+  "size": "320x568",
+  "set": "mid",
+  "who": "host",
+  "tileCount": 13,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 13,
+  "minFont": 10,
+  "short": 0,
+  "maxLines": 2,
+  "sample": [
+   "Early Five",
+   "Early Seven",
+   "Early Ten"
+  ]
+ }
+]

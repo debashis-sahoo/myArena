@@ -1,5 +1,6 @@
 /** Wire protocol. Authoritative description: specs/001-platform-hub-rooms/contracts/realtime-events.md */
 import type { LudoState } from './ludo/types.js';
+import { ROOM_ID_ALPHABET, ROOM_ID_LENGTH } from './limits.js';
 
 export const EVENTS = {
   // client -> server (all use acknowledgements)
@@ -25,6 +26,7 @@ export const EVENTS = {
 } as const;
 
 export type ErrorCode =
+  | 'HOST_ENTRY_REQUIRED'
   | 'ROOM_NOT_FOUND'
   | 'ROOM_FULL'
   | 'MATCH_IN_PROGRESS'
@@ -117,7 +119,13 @@ export interface ChatMessage {
   ts: number;
 }
 
-export type ClosedReason = 'all_left' | 'all_disconnected' | 'ai_owner_left' | 'server_restart' | 'taken_over';
+export type ClosedReason =
+  | 'all_left'
+  | 'all_disconnected'
+  | 'ai_owner_left'
+  | 'host_left'
+  | 'server_restart'
+  | 'taken_over';
 
 // ----- payloads -----
 export interface CreateRoomPayload {
@@ -129,7 +137,7 @@ export interface CreateRoomPayload {
   guest: GuestInfo;
 }
 export interface JoinRoomPayload {
-  gameId: string;
+  gameId?: string;
   roomId: string;
   guest: GuestInfo;
 }
@@ -170,12 +178,20 @@ export function invitePathFor(gameId: string, roomId: string): string {
   return `/room/${gameId}/${roomId}`;
 }
 
-/** Display form of a room ID: XXXX-XXXX. */
+/** Canonical display form of a room code. */
 export function formatRoomCode(roomId: string): string {
-  return roomId.length === 8 ? `${roomId.slice(0, 4)}-${roomId.slice(4)}` : roomId;
+  return normalizeRoomCode(roomId);
 }
 
 /** Accepts user-typed forms (lowercase, dashes, spaces). */
 export function normalizeRoomCode(input: string): string {
   return input.replace(/[\s-]/g, '').toUpperCase();
+}
+
+export function isRoomCode(input: string): boolean {
+  const normalized = normalizeRoomCode(input);
+  return (
+    normalized.length === ROOM_ID_LENGTH &&
+    [...normalized].every((character) => ROOM_ID_ALPHABET.includes(character))
+  );
 }

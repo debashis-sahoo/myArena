@@ -8,12 +8,13 @@ import { AiOpponentPicker } from './AiOpponentPicker';
 import { CapacityPicker } from './CapacityPicker';
 
 interface Props {
+  entryMode: 'host' | 'player';
   game: GameDefinition | null;
   onClose: () => void;
 }
 
 /** Game launch modal: two distinct actions, "Play with AI" and "Play Online" (FR-009 to FR-012). */
-export function LaunchModal({ game, onClose }: Props): ReactElement {
+export function LaunchModal({ entryMode, game, onClose }: Props): ReactElement {
   const navigate = useNavigate();
   const [step, setStep] = useState<'choose' | 'ai' | 'capacity'>('choose');
   const [busy, setBusy] = useState<null | 'online' | 'ai'>(null);
@@ -28,7 +29,7 @@ export function LaunchModal({ game, onClose }: Props): ReactElement {
   }, [game]);
 
   const launch = async (mode: 'online' | 'ai', botCount?: number, capacity?: number): Promise<void> => {
-    if (!game || busy) return;
+    if (entryMode !== 'host' || !game || busy) return;
     sfx.tap();
     setBusy(mode);
     setError(null);
@@ -44,7 +45,11 @@ export function LaunchModal({ game, onClose }: Props): ReactElement {
   };
 
   return (
-    <Modal open={game !== null} title={`Play ${game?.name ?? ''}`} onClose={busy ? () => undefined : onClose}>
+    <Modal
+      open={entryMode === 'host' && game !== null}
+      title={`Play ${game?.name ?? ''}`}
+      onClose={busy ? () => undefined : onClose}
+    >
       {game && step === 'choose' && (
         <div className="launch-step">
           <h2 className="modal-title">Play {game.name}</h2>

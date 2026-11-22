@@ -363,3 +363,17 @@
   transform-origin: 50% 50%;
   will-change: transform, opacity;
 }
+
+.un-head,
+.un-frame,
+.un-chat-dock,
+.un-res-panel {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 22px rgba(255, 61, 172, 0.12);
+}
+
+.un-brand,
+.un-res-title {
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 16px rgba(255, 61, 172, 0.3);
+}

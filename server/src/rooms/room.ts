@@ -60,6 +60,8 @@ interface Participant {
   socketId: string | null;
   connection: 'connected' | 'disconnected';
   reconnectTimer: NodeJS.Timeout | null;
+  /** Private room capability. Only an authorized creator is eligible. */
+  hostEligible: boolean;
 }
 
 interface Seat {
@@ -141,7 +143,7 @@ export class Room {
 
   /** Seats the creator as the only host, plus bots for AI rooms. Emits nothing (no sockets yet). */
   seedCreator(guest: GuestInfo, socketId: string, botCount: number): string {
-    const creator = this.addParticipant('human', guest.displayName, guest.avatar, guest.guestId, socketId);
+    const creator = this.addParticipant('human', guest.displayName, guest.avatar, guest.guestId, socketId, true);
     this.hostPlayerId = creator.playerId;
     for (let i = 0; i < botCount; i++) {
       this.addParticipant('bot', BOT_NAMES[i % BOT_NAMES.length] ?? 'Bot', 'robot', null, null);
@@ -241,7 +243,7 @@ export class Room {
     if (this.state === 'in_progress') throw new RoomError('MATCH_IN_PROGRESS', 'This match has already started.');
     if (!this.hasOpenSeat()) throw new RoomError('ROOM_FULL', 'This room is full.');
 
-    const participant = this.addParticipant('human', guest.displayName, guest.avatar, guest.guestId, socketId);
+    const participant = this.addParticipant('human', guest.displayName, guest.avatar, guest.guestId, socketId, false);
     this.announce('joined', `${participant.displayName} joined`);
     this.changed();
     return { participant: this.view(participant), playerId: participant.playerId, resumed: false, replacedSocketId: null };
@@ -555,23 +557,19 @@ export class Room {
       this.close(this.mode === 'ai' ? 'ai_owner_left' : reason === 'timeout' ? 'all_disconnected' : 'all_left');
       return;
     }
-    if (wasHost) this.handOverHost();
+    if (wasHost) {
+      this.close('host_left');
+      return;
+    }
     this.changed();
-  }
-
-  /** Exactly one host at all times: pick the longest-present human, preferring connected ones. */
-  private handOverHost(): void {
-    const humans = this.humans().sort((a, b) => a.joinSeq - b.joinSeq);
-    const next = humans.find((h) => h.connection === 'connected') ?? humans[0];
-    if (!next) return;
-    this.hostPlayerId = next.playerId;
-    this.announce('host_changed', `${next.displayName} is now the host`);
   }
 
   private requireHost(socketId: string): Participant {
     const p = this.findBySocket(socketId);
     if (!p) throw new RoomError('NOT_IN_ROOM', 'You are not in this room.');
-    if (p.playerId !== this.hostPlayerId) throw new RoomError('NOT_HOST', 'Only the host can do that.');
+    if (p.playerId !== this.hostPlayerId || !p.hostEligible) {
+      throw new RoomError('NOT_HOST', 'Only the host can do that.');
+    }
     return p;
   }
 
@@ -581,6 +579,7 @@ export class Room {
     avatar: string,
     guestId: string | null,
     socketId: string | null,
+    hostEligible = false,
   ): Participant {
     const seat = this.seats.find((s) => !s.occupant) ?? this.openRosterSeat();
     if (!seat) throw new RoomError('ROOM_FULL', 'This room is full.');
@@ -595,6 +594,7 @@ export class Room {
       socketId,
       connection: 'connected',
       reconnectTimer: null,
+      hostEligible,
     };
     seat.occupant = p;
     return p;

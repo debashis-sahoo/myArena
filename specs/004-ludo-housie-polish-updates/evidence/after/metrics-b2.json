@@ -1,0 +1,156 @@
+[
+ {
+  "size": "390x844",
+  "set": "all",
+  "who": "player",
+  "tileCount": 9,
+  "minCell": 39,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 13,
+  "short": 0,
+  "maxLines": 1,
+  "sample": []
+ },
+ {
+  "size": "390x844",
+  "set": "all",
+  "who": "host",
+  "tileCount": 9,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 10.5,
+  "short": 0,
+  "maxLines": 2,
+  "sample": []
+ },
+ {
+  "size": "360x640",
+  "set": "all",
+  "who": "player",
+  "tileCount": 40,
+  "minCell": 36,
+  "noScroll": true,
+  "cutTiles": 40,
+  "minFont": 10,
+  "short": 40,
+  "maxLines": 1,
+  "sample": [
+   "Early 5",
+   "Early 7",
+   "Early 10"
+  ]
+ },
+ {
+  "size": "360x640",
+  "set": "all",
+  "who": "host",
+  "tileCount": 40,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 40,
+  "minFont": 10,
+  "short": 40,
+  "maxLines": 2,
+  "sample": [
+   "Early 5",
+   "Early 7",
+   "Early 10"
+  ]
+ },
+ {
+  "size": "320x568",
+  "set": "all",
+  "who": "player",
+  "tileCount": 40,
+  "minCell": 32,
+  "noScroll": true,
+  "cutTiles": 40,
+  "minFont": 10,
+  "short": 40,
+  "maxLines": 2,
+  "sample": [
+   "Early 5",
+   "Early 7",
+   "Early 10"
+  ]
+ },
+ {
+  "size": "320x568",
+  "set": "all",
+  "who": "host",
+  "tileCount": 40,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 40,
+  "minFont": 10,
+  "short": 40,
+  "maxLines": 2,
+  "sample": [
+   "Early 5",
+   "Early 7",
+   "Early 10"
+  ]
+ },
+ {
+  "size": "844x390",
+  "set": "all",
+  "who": "player",
+  "tileCount": 17,
+  "minCell": 48,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 10,
+  "short": 5,
+  "maxLines": 2,
+  "sample": []
+ },
+ {
+  "size": "844x390",
+  "set": "all",
+  "who": "host",
+  "tileCount": 17,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 0,
+  "minFont": 10,
+  "short": 5,
+  "maxLines": 2,
+  "sample": []
+ },
+ {
+  "size": "640x360",
+  "set": "all",
+  "who": "player",
+  "tileCount": 37,
+  "minCell": 16,
+  "noScroll": true,
+  "cutTiles": 26,
+  "minFont": 10,
+  "short": 37,
+  "maxLines": 2,
+  "sample": [
+   "Early 5",
+   "Top+Mid",
+   "Mid+Bot"
+  ]
+ },
+ {
+  "size": "640x360",
+  "set": "all",
+  "who": "host",
+  "tileCount": 37,
+  "minCell": null,
+  "noScroll": true,
+  "cutTiles": 26,
+  "minFont": 10,
+  "short": 37,
+  "maxLines": 2,
+  "sample": [
+   "Early 5",
+   "Top+Mid",
+   "Mid+Bot"
+  ]
+ }
+]
