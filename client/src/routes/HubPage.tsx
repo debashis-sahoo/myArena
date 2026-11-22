@@ -16,7 +16,6 @@ export function HubPage({ entryMode }: { entryMode: HubEntryMode }): ReactElemen
       <Header entryMode={entryMode} />
       {entryMode === 'player' && <JoinRoomPanel />}
       <GameGrid onPlay={entryMode === 'host' ? setLaunching : undefined} entryMode={entryMode} />
-      <footer className="hub-footer">More games are on the way. Pick one and play with friends.</footer>
       {entryMode === 'host' && (
         <LaunchModal entryMode={entryMode} game={launching} onClose={() => setLaunching(null)} />
       )}

@@ -10,6 +10,11 @@ export function Header({ entryMode }: { entryMode: HubEntryMode }): ReactElement
       <GuestProfile />
       <div className="logo-wrap">
         <Logo entryMode={entryMode} />
+        <span className={`hub-role hub-role-${entryMode}`}>
+          <span aria-hidden="true">✦</span>
+          {entryMode === 'host' ? 'HOST ARENA' : 'PLAYER HUB'}
+          <span aria-hidden="true">✦</span>
+        </span>
       </div>
       <div className="sound">
         <AudioControls />

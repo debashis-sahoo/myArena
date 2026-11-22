@@ -33,10 +33,18 @@ export function JoinRoomPanel(): ReactElement {
 
   return (
     <section className="join-room-panel" aria-labelledby="join-room-title">
+      <div className="join-room-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" role="presentation">
+          <circle cx="24" cy="17" r="7" />
+          <circle cx="10" cy="20" r="5" />
+          <circle cx="38" cy="20" r="5" />
+          <path d="M12 39c0-7 5-12 12-12s12 5 12 12" />
+          <path d="M2 38c0-6 3-10 9-11M46 38c0-6-3-10-9-11" />
+        </svg>
+      </div>
       <div className="join-room-copy">
-        <span className="join-kicker">Your arena is waiting</span>
         <h1 id="join-room-title">Join with a room code</h1>
-        <p className="hint">Type the six-character code your host called out, then jump into the game.</p>
+        <p className="hint">Private room code</p>
       </div>
       <form
         className="join-room-form"
@@ -45,7 +53,9 @@ export function JoinRoomPanel(): ReactElement {
           void submit();
         }}
       >
-        <label htmlFor="room-code">Private room code</label>
+        <label htmlFor="room-code" className="sr-only">
+          Private room code
+        </label>
         <div className="join-room-input-row">
           <input
             id="room-code"

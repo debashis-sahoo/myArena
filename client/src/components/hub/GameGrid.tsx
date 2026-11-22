@@ -10,9 +10,11 @@ export function GameGrid({
   onPlay?: (game: GameDefinition) => void;
   entryMode: HubEntryMode;
 }): ReactElement {
+  const activeGames = GAMES.filter((game) => game.status === 'active');
+
   return (
     <main className="game-grid" aria-label={entryMode === 'host' ? 'Create a game room' : 'Available games'}>
-      {GAMES.map((game, i) => (
+      {activeGames.map((game, i) => (
         <GameCard key={game.id} game={game} index={i} onPlay={onPlay} entryMode={entryMode} />
       ))}
     </main>

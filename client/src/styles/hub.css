@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--pad);
+  gap: clamp(10px, 1.8vmin, 18px);
   padding: calc(var(--pad) + var(--safe-top)) calc(var(--pad) + var(--safe-right)) calc(var(--pad) + var(--safe-bottom))
     calc(var(--pad) + var(--safe-left));
   max-width: 2200px;
@@ -39,7 +39,7 @@
 
 .logo {
   display: block;
-  width: min(960px, 66vw);
+  width: min(820px, 62vw);
   min-width: 0;
   aspect-ratio: 3.24;
   line-height: 0;
@@ -50,7 +50,7 @@
 .logo-wrap {
   display: grid;
   justify-items: center;
-  width: min(960px, 66vw);
+  width: min(820px, 62vw);
   min-width: 0;
 }
 
@@ -61,6 +61,47 @@
   object-fit: fill;
   user-select: none;
   pointer-events: none;
+}
+
+.hub-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-top: 4px;
+  padding: 0.28rem 1rem 0.34rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(0.76rem, 1.35vmin, 1.02rem);
+  font-weight: 900;
+  letter-spacing: 0.34em;
+  line-height: 1;
+  color: var(--champagne);
+  text-shadow: var(--hub-role-glow);
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 226, 134, 0.62);
+  border-radius: 999px;
+  background: rgba(7, 4, 28, 0.78);
+  box-shadow:
+    inset 0 0 15px rgba(255, 195, 35, 0.08),
+    0 0 18px rgba(139, 92, 246, 0.24);
+  animation: role-glow 4.8s ease-in-out infinite;
+}
+
+.hub-role span {
+  color: #fff8c7;
+  font-size: 0.68em;
+  letter-spacing: 0;
+}
+
+.entry-host .hub-role {
+  color: #ffe98a;
+}
+
+.entry-player .hub-role {
+  color: #ffd2ff;
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, 0.82),
+    0 0 22px rgba(217, 118, 255, 0.65);
 }
 
 .profile {
@@ -145,44 +186,59 @@
 .join-room-panel {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(300px, 1.1fr);
+  grid-template-columns: 52px minmax(190px, 0.8fr) minmax(330px, 1.4fr);
   align-items: center;
-  gap: clamp(18px, 3vw, 42px);
-  padding: clamp(18px, 3.6vmin, 34px);
+  gap: 14px;
+  padding: 12px 16px;
   border: 2px solid color-mix(in srgb, var(--cyan) 65%, white);
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   background:
-    linear-gradient(125deg, rgba(39, 224, 255, 0.16), rgba(139, 92, 246, 0.12) 45%, rgba(255, 61, 172, 0.16)),
-    rgba(12, 5, 40, 0.84);
+    linear-gradient(110deg, rgba(39, 224, 255, 0.14), rgba(139, 92, 246, 0.15) 55%, rgba(255, 61, 172, 0.13)),
+    rgba(10, 5, 36, 0.91);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 0 34px rgba(39, 224, 255, 0.18),
-    0 22px 54px rgba(0, 0, 0, 0.34);
+    0 0 28px rgba(39, 224, 255, 0.2),
+    0 16px 34px rgba(0, 0, 0, 0.3);
+}
+
+.join-room-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #5ec8ff, #7669ff 52%, #b34cff);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.38), 0 0 18px rgba(75, 175, 255, 0.32);
+}
+
+.join-room-icon svg {
+  width: 30px;
+  fill: #f7fbff;
+  stroke: #f7fbff;
+  stroke-width: 4px;
+  stroke-linecap: round;
 }
 
 .join-room-copy {
   display: grid;
-  gap: 6px;
+  gap: 2px;
 }
 
 .join-room-copy h1 {
-  font-size: clamp(1.7rem, 4vmin, 3rem);
+  font-size: clamp(1.05rem, 2.2vmin, 1.4rem);
   font-weight: 1000;
   line-height: 1;
-  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4), 0 0 24px rgba(39, 224, 255, 0.35);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.38), 0 0 18px rgba(39, 224, 255, 0.28);
 }
 
-.join-kicker {
-  color: var(--lime);
-  font-size: 0.78rem;
-  font-weight: 1000;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.join-room-copy .hint {
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 
 .join-room-form {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .join-room-form > label {
@@ -191,16 +247,16 @@
 
 .join-room-input-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .room-code-input {
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 56px;
+  min-height: 42px;
   border-color: rgba(39, 224, 255, 0.75);
   font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
-  font-size: clamp(1.15rem, 3vmin, 1.7rem);
+  font-size: clamp(0.95rem, 2vmin, 1.2rem);
   font-weight: 1000;
   letter-spacing: 0.22em;
   text-align: center;
@@ -209,8 +265,8 @@
 }
 
 .join-room-submit {
-  min-width: 140px;
-  min-height: 56px;
+  min-width: 126px;
+  min-height: 44px;
 }
 
 @media (min-width: 700px) {
@@ -220,7 +276,14 @@
   }
 }
 
-/* Ultra-wide screens only: one row of four, identical card dimensions. Standard desktops stay 2 x 2. */
+@media (min-width: 1100px) {
+  .game-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: minmax(270px, 1fr);
+  }
+}
+
+/* Ultra-wide screens: preserve one row of four with bounded card height. */
 @media (min-aspect-ratio: 2/1) and (min-width: 1500px) {
   .hub {
     max-width: none;
@@ -228,7 +291,7 @@
 
   .game-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    grid-auto-rows: minmax(420px, 720px);
+    grid-auto-rows: minmax(360px, 520px);
     align-content: center;
   }
 }
@@ -240,7 +303,7 @@
   position: relative;
   container-type: size;
   min-width: 0;
-  padding: clamp(10px, 1.8vmin, 18px);
+  padding: clamp(9px, 1.25vmin, 14px);
   border-radius: var(--radius-lg);
   background:
     linear-gradient(160deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.03) 55%),
@@ -248,7 +311,7 @@
   border: 2px solid var(--accent);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.08) inset,
-    0 0 26px -4px var(--accent),
+    0 0 28px -4px color-mix(in srgb, var(--accent) 82%, white),
     0 16px 34px -12px rgba(0, 0, 0, 0.8);
   overflow: hidden;
   transition:
@@ -295,21 +358,28 @@
 .card-art {
   position: relative;
   flex: 1 1 auto;
-  min-height: 120px;
+  min-height: 136px;
   border-radius: calc(var(--radius-lg) - 8px);
   background: radial-gradient(80% 90% at 50% 40%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02));
   overflow: hidden;
 }
 
-.card-art svg {
+.card-art > svg,
+.card-art > img {
   position: absolute;
-  inset: 4%;
-  width: 92%;
-  height: 92%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   transition: transform 0.35s ease;
 }
 
-.game-card.active:hover .card-art svg {
+.card-art > svg {
+  padding: 4%;
+}
+
+.game-card.active:hover .card-art > svg,
+.game-card.active:hover .card-art > img {
   transform: scale(1.06) rotate(-1.5deg);
 }
 
@@ -353,7 +423,7 @@
 }
 
 .card-title {
-  font-size: clamp(1.4rem, 3.2vmin + 0.4vw, 2.1rem);
+  font-size: clamp(1.15rem, 2.6vmin + 0.2vw, 1.7rem);
   font-weight: 1000;
   line-height: 1.05;
   letter-spacing: 0.01em;
@@ -362,7 +432,7 @@
 
 .card-tagline {
   color: var(--muted);
-  font-size: clamp(0.82rem, 1.5vmin + 0.2vw, 0.98rem);
+  font-size: clamp(0.74rem, 1.2vmin + 0.1vw, 0.9rem);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -495,7 +565,19 @@
   }
 
   .join-room-panel {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .join-room-icon {
+    width: 42px;
+    height: 42px;
+    grid-row: 1;
+  }
+
+  .join-room-form {
+    grid-column: 1 / -1;
   }
 
   .join-room-input-row {
@@ -511,6 +593,57 @@
     width: 100%;
   }
 
+  .hub-role {
+    font-size: clamp(0.66rem, 2.8vw, 0.78rem);
+    letter-spacing: 0.26em;
+    padding-inline: 0.78rem;
+  }
+}
+
+@media (min-width: 360px) and (max-width: 699px) {
+  .game-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(300px, auto);
+    gap: 10px;
+  }
+
+  .game-card {
+    padding: 8px;
+    border-radius: 20px;
+  }
+
+  .card-inner {
+    gap: 7px;
+  }
+
+  .card-art {
+    min-height: 120px;
+  }
+
+  .card-title {
+    font-size: 1.02rem;
+  }
+
+  .card-tagline {
+    font-size: 0.68rem;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .card-badge {
+    top: 8px;
+    right: 8px;
+    padding: 3px 8px;
+    font-size: 0.62rem;
+  }
+
+  .card-play,
+  .soon-label {
+    min-height: 44px;
+    font-size: 0.67rem;
+    line-height: 1.2;
+    padding-inline: 7px;
+  }
 }
 
 .hub-footer {

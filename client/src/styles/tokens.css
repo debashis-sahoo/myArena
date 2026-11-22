@@ -15,6 +15,8 @@
   --purple: #8b5cf6;
   --orange: #ff9a3d;
   --danger: #ff5d73;
+  --champagne: #ffe7a1;
+  --emerald: #42f5c5;
 
   --arena-host-accent: #ffd93d;
   --arena-host-accent-2: #ff3dac;
@@ -31,6 +33,8 @@
   --glow-cyan: 0 0 18px rgba(39, 224, 255, 0.55);
   --glow-pink: 0 0 18px rgba(255, 61, 172, 0.55);
   --glow-lime: 0 0 18px rgba(182, 255, 59, 0.5);
+  --hub-role-glow: 0 0 8px rgba(255, 247, 194, 0.9), 0 0 22px rgba(255, 184, 0, 0.55);
+  --hub-card-surface: linear-gradient(180deg, rgba(17, 7, 54, 0.94), rgba(8, 3, 30, 0.97));
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);

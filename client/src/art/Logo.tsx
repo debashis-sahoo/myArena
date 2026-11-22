@@ -8,8 +8,10 @@ export function Logo({ entryMode }: { entryMode: 'host' | 'player' }): ReactElem
     <h1 className="logo" aria-label={`myArena Hub — ${role}`}>
       <img
         className="logo-image"
-        src={`/brand/myarena-title-${entryMode}.png`}
+        src="/brand/myarena-title.webp"
         alt=""
+        width="1200"
+        height="370"
         draggable="false"
         fetchPriority="high"
       />

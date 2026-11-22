@@ -1,0 +1,50 @@
+{
+  "representativeViewports": {
+    "desktop": {
+      "width": 1366,
+      "height": 768
+    },
+    "phone": {
+      "width": 390,
+      "height": 844
+    }
+  },
+  "previews": [
+    {
+      "id": "host-desktop",
+      "mode": "host",
+      "viewportClass": "desktop",
+      "artifactPath": "specs/009-premium-active-hub/previews/host-desktop.png",
+      "approved": true,
+      "reviewedAt": "2026-11-22",
+      "notes": "Explicitly approved for implementation: role is separate from title artwork; only active games are shown; Ludo, Housie, Bingo, and UNO use dimensional art; host launch actions are clear."
+    },
+    {
+      "id": "player-desktop",
+      "mode": "player",
+      "viewportClass": "desktop",
+      "artifactPath": "specs/009-premium-active-hub/previews/player-desktop.png",
+      "approved": true,
+      "reviewedAt": "2026-11-22",
+      "notes": "Explicitly approved for implementation: role is separate from title artwork; room-code entry remains primary; only active games are shown; player cards are non-interactive showcases."
+    },
+    {
+      "id": "host-phone",
+      "mode": "host",
+      "viewportClass": "phone",
+      "artifactPath": "specs/009-premium-active-hub/previews/host-phone.png",
+      "approved": true,
+      "reviewedAt": "2026-11-22",
+      "notes": "Explicitly approved for implementation after revision: exactly four active cards remain; title, role, profile, audio, and PLAY NOW actions fit without extra inactive panels."
+    },
+    {
+      "id": "player-phone",
+      "mode": "player",
+      "viewportClass": "phone",
+      "artifactPath": "specs/009-premium-active-hub/previews/player-phone.png",
+      "approved": true,
+      "reviewedAt": "2026-11-22",
+      "notes": "Explicitly approved for implementation after revision: exactly four active cards remain; room-code entry and separate PLAYER HUB role fit without an inactive fifth card."
+    }
+  ]
+}

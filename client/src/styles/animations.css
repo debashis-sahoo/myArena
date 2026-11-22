@@ -132,6 +132,16 @@
   }
 }
 
+@keyframes role-glow {
+  0%,
+  100% {
+    filter: brightness(0.98);
+  }
+  50% {
+    filter: brightness(1.12);
+  }
+}
+
 .arena-atmosphere {
   position: fixed;
   inset: 0;
