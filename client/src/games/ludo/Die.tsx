@@ -17,14 +17,14 @@ const PIPS: Record<number, number[]> = {
   6: [1, 3, 4, 6, 7, 9],
 };
 
-/** One cube face: the pip slab plus two smaller slabs set deeper, which bevel the edges and corners into a rounded die. */
+/** One cube face: layered slabs form the rounded shell and a dark inset pip field. */
 function Face({ n }: { n: number }): ReactElement {
   const on = new Set(PIPS[n]);
   return (
     <span className={`face f${n}`} aria-hidden="true">
       <span className="slab s2" />
       <span className="slab s1" />
-      <span className="slab s0">
+      <span className="slab s0" data-value={n}>
         {Array.from({ length: 9 }, (_, i) => (
           <i key={i} className={on.has(i + 1) ? 'pip' : ''} />
         ))}

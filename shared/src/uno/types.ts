@@ -77,7 +77,7 @@ export interface UnoView {
 }
 
 export type UnoEffect = 'none' | 'skip' | 'reverse' | 'draw2' | 'wild' | 'wild4';
-export type UnoDrawReason = 'turn' | 'pending' | 'timeout' | 'catch' | 'start';
+export type UnoDrawReason = 'turn' | 'pending' | 'timeout' | 'catch' | 'start' | 'replacement';
 export type UnoCatchCloseReason = 'called' | 'caught' | 'expired' | 'hand_changed' | 'left' | 'finished';
 
 export interface UnoEventBase {

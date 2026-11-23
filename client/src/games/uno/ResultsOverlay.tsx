@@ -89,7 +89,7 @@ export function ResultsOverlay({ table, youId, info, canPlayAgain, onHub }: Resu
 
   return (
     <div className="un-results">
-      <Confetti count={34} />
+      <Confetti count={48} />
       <div className="un-res-panel" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={panel} onKeyDown={trapTab}>
         <div className="un-res-win">
           {table.winner && <Avatar k={avatarOf(table.winner)} size={64} ring={ringOf(table.winner)} />}

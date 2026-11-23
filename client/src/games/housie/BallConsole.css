@@ -54,6 +54,8 @@
   gap: 6px;
   justify-content: start;
   align-content: start;
+  width: max-content;
+  max-width: 100%;
 }
 
 .hz-bc-chip {
@@ -85,6 +87,7 @@
   font-size: calc(var(--chip) * 0.42);
   white-space: nowrap;
   padding: 0 6px;
+  min-width: max-content;
 }
 
 .hz .hz-bc-chip.all:hover {
@@ -146,4 +149,37 @@
   aspect-ratio: 10 / 9;
   width: 100%;
   min-height: 0;
+}
+
+/* Phone player view: the ball/count share a compact top row and recent calls use the full width below. */
+.hz-match.narrow:not(.is-host) .hz-bc-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(52px, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.hz-match.narrow:not(.is-host) .hz-bc-ball {
+  grid-column: 1;
+  grid-row: 1;
+  padding-right: 0;
+}
+
+.hz-match.narrow:not(.is-host) .hz-bc-side {
+  display: contents;
+}
+
+.hz-match.narrow:not(.is-host) .hz-bc-count {
+  grid-column: 2;
+  grid-row: 1;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.hz-match.narrow:not(.is-host) .hz-bc-grid-region {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  height: 100%;
 }

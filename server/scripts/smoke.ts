@@ -22,8 +22,13 @@ import {
   type GuestInfo,
   type JoinedData,
   type RoomState,
+  type UnoEvent,
   type UnoView,
+  unoCardOf,
 } from '@myarena/shared';
+import type { GameContext } from '../src/games/registry.js';
+import { createUnoEngine } from '../src/games/uno/engine.js';
+import type { UnoMatch } from '../src/games/uno/matchOps.js';
 
 const WINDOW_MS = Number(process.env.SMOKE_WINDOW_MS ?? 3000);
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -438,6 +443,142 @@ const scenarios: Scenario[] = [
       assert(!text.includes('drawPile'), 'the draw pile is never sent');
       ok(await emit(human, EVENTS.ROOM_LEAVE, {}));
       closeAll(human);
+    },
+  ],
+  [
+    'UNO final powercard: normal effects, one replacement, privacy, reshuffle, and numbered finish',
+    async () => {
+      const cases = [
+        ['final-skip', 'skip'],
+        ['final-reverse', 'reverse'],
+        ['final-draw2', 'draw2'],
+        ['final-wild', 'wild'],
+        ['final-wild4', 'wild4'],
+        ['final-skip-reshuffle', 'skip'],
+      ] as const;
+
+      const runCase = (scenario: (typeof cases)[number][0], expectedEffect: string): void => {
+        process.env.UNO_DEV_DECK = scenario;
+        const events = new Map<string, UnoEvent[]>([
+          ['host', []],
+          ['guest', []],
+        ]);
+        const errors: string[] = [];
+        const ctx: GameContext = {
+          schedule: () => () => undefined,
+          emit: () => undefined,
+          say: () => undefined,
+          releaseSeat: () => undefined,
+          now: () => 1_000,
+          log: (level, _fields, message) => {
+            if (level === 'error') errors.push(message);
+          },
+          emitTo: (id, event) => events.get(id)?.push(event as UnoEvent),
+          hostId: () => 'host',
+          notice: () => undefined,
+          isConnected: () => true,
+        };
+        const engine = createUnoEngine();
+        const match = engine.createMatch(
+          [
+            { playerId: 'host', displayName: 'Host', color: 'orange', kind: 'human' },
+            { playerId: 'guest', displayName: 'Guest', color: 'purple', kind: 'human' },
+          ],
+          ctx,
+        ) as UnoMatch;
+        match.phase = 'turn';
+        match.turn = 'host';
+        match.deadline = null;
+        match.thinking = null;
+        const before = engine.getView(match, 'host') as UnoView;
+        assert(before.you?.hand.length === 1, `${scenario} did not create a one-card hand`);
+        const card = before.you?.hand[0] as number;
+        const color = unoCardOf(card).color === null ? 'blue' : undefined;
+        const result = engine.onAction(match, 'host', { type: 'playCard', card, ...(color ? { color } : {}) });
+        assert(result.ok, `${scenario} refused: ${result.reason}`);
+        assert(match.winner === null && match.phase !== 'finished', `${scenario} incorrectly finished`);
+        assert(match.seats[0]?.hand.length === 1, `${scenario} did not award one replacement`);
+        const own = events.get('host')?.slice(1) ?? [];
+        const other = events.get('guest')?.slice(1) ?? [];
+        const play = own.find((event) => event.type === 'play');
+        const draw = own.find((event) => event.type === 'draw' && event.why === 'replacement');
+        const hidden = other.find((event) => event.type === 'draw' && event.why === 'replacement');
+        assert(play?.type === 'play' && play.effect === expectedEffect, `${scenario} lost its ${expectedEffect} effect`);
+        assert(draw?.type === 'draw' && draw.cards?.length === 1 && draw.count === 1, `${scenario} replacement draw was not private/exact`);
+        assert(hidden?.type === 'draw' && hidden.cards === undefined, `${scenario} leaked a replacement card`);
+        assert(!own.some((event) => event.type === 'finished'), `${scenario} emitted finished`);
+        if (scenario === 'final-skip-reshuffle') assert(draw?.type === 'draw' && draw.reshuffled, 'replacement did not reshuffle');
+        assert(errors.length === 0, `${scenario} logged an unexpected state fault`);
+        engine.dispose(match);
+      };
+
+      try {
+        for (const [scenario, effect] of cases) runCase(scenario, effect);
+
+        process.env.UNO_DEV_DECK = 'final-wild';
+        const events = new Map<string, UnoEvent[]>([
+          ['host', []],
+          ['guest', []],
+        ]);
+        const errors: string[] = [];
+        const ctx: GameContext = {
+          schedule: () => () => undefined,
+          emit: () => undefined,
+          say: () => undefined,
+          releaseSeat: () => undefined,
+          now: () => 1_000,
+          log: (level, _fields, message) => {
+            if (level === 'error') errors.push(message);
+          },
+          emitTo: (id, event) => events.get(id)?.push(event as UnoEvent),
+          hostId: () => 'host',
+          notice: () => undefined,
+          isConnected: () => true,
+        };
+        const engine = createUnoEngine();
+        const broken = engine.createMatch(
+          [
+            { playerId: 'host', displayName: 'Host', color: 'orange', kind: 'human' },
+            { playerId: 'guest', displayName: 'Guest', color: 'purple', kind: 'human' },
+          ],
+          ctx,
+        ) as UnoMatch;
+        broken.phase = 'turn';
+        broken.turn = 'host';
+        broken.drawPile = [];
+        broken.discard = [];
+        const brokenView = engine.getView(broken, 'host') as UnoView;
+        const brokenCard = brokenView.you?.hand[0] as number;
+        const handBefore = [...(broken.seats[0]?.hand ?? [])];
+        const result = engine.onAction(broken, 'host', { type: 'playCard', card: brokenCard, color: 'blue' });
+        assert(!result.ok, 'corrupted replacement state should be rejected');
+        assert(broken.seats[0]?.hand.join(',') === handBefore.join(','), 'corrupted state changed the hand');
+        assert(broken.discard.length === 0 && broken.turn === 'host' && broken.winner === null, 'corrupted state mutated authority');
+        assert(errors.length === 1 && errors[0] === 'uno replacement invariant failed', 'corrupted state was not logged once');
+        engine.dispose(broken);
+
+        process.env.UNO_DEV_DECK = 'endgame';
+        const finishEvents: UnoEvent[] = [];
+        const finishCtx: GameContext = { ...ctx, emitTo: (id, event) => void (id === 'host' && finishEvents.push(event as UnoEvent)) };
+        const finishEngine = createUnoEngine();
+        const finished = finishEngine.createMatch(
+          [
+            { playerId: 'host', displayName: 'Host', color: 'orange', kind: 'human' },
+            { playerId: 'guest', displayName: 'Guest', color: 'purple', kind: 'human' },
+          ],
+          finishCtx,
+        ) as UnoMatch;
+        finished.phase = 'turn';
+        finished.turn = 'host';
+        const finishView = finishEngine.getView(finished, 'host') as UnoView;
+        const finishCard = finishView.you?.hand[0] as number;
+        const finishResult = finishEngine.onAction(finished, 'host', { type: 'playCard', card: finishCard });
+        assert(finishResult.ok && finished.winner === 'host' && finished.phase === 'finished', 'numbered final card did not finish');
+        assert(finishEvents.some((event) => event.type === 'finished' && event.winner === 'host'), 'numbered final card did not publish finished');
+        finishEngine.dispose(finished);
+      } finally {
+        delete process.env.UNO_DEV_DECK;
+      }
     },
   ],
   [

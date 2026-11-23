@@ -12,7 +12,7 @@ export function HubPage({ entryMode }: { entryMode: HubEntryMode }): ReactElemen
   const [launching, setLaunching] = useState<GameDefinition | null>(null);
   return (
     <div className={`hub entry-${entryMode}`}>
-      <Confetti />
+      <Confetti count={40} />
       <Header entryMode={entryMode} />
       {entryMode === 'player' && <JoinRoomPanel />}
       <GameGrid onPlay={entryMode === 'host' ? setLaunching : undefined} entryMode={entryMode} />

@@ -95,9 +95,24 @@ interface Plan {
   avoid?: (id: number) => boolean;
   /** Leave 4 cards in the Draw Pile and 20 below the top of the Discard Pile; the rest are out of play. */
   shortPile?: boolean;
+  /** Put every undealt card below the starting card so the first replacement draw must reshuffle. */
+  emptyDrawPile?: boolean;
 }
 
-const SCENARIOS = ['wild', 'reverse', 'uno', 'stack', 'short-pile', 'endgame'] as const;
+const SCENARIOS = [
+  'wild',
+  'reverse',
+  'uno',
+  'stack',
+  'short-pile',
+  'endgame',
+  'final-skip',
+  'final-reverse',
+  'final-draw2',
+  'final-wild',
+  'final-wild4',
+  'final-skip-reshuffle',
+] as const;
 type Scenario = (typeof SCENARIOS)[number];
 
 function isScenario(value: string): value is Scenario {
@@ -110,6 +125,7 @@ function planFor(scenario: Scenario): Plan {
   const wilds = idsWhere(null, 'wild');
   const wild4s = idsWhere(null, 'wild4');
   const redDraw2s = idsWhere('red', 'draw2');
+  const redSkips = idsWhere('red', 'skip');
   switch (scenario) {
     case 'wild':
       return { fixed: [[wilds[0] as number, wild4s[0] as number, ...redNumbers.slice(0, 5)]], start };
@@ -133,6 +149,18 @@ function planFor(scenario: Scenario): Plan {
       return { fixed: [], shortPile: true };
     case 'endgame':
       return { fixed: [redNumbers.slice(0, 1)], sizes: [1], start };
+    case 'final-skip':
+      return { fixed: [[redSkips[0] as number]], sizes: [1], start };
+    case 'final-reverse':
+      return { fixed: [[idsWhere('red', 'reverse')[0] as number]], sizes: [1], start };
+    case 'final-draw2':
+      return { fixed: [[redDraw2s[0] as number]], sizes: [1], start };
+    case 'final-wild':
+      return { fixed: [[wilds[0] as number]], sizes: [1], start };
+    case 'final-wild4':
+      return { fixed: [[wild4s[0] as number]], sizes: [1], start };
+    case 'final-skip-reshuffle':
+      return { fixed: [[redSkips[0] as number]], sizes: [1], start, emptyDrawPile: true };
   }
 }
 
@@ -186,6 +214,9 @@ export function dealMatch(seatCount: number, firstIndex: number): Deal {
 
   if (plan?.shortPile) {
     return { hands, drawPile: pile.slice(0, 4), discard: [...pile.slice(4, 24), start], start };
+  }
+  if (plan?.emptyDrawPile) {
+    return { hands, drawPile: [], discard: [...pile, start], start };
   }
   return { hands, drawPile: pile, discard: [start], start };
 }

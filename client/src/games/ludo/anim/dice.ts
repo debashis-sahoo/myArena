@@ -48,13 +48,14 @@ function tumbleKeyframes(from: number, to: number, dir: number, fwd: number): Ke
   const rot = (x: number, y: number, z: number): string => `rotateX(${x}deg) rotateY(${y}deg) rotateZ(${z}deg)`;
   return [
     { offset: 0, transform: rot(x0, y0, 0) },
-    { offset: 0.12, transform: rot(x0 + fwd * 300, y0 + dir * 420, dir * 40) },
-    { offset: 0.3, transform: rot(fx + fwd * 540, fy + dir * 700, dir * 70) },
-    { offset: 0.42, transform: rot(fx + fwd * 380, fy + dir * 520, dir * 45) },
-    { offset: 0.54, transform: rot(fx + fwd * 250, fy + dir * 360, dir * 22) },
-    { offset: 0.62, transform: rot(fx + fwd * 160, fy + dir * 270, dir * 12) },
-    { offset: 0.72, transform: rot(fx + fwd * 70, fy + dir * 140, dir * 6) },
-    { offset: 0.85, transform: rot(fx + fwd * 18, fy + dir * 34, dir * 2) },
+    { offset: 0.1, transform: rot(x0 + fwd * 260, y0 + dir * 390, dir * 34), easing: 'cubic-bezier(.2,.7,.35,1)' },
+    { offset: 0.28, transform: rot(fx + fwd * 570, fy + dir * 730, dir * 76) },
+    { offset: 0.43, transform: rot(fx + fwd * 390, fy + dir * 520, dir * 48) },
+    { offset: 0.56, transform: rot(fx + fwd * 245, fy + dir * 350, dir * 28) },
+    { offset: 0.68, transform: rot(fx + fwd * 145, fy + dir * 230, dir * 16) },
+    { offset: 0.78, transform: rot(fx + fwd * 58, fy + dir * 96, dir * 7) },
+    { offset: 0.89, transform: rot(fx + fwd * 12, fy + dir * 24, dir * 2), easing: 'cubic-bezier(.25,.8,.25,1)' },
+    { offset: 0.95, transform: rot(fx - fwd * 4, fy - dir * 6, -dir * 0.8) },
     { offset: 1, transform: rot(fx, fy, 0) },
   ];
 }
@@ -66,28 +67,30 @@ function throwKeyframes(w: number, h: number, dir: number): Keyframe[] {
   const t = (x: number, y: number, s: number): string => `translate(${dir * x * w}px, ${y * h}px) scale(${s})`;
   return [
     { offset: 0, transform: t(-0.3, 0, 1), easing: up },
-    { offset: 0.12, transform: t(-0.22, -1, 1.25), easing: down },
-    { offset: 0.3, transform: t(-0.1, 0, 1.04), easing: up },
-    { offset: 0.42, transform: t(-0.03, -0.45, 1.12), easing: down },
-    { offset: 0.54, transform: t(0.03, 0, 1.02), easing: up },
-    { offset: 0.62, transform: t(0.04, -0.18, 1.05), easing: down },
-    { offset: 0.72, transform: t(0.025, 0, 1), easing: 'ease-out' },
-    { offset: 0.85, transform: t(0.008, -0.03, 1), easing: 'ease-in' },
+    { offset: 0.12, transform: t(-0.22, -0.58, 1.18), easing: down },
+    { offset: 0.29, transform: t(-0.1, 0, 0.97), easing: up },
+    { offset: 0.42, transform: t(-0.025, -0.26, 1.08), easing: down },
+    { offset: 0.55, transform: t(0.03, 0, 0.985), easing: up },
+    { offset: 0.66, transform: t(0.045, -0.09, 1.035), easing: down },
+    { offset: 0.75, transform: t(0.025, 0, 0.995), easing: 'ease-out' },
+    { offset: 0.84, transform: t(0.012, -0.025, 1.008), easing: 'ease-in' },
+    { offset: 0.91, transform: t(0.003, 0, 1), easing: 'ease-out' },
     { offset: 1, transform: t(0, 0, 1) },
   ];
 }
 
 function shadowKeyframes(w: number, dir: number): Keyframe[] {
-  const s = (x: number, k: number): string => `translateX(${dir * x * w}px) scale(${k})`;
+  const s = (x: number, sx: number, sy: number): string => `translateX(${dir * x * w}px) scale(${sx}, ${sy})`;
   return [
-    { offset: 0, transform: s(-0.3, 1), opacity: 0.55 },
-    { offset: 0.12, transform: s(-0.22, 0.55), opacity: 0.2 },
-    { offset: 0.3, transform: s(-0.1, 1.05), opacity: 0.6 },
-    { offset: 0.42, transform: s(-0.03, 0.8), opacity: 0.38 },
-    { offset: 0.54, transform: s(0.03, 1.02), opacity: 0.58 },
-    { offset: 0.62, transform: s(0.04, 0.92), opacity: 0.5 },
-    { offset: 0.72, transform: s(0.025, 1), opacity: 0.55 },
-    { offset: 1, transform: s(0, 1), opacity: 0.55 },
+    { offset: 0, transform: s(-0.3, 1, 1), opacity: 0.52, filter: 'blur(2px)' },
+    { offset: 0.12, transform: s(-0.22, 0.58, 0.52), opacity: 0.18, filter: 'blur(5px)' },
+    { offset: 0.29, transform: s(-0.1, 1.08, 1.08), opacity: 0.64, filter: 'blur(1px)' },
+    { offset: 0.42, transform: s(-0.025, 0.78, 0.72), opacity: 0.34, filter: 'blur(4px)' },
+    { offset: 0.55, transform: s(0.03, 1.04, 1.03), opacity: 0.58, filter: 'blur(1.5px)' },
+    { offset: 0.66, transform: s(0.045, 0.9, 0.84), opacity: 0.46, filter: 'blur(3px)' },
+    { offset: 0.75, transform: s(0.025, 1.015, 1.01), opacity: 0.56, filter: 'blur(1.8px)' },
+    { offset: 0.91, transform: s(0.003, 0.99, 0.99), opacity: 0.53, filter: 'blur(2.2px)' },
+    { offset: 1, transform: s(0, 1, 1), opacity: 0.55, filter: 'blur(2px)' },
   ];
 }
 
@@ -138,4 +141,40 @@ export async function playRoll(parts: DiceParts, from: number, to: number, reduc
   await Promise.all(animations.map(finished));
   // Hand the final pose back to the stylesheet / React so no animation is left holding styles.
   animations.forEach((a) => a.cancel());
+}
+
+export async function playRollCancellable(
+  parts: DiceParts,
+  from: number,
+  to: number,
+  reduced: boolean,
+  signal: AbortSignal,
+): Promise<void> {
+  if (signal.aborted) {
+    parts.cubeEl.style.transform = faceTransform(to);
+    return;
+  }
+  const originalAnimate = parts.cubeEl.getAnimations.bind(parts.cubeEl);
+  const started = new Set<Animation>();
+  const collect = (): void => {
+    for (const animation of originalAnimate()) started.add(animation);
+    for (const animation of parts.throwEl.getAnimations()) started.add(animation);
+    for (const animation of parts.shadowEl.getAnimations()) started.add(animation);
+    for (const animation of parts.shakeEl.getAnimations()) started.add(animation);
+  };
+  const cancel = (): void => {
+    collect();
+    started.forEach((animation) => animation.cancel());
+    parts.cubeEl.style.transform = faceTransform(to);
+    parts.shadowEl.style.transform = '';
+    parts.shadowEl.style.opacity = '';
+    parts.shadowEl.style.filter = '';
+  };
+  signal.addEventListener('abort', cancel, { once: true });
+  try {
+    await playRoll(parts, from, to, reduced);
+  } finally {
+    signal.removeEventListener('abort', cancel);
+    if (signal.aborted) cancel();
+  }
 }

@@ -186,6 +186,8 @@ async function animateDraw(ev: EventOf<'draw'>, s: Session, commit: () => void):
   const mine = ev.by === (ev.you?.playerId ?? null);
   if (ev.why === 'pending' || ev.why === 'catch') {
     pushBanner(mine ? `You draw ${ev.count}` : `${nameOf(ev, ev.by)} draws ${ev.count}`, 'penalty', ev.by);
+  } else if (ev.why === 'replacement') {
+    pushBanner(mine ? 'Powercard played — one replacement' : `${nameOf(ev, ev.by)} takes one replacement`, 'info', ev.by);
   }
   const pile = boxOf(pileEl('draw'));
   if (!pile || ev.count <= 0) {

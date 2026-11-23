@@ -3,12 +3,10 @@ import type { CSSProperties } from 'react';
 import { Ball } from './Ball';
 import { MasterBoard } from './MasterBoard';
 import { rollIn } from './anim/ballRoll';
-import { planBall, useRegionSize } from './useFit';
+import { planBall, planRecentCalls, useRegionSize } from './useFit';
 import { sfx } from '../../audio/sfx';
 import { useReducedMotion } from '../../state/viewport';
 import './BallConsole.css';
-
-const GAP = 6;
 
 export function BallConsole({ called }: { called: number[] }) {
   const reduced = useReducedMotion();
@@ -18,6 +16,7 @@ export function BallConsole({ called }: { called: number[] }) {
   const prevLen = useRef(called.length);
   const [viewAll, setViewAll] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const historyRef = useRef<HTMLButtonElement>(null);
 
   const current = called.length > 0 ? (called[called.length - 1] ?? null) : null;
 
@@ -33,25 +32,43 @@ export function BallConsole({ called }: { called: number[] }) {
     if (!viewAll) return;
     closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setViewAll(false);
+      if (e.key === 'Escape') {
+        setViewAll(false);
+        requestAnimationFrame(() => historyRef.current?.focus());
+      }
+      if (e.key === 'Tab') {
+        const focusable = [...document.querySelectorAll<HTMLButtonElement>('.hz-bc-dialog button:not(:disabled)')];
+        if (focusable.length === 0) return;
+        const first = focusable[0] as HTMLButtonElement;
+        const last = focusable[focusable.length - 1] as HTMLButtonElement;
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [viewAll]);
 
-  const { ball, chip } = planBall(body.width, body.height);
-  const chipW = Math.round(chip * 1.3);
-  const cols = Math.max(0, Math.floor((grid.width + GAP) / (chipW + GAP)));
-  const rows = Math.max(0, Math.floor((grid.height + GAP) / (chip + GAP)));
-  const span = cols >= 3 ? 2 : 1;
-  const shown = Math.max(0, cols * rows - span);
-  const previous = called.slice(0, -1).reverse().slice(0, shown);
+  const { ball: plannedBall } = planBall(body.width, body.height);
+  const ball = Math.min(plannedBall, Math.max(54, Math.floor(body.height * 0.42)));
+  const previousCount = Math.max(0, called.length - 1);
+  const plan = planRecentCalls(grid.width, grid.height, body.width, body.height, previousCount);
+  const previous = called.slice(0, -1).reverse().slice(0, plan.visible);
 
   const gridStyle = {
-    '--chip': `${chip}px`,
-    '--chip-w': `${chipW}px`,
-    '--cols': cols,
+    '--chip': `${plan.chip}px`,
+    '--chip-w': `${plan.chipWidth}px`,
+    '--cols': plan.columns,
   } as CSSProperties;
+  const closeHistory = (): void => {
+    setViewAll(false);
+    requestAnimationFrame(() => historyRef.current?.focus());
+  };
 
   return (
     <section className="hz-panel hz-bc" aria-label="Current ball">
@@ -65,7 +82,7 @@ export function BallConsole({ called }: { called: number[] }) {
             Called {called.length} of 90
           </div>
           <div className="hz-bc-grid-region" ref={grid.ref}>
-            {cols > 0 && rows > 0 && (
+            {plan.columns > 0 && plan.rows > 0 && previousCount > 0 && (
               <div className="hz-bc-grid" style={gridStyle}>
                 {previous.map((n) => (
                   <span key={n} className="hz-bc-chip">
@@ -73,9 +90,10 @@ export function BallConsole({ called }: { called: number[] }) {
                   </span>
                 ))}
                 <button
+                  ref={historyRef}
                   type="button"
                   className="hz-bc-chip all"
-                  style={{ gridColumn: `span ${span}` }}
+                  style={{ gridColumn: `span ${plan.historySpan}` }}
                   onClick={() => setViewAll(true)}
                   aria-haspopup="dialog"
                 >
@@ -90,11 +108,11 @@ export function BallConsole({ called }: { called: number[] }) {
         {current === null ? '' : `Ball ${current}`}
       </span>
       {viewAll && (
-        <div className="hz-bc-overlay" onClick={() => setViewAll(false)}>
+        <div className="hz-bc-overlay" onClick={closeHistory}>
           <div className="hz-bc-dialog" role="dialog" aria-modal="true" aria-label="All called numbers" onClick={(e) => e.stopPropagation()}>
             <div className="hz-bc-dialog-head">
               <span className="hz-title">Called {called.length} of 90</span>
-              <button ref={closeRef} type="button" className="hz-btn small" onClick={() => setViewAll(false)} aria-label="Close">
+              <button ref={closeRef} type="button" className="hz-btn small" onClick={closeHistory} aria-label="Close">
                 Close
               </button>
             </div>

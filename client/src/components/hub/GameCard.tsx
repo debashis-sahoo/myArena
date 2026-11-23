@@ -52,6 +52,7 @@ export function GameCard({ game, index, onPlay, entryMode }: Props): ReactElemen
               width="768"
               height="768"
               loading={index < 2 ? 'eager' : 'lazy'}
+              decoding="async"
               fetchPriority={index === 0 ? 'high' : 'auto'}
               onError={() => setArtFailed(true)}
             />

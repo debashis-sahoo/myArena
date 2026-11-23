@@ -457,7 +457,7 @@
 /* Portrait or narrow: one column (ball row, tickets, combinations) and a chat drawer. */
 .hz-match.narrow .hz-main {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(76px, 14dvh) minmax(0, 1fr) minmax(168px, var(--hz-tiles-n, 1fr));
+  grid-template-rows: minmax(142px, 22dvh) minmax(0, 1fr) minmax(168px, var(--hz-tiles-n, 1fr));
   padding-bottom: 44px;
 }
 
@@ -513,7 +513,7 @@
 /* Short landscape phones use the narrow column: give the tickets the space (the ball row and the tiles are the compressible parts). */
 @media (max-height: 520px) {
   .hz-match.narrow .hz-main {
-    grid-template-rows: minmax(60px, 18dvh) minmax(0, 1fr) minmax(96px, 30dvh);
+    grid-template-rows: minmax(96px, 25dvh) minmax(0, 1fr) minmax(96px, 30dvh);
   }
 
   .hz-match.narrow.is-host .hz-main {

@@ -255,3 +255,29 @@ export function planBall(width: number, height: number): BallPlan {
   const chip = Math.max(22, Math.min(30, Math.floor(w / 14)));
   return { ball, chip };
 }
+
+export type RecentCallPlan = {
+  chip: number;
+  chipWidth: number;
+  columns: number;
+  rows: number;
+  historySpan: number;
+  visible: number;
+};
+
+/**
+ * Plans only complete recent-number rows. The history control reserves whole grid cells, and the
+ * remaining capacity is devoted to newest-first called numbers.
+ */
+export function planRecentCalls(width: number, height: number, bodyWidth: number, bodyHeight: number, previousCount: number): RecentCallPlan {
+  const { chip } = planBall(bodyWidth, bodyHeight);
+  const gap = 6;
+  const chipWidth = Math.round(chip * 1.3);
+  const columns = Math.max(0, Math.floor((Math.max(0, width) + gap) / (chipWidth + gap)));
+  const rows = Math.max(0, Math.floor((Math.max(0, height) + gap) / (chip + gap)));
+  const historySpan = columns >= 4 ? 2 : columns > 0 ? 1 : 0;
+  const capacity = Math.max(0, columns * rows);
+  const reserved = Math.min(historySpan, capacity);
+  const complete = Math.min(Math.max(0, Math.floor(previousCount)), Math.max(0, capacity - reserved));
+  return { chip, chipWidth, columns, rows, historySpan, visible: complete };
+}

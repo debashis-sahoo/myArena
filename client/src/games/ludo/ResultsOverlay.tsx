@@ -45,7 +45,7 @@ export function ResultsOverlay({ state, info, youId, onHub, isHost, hostName, pr
 
   return (
     <div className="results-backdrop">
-      <Confetti count={34} />
+      <Confetti count={48} />
       <div className="results" role="dialog" aria-modal="true" aria-label="Match results">
         <span className="trophy" aria-hidden="true">
           🏆

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type CSSProperties, type ReactElement } from 'react';
 import { COLOR_HEX } from '@myarena/shared';
 import { useReducedMotion } from '../../state/viewport';
-import { playRoll } from './anim/dice';
+import { playRollCancellable } from './anim/dice';
 import { Die, type DieRefs } from './Die';
 import type { PlayerInfo } from './playerInfo';
 import type { ReadyLudo } from './useLudo';
@@ -46,15 +46,18 @@ export function DiceConsole({ ludo, info, compact, row }: Props): ReactElement {
     const shake = shakeRef.current;
     if (!r.tray || !r.throwEl || !r.cube || !r.shadow || !shake) return;
     const rect = r.tray.getBoundingClientRect();
-    void playRoll(
+    const controller = new AbortController();
+    void playRollCancellable(
       { throwEl: r.throwEl, cubeEl: r.cube, shadowEl: r.shadow, shakeEl: shake, trayWidth: rect.width, trayHeight: rect.height },
       prevFace.current,
       ev.value,
       reduced,
+      controller.signal,
     );
+    return () => controller.abort();
     // Keyed by the animation id: the roll plays once per event.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [animId]);
+  }, [animId, reduced]);
 
   // Spacebar rolls only on my turn, and never while typing or while a dialog or control has focus.
   useEffect(() => {

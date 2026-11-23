@@ -217,14 +217,22 @@
   overflow: hidden;
   pointer-events: none;
   z-index: 0;
+  isolation: isolate;
 }
 
 .confetti i {
   position: absolute;
   top: -5vh;
-  border-radius: 2px;
   opacity: 0.8;
   animation: fall linear infinite;
+  will-change: transform;
+  box-shadow: 0 0 7px currentColor;
+}
+
+@media (max-width: 600px) {
+  .confetti i:nth-child(n + 37) {
+    display: none;
+  }
 }
 
 .spinner {

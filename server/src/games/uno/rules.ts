@@ -8,6 +8,16 @@ import {
   type UnoStanding,
 } from '@myarena/shared';
 
+/** Action and wild cards continue play but cannot be the winning final card. */
+export function isPowerCard(card: number): boolean {
+  return unoCardOf(card).kind !== 'number';
+}
+
+/** Only a legally played numbered last card may declare a winner. */
+export function canFinishWith(card: number): boolean {
+  return !isPowerCard(card);
+}
+
 /** What the rules need to know about the table. A `Match` (or an `UnoTable` plus the viewer's `drawn`) maps onto it directly. */
 export interface RuleTable {
   /** Card id on top of the Discard Pile. */

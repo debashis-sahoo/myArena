@@ -26,12 +26,14 @@ import { dealMatch, devTurnMs, reshuffle, shuffle } from './deck.js';
 import type { CatchWindow, Match, Seat } from './model.js';
 import {
   applyEffect,
+  canFinishWith,
   canPlay,
   canStack,
   dealerOf,
   matches,
   nextActive,
   playable,
+  isPowerCard,
   standingsOf,
   startCardEffect,
   type RuleTable,
@@ -385,12 +387,17 @@ export function playCard(m: UnoMatch, playerId: string, card: number, color?: Un
   if (at < 0) return refuse('You do not have that card.');
   if (m.phase === 'drawn' && m.drawn?.card !== card) return refuse('Play the card you drew, or keep it.');
   if (m.pending && unoCardOf(card).kind !== m.pending.kind) return refuse('Play a matching draw card or draw the cards.');
-  const rule = ruleTable(m);
-  if (!canPlay(rule, card)) return refuse('That card does not match.');
   const wild = unoCardOf(card).color === null;
   if (wild ? color === undefined || !UNO_COLORS.includes(color) : color !== undefined) {
     return refuse('Choose a colour for the Wild card.');
   }
+  const finalPowerCard = seat.hand.length === 1 && isPowerCard(card);
+  if (finalPowerCard && m.drawPile.length === 0 && m.discard.length === 0) {
+    m.ctx.log('error', { playerId, card, drawCount: m.drawPile.length, discardCount: m.discard.length }, 'uno replacement invariant failed');
+    return refuse('The match cannot continue safely. Please reconnect.');
+  }
+  const rule = ruleTable(m);
+  if (!canPlay(rule, card)) return refuse('That card does not match.');
 
   touch(seat);
   stopFlow(m);
@@ -401,8 +408,8 @@ export function playCard(m: UnoMatch, playerId: string, card: number, color?: Un
   m.discard.push(card);
   const effect = applyEffect(rule, m.seats, m.seats.indexOf(seat), card, color ?? null);
 
-  if (seat.hand.length === 0) {
-    // The last card wins at once; its effects are not applied (FR-020).
+  if (seat.hand.length === 0 && canFinishWith(card)) {
+    // A numbered final card keeps the existing immediate-finish behavior.
     m.activeColor = effect.activeColor;
     m.pending = null;
     m.phase = 'settling';
@@ -415,7 +422,8 @@ export function playCard(m: UnoMatch, playerId: string, card: number, color?: Un
   m.activeColor = effect.activeColor;
   m.direction = effect.direction;
   m.pending = effect.pending;
-  handOff(m, playerId, effect.advance, effect.effect === 'none' ? UNO_SETTLE_PLAY_MS : UNO_SETTLE_EFFECT_MS);
+  const settle = effect.effect === 'none' ? UNO_SETTLE_PLAY_MS : UNO_SETTLE_EFFECT_MS;
+  handOff(m, playerId, effect.advance, settle + (finalPowerCard ? unoDrawSettleMs(1) : 0));
   publish(m, {
     type: 'play',
     by: playerId,
@@ -425,6 +433,15 @@ export function playCard(m: UnoMatch, playerId: string, card: number, color?: Un
     ...(effect.skipped ? { skipped: effect.skipped } : {}),
     ...(stacked ? { stacked: true } : {}),
   });
+  if (finalPowerCard) {
+    const got = receive(m, seat, 1);
+    if (got.cards.length !== 1) {
+      m.ctx.log('error', { playerId, card, drawCount: m.drawPile.length, discardCount: m.discard.length }, 'uno replacement invariant failed after play');
+      return refuse('The match cannot continue safely. Please reconnect.');
+    }
+    announceDraw(m, seat, 'replacement', got);
+    return OK;
+  }
   if (seat.hand.length === 1 && !seat.calledUno) openCatch(m, seat);
   return OK;
 }
