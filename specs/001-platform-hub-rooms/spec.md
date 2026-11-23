@@ -323,8 +323,9 @@ platform's inactivity limit, and verify that nobody is disconnected and the room
 
 - **FR-013**: Each room MUST receive a unique, non-guessable room ID, and the room MUST be reachable at the shareable path
   `/room/{gameId}/{roomId}`.
-- **FR-014**: The room MUST display its room code and invite link, with a one-click "Copy Invite Link" control that confirms
-  success and falls back to a manually copyable field if automatic copying is unavailable.
+- **FR-014**: The room MUST display its complete room code and invite link without clipped or unreadable content, with a
+  one-click "Copy Invite Link" control that confirms success and falls back to a manually copyable field if automatic
+  copying is unavailable. Invite controls MUST remain usable in full lobby and compact in-game layouts from 320 px upward.
 - **FR-015**: Opening an invite link MUST allow a visitor to join as a guest (with a display name), and MUST handle these cases
   with clear messages and a route back to the Hub: unknown/expired room, full room, and match already in progress.
 - **FR-016**: Room capacity MUST be configurable by the host between 2 and 4 players for Ludo; capacity limits MUST be defined per

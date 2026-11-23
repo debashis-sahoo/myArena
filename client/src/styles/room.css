@@ -301,14 +301,15 @@
 }
 
 .invite-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .invite-field {
-  flex: 1 1 160px;
+  width: 100%;
+  min-width: 0;
   min-height: 38px;
   font-size: 0.82rem;
 }
@@ -319,14 +320,14 @@
 }
 
 .invite-code-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(7.25rem, 1fr) auto;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
 }
 
 .invite-code-row label {
-  flex: 1 0 100%;
+  grid-column: 1 / -1;
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 900;
@@ -335,16 +336,22 @@
 }
 
 .invite-code-field {
-  width: 8.5ch;
+  width: 100%;
+  min-width: 0;
   min-height: 42px;
   border-color: rgba(255, 217, 61, 0.75);
   color: #fff4a6;
   font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
   font-size: 1.05rem;
   font-weight: 1000;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-align: center;
   box-shadow: inset 0 0 0 1px rgba(255, 217, 61, 0.2), 0 0 14px rgba(255, 217, 61, 0.12);
+}
+
+.invite-row .btn,
+.invite-code-row .btn {
+  white-space: nowrap;
 }
 
 .invite-compact {
@@ -371,16 +378,28 @@
 }
 
 .invite-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 60;
   width: min(420px, 86vw);
+  max-height: calc(100dvh - 76px);
+  overflow-y: auto;
   padding: 12px;
   border: 1px solid rgba(39, 224, 255, 0.45);
   border-radius: var(--radius);
   background: linear-gradient(165deg, rgba(34, 18, 91, 0.98), rgba(12, 5, 40, 0.98));
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55), 0 0 28px rgba(39, 224, 255, 0.15);
+}
+
+@media (max-width: 360px) {
+  .invite-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .invite-row .btn {
+    width: 100%;
+  }
 }
 
 .player-list {

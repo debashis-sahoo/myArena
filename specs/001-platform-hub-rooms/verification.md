@@ -52,6 +52,15 @@ viewport) against the production build served by `npm start`, plus the headless 
   denied-clipboard fallback was not exercised separately.)
 - Dismissing the modal at any step creates no room (server room count unchanged).
 
+#### V2 responsive invite regression check - PASS (2026-11-23)
+
+- Expected: the complete six-character room code and copy actions fit in the lobby invite panel and compact in-game
+  popover at 320, 360, 390, and 538 px widths; no page or popover horizontal overflow.
+- Measured code text width: 65.7 px. Full lobby code field usable widths: 124.8, 164.8, 194.8, and 336.8 px.
+  Compact popover code field usable widths: 112.8, 147.8, 173.8, and 257.8 px.
+- Compact popover bounds stayed within the viewport at every width (320: 22.4-297.6; 360: 25.2-334.8;
+  390: 27.3-362.7; 538: 59-479 px). Page overflow and popover overflow were both 0 px.
+
 ### V3. Join and presence (US3; SC-003) - PASS
 
 - Second isolated browser context opens the invite link: join gate (name + avatar), then the guest appears in the host's

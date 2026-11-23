@@ -247,6 +247,7 @@ screenshots where visual.
 - [X] T104 [P] Review security in `server/src/`: every inbound event schema-validated, unknown fields rejected, host-only events authorized on the server, rate limits active for create, join, and chat, `guestId` never logged or broadcast, the CSP in `server/src/app.ts` matches [contracts/http-routes.md](contracts/http-routes.md), and chat is only ever rendered as text
 - [ ] T105 Run `npm run smoke`, `npm run smoke -- --rooms 50` once, and the full [quickstart.md](quickstart.md) pass on desktop and a phone-sized viewport; time a first-time launch from Hub load to the open launch modal (SC-001), obtain a reviewer sign-off comparing the Hub with the reference image (SC-010), confirm SC-001 to SC-012 and update `specs/001-platform-hub-rooms/verification.md`
 - [X] T106 Record a constitution compliance review in `specs/001-platform-hub-rooms/verification.md` covering Principles I to V, the Runtime and Deployment Constraints, and the Development Workflow and Quality Gates, listing any pending Render verification
+- [X] T107 [US2] Fix the shared `InviteBar` layout so the complete room code, invite field, and copy controls remain readable and usable in full lobby panels and compact game headers from 320 px upward; verify 320, 360, 390, and 538 px widths and record the evidence in `specs/001-platform-hub-rooms/verification.md` (FR-014)
 
 ---
 

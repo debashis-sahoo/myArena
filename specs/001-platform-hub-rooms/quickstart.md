@@ -56,7 +56,8 @@ visual scenarios.
 1. Click Ludo. Expect a modal with distinct "Play with AI" and "Play Online" buttons; Escape, outside click, and the close
    button dismiss it.
 2. Choose "Play Online". Expect within 2 s: a room page at `/room/ludo/XXXXXXXX`, the room code, an invite link, and you
-   marked as host.
+   marked as host. At 320, 360, 390, and 538 px viewport widths, the complete room code remains readable and the invite
+   link field and copy controls remain usable without horizontal clipping.
 3. Click "Copy Invite Link". Expect a "Copied!" confirmation and the full URL on the clipboard. (Deny clipboard access to
    check the manual-copy field fallback.)
 

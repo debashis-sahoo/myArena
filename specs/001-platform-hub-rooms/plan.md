@@ -20,7 +20,8 @@ Technical approach (details in [research.md](research.md)):
 - **Keepalive** relies on Socket.IO's short ping/pong heartbeat: Render counts WebSocket messages from open connections as
   traffic, so active rooms stay connected and awake while empty servers can sleep.
 - Graphics are custom inline SVG and CSS with synthesized Web Audio sounds; the layout is responsive by viewport shape so
-  the game stage uses the largest available space in portrait and landscape.
+  the game stage uses the largest available space in portrait and landscape. Shared invite controls use responsive grid
+  tracks so the complete room code remains readable and the link remains copyable in lobby panels and compact game headers.
 - A **platform-to-game contract** ([contracts/game-module.md](contracts/game-module.md)) and a placeholder game module let
   future games reuse all room capabilities without reimplementing them.
 
@@ -42,9 +43,9 @@ on phones, tablets, laptops, and desktops
 
 **Project Type**: Web application, single deployable (npm workspaces: `shared`, `server`, `client`)
 
-**Performance Goals**: Room code and invite link visible within 2 s of "Play Online" (SC-002); presence changes within 2 s,
-abrupt disconnects within 10 s (SC-003); chat delivery within 1 s for 95% of sends (SC-004); animations at 60 fps on
-mid-range phones
+**Performance Goals**: Room code and invite link visible and unclipped within 2 s of "Play Online" (SC-002); presence
+changes within 2 s, abrupt disconnects within 10 s (SC-003); chat delivery within 1 s for 95% of sends (SC-004);
+animations at 60 fps on mid-range phones
 
 **Constraints**: Free plan: 750 instance hours per month, 512 MB RAM, 0.1 CPU, one instance, ephemeral disk, spin-down after
 15 minutes without inbound traffic, roughly one-minute cold start; bind to `PORT` on `0.0.0.0`; `wss` only in production;

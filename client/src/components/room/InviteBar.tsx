@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type ReactElement } from 'react';
 import { formatRoomCode } from '@myarena/shared';
 import { sfx } from '../../audio/sfx';
 
@@ -34,8 +34,30 @@ export function InviteBar({ roomId, invitePath, compact = false }: Props): React
   const link = `${window.location.origin}${invitePath}`;
   const codeFieldRef = useRef<HTMLInputElement>(null);
   const linkFieldRef = useRef<HTMLInputElement>(null);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const summaryRef = useRef<HTMLElement>(null);
   const timer = useRef<number | undefined>(undefined);
   const [state, setState] = useState<{ target: CopyTarget; status: 'copied' | 'manual' } | null>(null);
+  const [popoverTop, setPopoverTop] = useState<number | null>(null);
+
+  const positionPopover = useCallback((): void => {
+    if (!detailsRef.current?.open || !summaryRef.current) return;
+    const summary = summaryRef.current.getBoundingClientRect();
+    setPopoverTop(summary.bottom + 8);
+  }, []);
+  const schedulePopoverPosition = useCallback((): void => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(positionPopover));
+  }, [positionPopover]);
+
+  useEffect(() => {
+    if (!compact) return;
+    window.addEventListener('resize', schedulePopoverPosition);
+    window.addEventListener('scroll', schedulePopoverPosition, true);
+    return () => {
+      window.removeEventListener('resize', schedulePopoverPosition);
+      window.removeEventListener('scroll', schedulePopoverPosition, true);
+    };
+  }, [compact, schedulePopoverPosition]);
 
   const copy = async (target: CopyTarget): Promise<void> => {
     sfx.tap();
@@ -96,13 +118,26 @@ export function InviteBar({ roomId, invitePath, compact = false }: Props): React
   );
 
   if (compact) {
+    const popoverStyle: CSSProperties = popoverTop === null ? { visibility: 'hidden' } : { top: popoverTop };
     return (
-      <details className="invite-compact">
-        <summary className="invite-summary" aria-label={`Invite to room ${formatRoomCode(roomId)}`}>
+      <details
+        ref={detailsRef}
+        className="invite-compact"
+        onToggle={(event) => {
+          if (event.currentTarget.open) {
+            schedulePopoverPosition();
+          } else {
+            setPopoverTop(null);
+          }
+        }}
+      >
+        <summary ref={summaryRef} className="invite-summary" aria-label={`Invite to room ${formatRoomCode(roomId)}`}>
           <span className="code-chip">{formatRoomCode(roomId)}</span>
           <span aria-hidden="true">↗</span>
         </summary>
-        <div className="invite-popover">{controls}</div>
+        <div className="invite-popover" style={popoverStyle}>
+          {controls}
+        </div>
       </details>
     );
   }
