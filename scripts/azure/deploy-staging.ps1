@@ -23,13 +23,23 @@ az webapp start --resource-group $ResourceGroup --name $WebAppName --slot stagin
 if ($LASTEXITCODE -ne 0) {
   throw 'Unable to start the staging slot before deployment.'
 }
-az webapp deployment source config-zip `
-  --resource-group $ResourceGroup `
-  --name $WebAppName `
-  --slot staging `
-  --src $zipPath
-if ($LASTEXITCODE -ne 0) {
-  throw 'Staging ZIP deployment failed.'
+$deployed = $false
+for ($attempt = 1; $attempt -le 3; $attempt++) {
+  az webapp deployment source config-zip `
+    --resource-group $ResourceGroup `
+    --name $WebAppName `
+    --slot staging `
+    --src $zipPath
+  if ($LASTEXITCODE -eq 0) {
+    $deployed = $true
+    break
+  }
+  if ($attempt -lt 3) {
+    Start-Sleep -Seconds (30 * $attempt)
+  }
+}
+if (-not $deployed) {
+  throw 'Staging ZIP deployment failed after three bounded attempts.'
 }
 
 [ordered]@{
