@@ -42,6 +42,11 @@ if (-not $deployed) {
   throw 'Staging ZIP deployment failed after three bounded attempts.'
 }
 
+az webapp restart --resource-group $ResourceGroup --name $WebAppName --slot staging
+if ($LASTEXITCODE -ne 0) {
+  throw 'Unable to restart staging after ZIP deployment.'
+}
+
 [ordered]@{
   artifactDigest = $manifest.artifactDigest
   commitSha = $manifest.commitSha

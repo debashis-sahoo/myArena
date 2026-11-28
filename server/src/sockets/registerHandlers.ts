@@ -179,7 +179,13 @@ export function createRealtime(io: Server, hostEntry: HostEntryCapability): { st
 
     handler(socket, EVENTS.ROOM_CREATE, createRoomSchema, (p) => {
       if (!config.acceptsPublicNewRooms && !d.candidateVerifier) {
-        throw new RoomError('HOST_ENTRY_REQUIRED', 'New rooms are available only on the production slot.');
+        const candidateProvided = typeof socket.handshake.auth?.candidateVerifier === 'string';
+        throw new RoomError(
+          'HOST_ENTRY_REQUIRED',
+          candidateProvided
+            ? 'Candidate verification did not match the active staging capability.'
+            : 'New rooms are available only on the production slot.',
+        );
       }
       if (!d.hostEntry) {
         throw new RoomError('HOST_ENTRY_REQUIRED', 'Open the host page to create a room.');
