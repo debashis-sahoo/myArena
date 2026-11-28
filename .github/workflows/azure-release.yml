@@ -36,6 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+      AZURE_APPSERVICE_PLAN_NAME: ${{ vars.AZURE_APPSERVICE_PLAN_NAME }}
     steps:
       - uses: actions/checkout@v4
 
