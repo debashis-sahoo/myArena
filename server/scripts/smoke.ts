@@ -160,6 +160,35 @@ type Scenario = [name: string, run: (url: string) => Promise<void>];
 
 const scenarios: Scenario[] = [
   [
+    'candidate: controlled action and immediate authoritative reconnect',
+    async (url) => {
+      const host = await connectHost(url, 'CandidateHost');
+      const created = ok(
+        await emit<JoinedData>(host, EVENTS.ROOM_CREATE, {
+          gameId: 'housie',
+          mode: 'online',
+          capacity: 2,
+          guest: host.guest,
+        }),
+      );
+      host.last = created.room;
+      host.playerId = created.you.playerId;
+      ok(await emit(host, EVENTS.GAME_ACTION, { type: 'setCaller', mode: 'manual' }));
+      host.socket.close();
+
+      const reconnected = await connect(url, 'CandidateHost', host.guest);
+      const joined = ok(
+        await emit<JoinedData>(reconnected, EVENTS.ROOM_JOIN, {
+          gameId: 'housie',
+          roomId: created.room.roomId,
+          guest: host.guest,
+        }),
+      );
+      assert(joined.resumed && joined.you.playerId === created.you.playerId, 'candidate room must resume authoritatively');
+      closeAll(reconnected);
+    },
+  ],
+  [
     'health route reports ok',
     async (url) => {
       const res = await fetch(`${url}/healthz`);
@@ -731,8 +760,17 @@ async function main(): Promise<void> {
     if (loadRooms > 0) {
       if (!(await loadTest(url, loadRooms))) failures++;
     } else {
+      const candidateExcluded = new Set([
+        'removal: player is told, blocked for the cooldown, then may rejoin',
+        'reconnect: seat kept inside the window, released after it',
+        'host disconnect past the window closes without player promotion',
+        'in a match a released seat is announced and the match continues',
+      ]);
+      const selectedScenarios = process.env.SMOKE_CANDIDATE_ONLY === '1'
+        ? scenarios.filter(([name]) => !candidateExcluded.has(name))
+        : scenarios;
       const results = await Promise.all(
-        scenarios.map(async ([name, run]) => {
+        selectedScenarios.map(async ([name, run]) => {
           try {
             await run(url);
             return { name, error: null as string | null };

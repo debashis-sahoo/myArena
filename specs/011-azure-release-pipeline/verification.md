@@ -71,6 +71,10 @@ These items are not marked complete or represented as deployment validation.
   assignment on the Application Insights resource.
 - 2026-11-28: production Web App is Running with Always On, WebSockets, HTTPS-only, Node.js 22,
   one worker, and `/healthz`.
+- 2026-11-28: live staging qualification reached 500 concurrent connections across 50 rooms.
+  The measured p50/p95/p99 acknowledgements were 227/273/391 ms. The run still failed before
+  cutover because expiry-dependent local smoke assertions used a 3-second expectation against the
+  production 60-second reconnect window; candidate-only smoke now excludes those timing tests.
 - 2026-11-28: GitHub OIDC client and exact hardened `main`, `pull_request`, and
   `environment:production` federated credentials were created.
 - Blocked before app deployment: GitHub CLI is authenticated to `msft.ghe.com`, while GitHub.com

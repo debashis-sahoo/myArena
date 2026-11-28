@@ -123,13 +123,18 @@ jobs:
           pwsh -NoProfile -File scripts/azure/deploy-staging.ps1 `
             -ManifestPath $manifest.FullName `
             -WebAppName $env:AZURE_WEBAPP_NAME
+          if ($LASTEXITCODE -ne 0) { throw 'Staging deployment failed.' }
           pwsh -NoProfile -File scripts/azure/warm-and-verify.ps1 `
             -CandidateUrl "https://$($env:AZURE_WEBAPP_NAME)-staging.azurewebsites.net"
+          if ($LASTEXITCODE -ne 0) { throw 'Candidate warm-up failed.' }
           $env:LOAD_URL = "https://$($env:AZURE_WEBAPP_NAME)-staging.azurewebsites.net"
           npx tsx server/scripts/load-500.ts
+          if ($LASTEXITCODE -ne 0) { throw 'S1 500-connection gate failed.' }
           az webapp restart --resource-group myArena --name $env:AZURE_WEBAPP_NAME --slot staging
+          if ($LASTEXITCODE -ne 0) { throw 'Post-load staging restart failed.' }
           pwsh -NoProfile -File scripts/azure/warm-and-verify.ps1 `
             -CandidateUrl "https://$($env:AZURE_WEBAPP_NAME)-staging.azurewebsites.net"
+          if ($LASTEXITCODE -ne 0) { throw 'Post-load warm-up failed.' }
           $started.ToString('o') | Set-Content artifacts/release-started-utc.txt
 
       - name: Record candidate evidence

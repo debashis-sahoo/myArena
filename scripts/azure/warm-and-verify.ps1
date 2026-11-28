@@ -32,9 +32,11 @@ if (-not $healthy) {
 
 $oldVerifier = $env:CANDIDATE_VERIFIER_TOKEN
 $oldSmokeUrl = $env:SMOKE_URL
+$oldCandidateOnly = $env:SMOKE_CANDIDATE_ONLY
 try {
   $env:CANDIDATE_VERIFIER_TOKEN = $CandidateVerifierToken
   $env:SMOKE_URL = $CandidateUrl
+  $env:SMOKE_CANDIDATE_ONLY = '1'
   & npm run smoke
   if ($LASTEXITCODE -ne 0) {
     throw 'Candidate room-flow smoke validation failed.'
@@ -42,6 +44,7 @@ try {
 } finally {
   $env:CANDIDATE_VERIFIER_TOKEN = $oldVerifier
   $env:SMOKE_URL = $oldSmokeUrl
+  $env:SMOKE_CANDIDATE_ONLY = $oldCandidateOnly
   $CandidateVerifierToken = ''
 }
 
