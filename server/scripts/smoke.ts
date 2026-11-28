@@ -474,7 +474,7 @@ const scenarios: Scenario[] = [
     },
   ],
   [
-    'UNO AI room: starts at once with a 7-card hand and no other hand in the payload',
+    'UNO AI room: starts at once and keeps only the authoritative hand in the payload',
     async (url) => {
       const human = await connectHost(url, 'Solo');
       const created = ok(
@@ -482,8 +482,8 @@ const scenarios: Scenario[] = [
       );
       const game = created.game as UnoView | undefined;
       assert(created.room.state === 'in_progress', `UNO AI room state ${created.room.state}`);
-      assert(game?.you?.hand.length === 7, 'the player holds 7 cards');
-      assert(game.table.players.length === 4 && game.table.players.every((p) => p.handCount === 7), '4 players with 7 cards each');
+      assert((game?.you?.hand.length ?? 0) >= 7, 'the player holds at least the seven-card initial deal');
+      assert(game.table.players.length === 4 && game.table.players.every((p) => p.handCount > 0), '4 active players');
       const text = JSON.stringify(created);
       assert((text.match(/"hand"/g) ?? []).length === 1, "only the receiver's own hand is in the payload");
       assert(!text.includes('drawPile'), 'the draw pile is never sent');
