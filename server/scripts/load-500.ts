@@ -7,8 +7,12 @@ if (!endpoint) throw new Error('LOAD_URL is required; point it at the one-worker
 const candidateVerifier = process.env.CANDIDATE_VERIFIER_TOKEN;
 const roomCount = Number(process.env.LOAD_ROOMS ?? 50);
 const connectionsPerRoom = Number(process.env.LOAD_CONNECTIONS_PER_ROOM ?? 10);
+const roomConcurrency = Number(process.env.LOAD_ROOM_CONCURRENCY ?? 5);
 if (roomCount * connectionsPerRoom !== 500) {
   throw new Error('The qualification must create exactly 500 concurrent WebSocket connections.');
+}
+if (!Number.isInteger(roomConcurrency) || roomConcurrency < 1 || roomConcurrency > roomCount) {
+  throw new Error('LOAD_ROOM_CONCURRENCY must be a whole number between 1 and LOAD_ROOMS.');
 }
 
 const sockets: Socket[] = [];
@@ -61,27 +65,35 @@ function percentile(values: number[], fraction: number): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(fraction * sorted.length) - 1)] ?? 0;
 }
 
-try {
-  for (let roomIndex = 0; roomIndex < roomCount; roomIndex++) {
-    const offset = roomIndex * connectionsPerRoom;
-    const host = await connect(guests[offset]!, await hostCookie());
-    const joined = await emit<JoinedData>(host, EVENTS.ROOM_CREATE, {
+async function exerciseRoom(roomIndex: number): Promise<void> {
+  const offset = roomIndex * connectionsPerRoom;
+  const host = await connect(guests[offset]!, await hostCookie());
+  const joined = await emit<JoinedData>(host, EVENTS.ROOM_CREATE, {
+    gameId: 'housie',
+    mode: 'online',
+    capacity: connectionsPerRoom,
+    guest: guests[offset],
+  });
+  for (let player = 1; player < connectionsPerRoom; player++) {
+    const guest = guests[offset + player]!;
+    const socket = await connect(guest);
+    await emit<JoinedData>(socket, EVENTS.ROOM_JOIN, {
       gameId: 'housie',
-      mode: 'online',
-      capacity: connectionsPerRoom,
-      guest: guests[offset],
+      roomId: joined.room.roomId,
+      guest,
     });
-    for (let player = 1; player < connectionsPerRoom; player++) {
-      const guest = guests[offset + player]!;
-      const socket = await connect(guest);
-      await emit<JoinedData>(socket, EVENTS.ROOM_JOIN, {
-        gameId: 'housie',
-        roomId: joined.room.roomId,
-        guest,
-      });
-      await emit(socket, EVENTS.CHAT_SEND, { text: `load-${roomIndex}-${player}` });
-    }
-    await emit(host, EVENTS.GAME_ACTION, { type: 'setCaller', mode: 'manual' });
+    await emit(socket, EVENTS.CHAT_SEND, { text: `load-${roomIndex}-${player}` });
+  }
+  await emit(host, EVENTS.GAME_ACTION, { type: 'setCaller', mode: 'manual' });
+}
+
+try {
+  for (let start = 0; start < roomCount; start += roomConcurrency) {
+    const roomIndexes = Array.from(
+      { length: Math.min(roomConcurrency, roomCount - start) },
+      (_, index) => start + index,
+    );
+    await Promise.all(roomIndexes.map(exerciseRoom));
   }
 
   const p95 = percentile(latencies, 0.95);
