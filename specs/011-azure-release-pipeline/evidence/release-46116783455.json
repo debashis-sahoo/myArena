@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "repository": "debashis-sahoo/myArena",
+  "targetSubscription": "ec7b61df-f90c-4c20-b089-847e999236d5",
+  "resourceGroup": "myArena",
+  "region": "centralindia",
+  "checks": {
+    "build": "pass",
+    "bicepWhatIf": "pass",
+    "smoke": "pass",
+    "quota": "pass",
+    "stagingRoomAdmission": "pass",
+    "health": "pass",
+    "websocket": "pass",
+    "https": "pass",
+    "load": "pass",
+    "postSwapSettingMutation": "absent",
+    "stagingCorsReconnect": "not_applicable_initial_deploy",
+    "policy": "pass"
+  },
+  "cost": {
+    "lowTrafficMonthlyUsd": 73.35,
+    "telemetryMonthlyUsd": 0,
+    "ceilingUsd": 80,
+    "transferMonthlyUsd": 1,
+    "artifactMonthlyUsd": 0,
+    "supportingMonthlyUsd": 3,
+    "s1MonthlyUsd": 69.35,
+    "withinCeiling": true
+  },
+  "runAttempt": 1,
+  "artifactDigest": "sha256:1473af9c07edbbb87e7f559cfd9af55db83628df42e51b568a7a620cec8d2d6c",
+  "runId": "46116783455",
+  "result": "active",
+  "dependencyFingerprint": "sha256:6eeedf46def0dc985fd071ef221485e2cb96daaa6d8c4bcdfc443087903059d0",
+  "approval": {
+    "approvedBy": "debashis-sahoo",
+    "approvedAtUtc": "2026-11-28T07:55:32Z",
+    "environment": "production"
+  },
+  "commitSha": "1ca2e6a0a14e33cd559d69f6925a014ae9dcae17",
+  "cutover": {
+    "publicEndpoint": "https://myarena-2rmn2sg5dfrjy-app.azurewebsites.net",
+    "direction": "forward",
+    "activeSlot": "production",
+    "drainingSlot": "staging",
+    "drainDeadlineUtc": "2026-11-28T08:30:32.9666408Z",
+    "postSwapSettingMutation": "absent",
+    "swapStartedUtc": "2026-11-28T13:25:49.9858548+05:30",
+    "swapCompletedUtc": "2026-11-28T13:30:32.9666408+05:30",
+    "retiredUtc": "2026-11-28T08:03:07.029446Z"
+  },
+  "timing": {
+    "evidenceRetrievalSeconds": null,
+    "routineRolloutSeconds": 282.980786
+  },
+  "load": {
+    "operations": 1000,
+    "p95Ms": 392,
+    "rooms": 50,
+    "connections": 500,
+    "p99Ms": 652,
+    "p50Ms": 222
+  },
+  "workflow": {
+    "deploymentStatus": "success",
+    "prepare": "success",
+    "runId": "46116783455",
+    "cutover": "success-with-evidence-attachment-failure"
+  },
+  "rollbackCandidate": "initial Azure staging state (no prior app)",
+  "initialDeployment": true,
+  "evidenceDigest": "sha256:ece37da7d101477495b6827a00b8451944e89eb3caf6f0abb8a6ba6a96327ed8"
+}

@@ -81,6 +81,7 @@ async function connect(
     extraHeaders: {
       'x-forwarded-for': `10.${(n >> 16) & 255}.${(n >> 8) & 255}.${n & 255}`,
       ...(cookieHeader ? { cookie: cookieHeader } : {}),
+      ...(process.env.SMOKE_TEST_ORIGIN ? { origin: process.env.SMOKE_TEST_ORIGIN } : {}),
     },
   });
   const client: Client = { socket, guest, chat: [], activity: [], closed: [], removed: [] };
@@ -159,6 +160,33 @@ function closeAll(...clients: Client[]): void {
 type Scenario = [name: string, run: (url: string) => Promise<void>];
 
 const scenarios: Scenario[] = [
+  [
+    'origin: staging rejects an unallowlisted browser origin',
+    async (url) => {
+      if (!process.env.SMOKE_TEST_ORIGIN) return;
+      const socket = connectClient(url, {
+        transports: ['websocket'],
+        reconnection: false,
+        extraHeaders: { origin: 'https://untrusted.invalid' },
+      });
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          socket.close();
+          reject(new Error('unallowlisted origin unexpectedly connected'));
+        }, 10_000);
+        socket.once('connect', () => {
+          clearTimeout(timer);
+          socket.close();
+          reject(new Error('unallowlisted origin connected'));
+        });
+        socket.once('connect_error', () => {
+          clearTimeout(timer);
+          socket.close();
+          resolve();
+        });
+      });
+    },
+  ],
   [
     'candidate: controlled action and immediate authoritative reconnect',
     async (url) => {

@@ -16,7 +16,11 @@ for (const name of ['candidateVerifier', 'token', 'cookie', 'chat', 'guestId']) 
 
 const cutover = input.cutover ?? {};
 for (const check of ['build', 'smoke', 'bicepWhatIf', 'policy', 'quota', 'health', 'https', 'websocket', 'stagingRoomAdmission', 'stagingCorsReconnect', 'load']) {
-  if (input.checks?.[check] !== 'pass') {
+  const initialDrainException =
+    check === 'stagingCorsReconnect' &&
+    input.initialDeployment === true &&
+    input.checks?.[check] === 'not_applicable_initial_deploy';
+  if (input.checks?.[check] !== 'pass' && !initialDrainException) {
     throw new Error(`Blocking release check '${check}' did not pass.`);
   }
 }

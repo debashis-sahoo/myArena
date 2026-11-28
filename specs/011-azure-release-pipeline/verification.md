@@ -75,6 +75,13 @@ These items are not marked complete or represented as deployment validation.
   The measured p50/p95/p99 acknowledgements were 227/273/391 ms. The run still failed before
   cutover because expiry-dependent local smoke assertions used a 3-second expectation against the
   production 60-second reconnect window; candidate-only smoke now excludes those timing tests.
+- 2026-11-28: corrected candidate run `46116783455` passed 500 connections across 50 rooms with
+  p50/p95/p99 222/392/652 ms, a USD 73.35 estimate, and all staging checks.
+- 2026-11-28: protected forward swap started at 07:55:49Z and completed at 08:00:32Z. Production
+  served commit `1ca2e6a0a14e33cd559d69f6925a014ae9dcae17`, `/healthz` returned OK, and the prior
+  empty staging process was stopped at 08:03:07Z. Public endpoint:
+  `https://myarena-2rmn2sg5dfrjy-app.azurewebsites.net`.
+- Actual release evidence: [release-46116783455.json](evidence/release-46116783455.json).
 - 2026-11-28: GitHub OIDC client and exact hardened `main`, `pull_request`, and
   `environment:production` federated credentials were created.
 - Blocked before app deployment: GitHub CLI is authenticated to `msft.ghe.com`, while GitHub.com

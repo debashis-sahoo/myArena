@@ -33,10 +33,13 @@ if (-not $healthy) {
 $oldVerifier = $env:CANDIDATE_VERIFIER_TOKEN
 $oldSmokeUrl = $env:SMOKE_URL
 $oldCandidateOnly = $env:SMOKE_CANDIDATE_ONLY
+$oldSmokeTestOrigin = $env:SMOKE_TEST_ORIGIN
 try {
   $env:CANDIDATE_VERIFIER_TOKEN = $CandidateVerifierToken
   $env:SMOKE_URL = $CandidateUrl
   $env:SMOKE_CANDIDATE_ONLY = '1'
+  $productionHost = ([Uri]$CandidateUrl).Host -replace '-staging\.azurewebsites\.net$', '.azurewebsites.net'
+  $env:SMOKE_TEST_ORIGIN = "https://$productionHost"
   & npm run smoke
   if ($LASTEXITCODE -ne 0) {
     throw 'Candidate room-flow smoke validation failed.'
@@ -45,6 +48,7 @@ try {
   $env:CANDIDATE_VERIFIER_TOKEN = $oldVerifier
   $env:SMOKE_URL = $oldSmokeUrl
   $env:SMOKE_CANDIDATE_ONLY = $oldCandidateOnly
+  $env:SMOKE_TEST_ORIGIN = $oldSmokeTestOrigin
   $CandidateVerifierToken = ''
 }
 

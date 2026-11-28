@@ -23,6 +23,10 @@ io = new Server(httpServer, {
   pingInterval: PING_INTERVAL_MS,
   pingTimeout: PING_TIMEOUT_MS,
   maxHttpBufferSize: 10_000,
+  allowRequest: (request, callback) => {
+    const origin = request.headers.origin;
+    callback(null, !origin || !config.publicOrigin || origin === config.publicOrigin);
+  },
   cors:
     config.publicOrigin
       ? {

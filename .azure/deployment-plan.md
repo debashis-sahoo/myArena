@@ -188,5 +188,11 @@ validation, protected approval, preflight, and the 500-connection S1 gate pass.
   Contributor role.
 - Live RBAC: production and staging managed identities each have `Monitoring Metrics Publisher`
   on the Application Insights resource.
-- Application artifact: pending. A clean source-controlled commit and valid GitHub.com
-  authentication are required before the protected release workflow can deploy it.
+- Source-controlled candidate `1ca2e6a0a14e33cd559d69f6925a014ae9dcae17` was deployed, protected,
+  and swapped to production.
+- Active production endpoint: `https://myarena-2rmn2sg5dfrjy-app.azurewebsites.net`
+- Forward release `46116783455`: 500/50 room load passed with p95 392 ms; cost estimate
+  USD 73.35/month; swap completed in 282.98 seconds; inactive staging drain was retired.
+- The GitHub run's evidence-attachment step failed because it tried to add a PowerShell property
+  that did not exist. The swap was verified separately, the inactive drain was safely closed, and a
+  manual deployment-success status plus recovered machine-readable evidence were recorded.

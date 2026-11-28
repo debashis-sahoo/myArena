@@ -214,13 +214,14 @@ jobs:
         run: |
           $state = Get-Content -Raw artifacts/release-state.json | ConvertFrom-Json
           $input = Get-Content -Raw artifacts/evidence-input.json | ConvertFrom-Json
-          $started = [DateTimeOffset]::Parse((Get-Content -Raw artifacts/release-started-utc.txt))
-          $input.cutover = $state
+          $started = [DateTimeOffset]::Parse($state.swapStartedUtc)
+          $input | Add-Member -NotePropertyName cutover -NotePropertyValue $state -Force
           $input.result = 'active'
-          $input.timing = @{
+          $timing = @{
             routineRolloutSeconds = ([DateTimeOffset]::UtcNow - $started).TotalSeconds
             evidenceRetrievalSeconds = $null
           }
+          $input | Add-Member -NotePropertyName timing -NotePropertyValue $timing -Force
           $input | ConvertTo-Json -Depth 10 | Set-Content artifacts/evidence-input.json
           node scripts/release/write-evidence.mjs artifacts/evidence-input.json release-evidence/release.json
 
