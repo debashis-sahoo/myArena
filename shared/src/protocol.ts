@@ -18,6 +18,7 @@ export const EVENTS = {
   CHAT_MESSAGE: 'chat:message',
   PLAYER_REMOVED: 'player:removed',
   ROOM_CLOSED: 'room:closed',
+  ROOM_RECONNECT_HINT: 'room:reconnectHint',
   SERVER_RESTARTING: 'server:restarting',
   // game channel: actions up, events and snapshots down
   GAME_ACTION: 'game:action',
@@ -141,6 +142,34 @@ export interface JoinRoomPayload {
   roomId: string;
   guest: GuestInfo;
 }
+
+export type SlotIdentity = 'production' | 'staging';
+export type ReleasePhase = 'candidate' | 'active' | 'draining' | 'stopped';
+
+export interface RoomReconnectHint {
+  gameId: string;
+  roomId: string;
+  origin: string;
+  validUntilUtc: string;
+}
+
+export interface CandidateVerification {
+  tokenHash: string;
+  expiresUtc: string;
+  usedBy: string;
+}
+
+export interface SafeOperationalEvent {
+  timestamp: string;
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  releaseId: string;
+  slot: SlotIdentity;
+  category: 'startup' | 'health' | 'routing' | 'swap' | 'capacity' | 'release' | 'error';
+  event: string;
+  safeCorrelationId: string;
+  metric?: number;
+  unit?: string;
+}
 export interface SetCapacityPayload {
   capacity: number;
 }
@@ -159,6 +188,8 @@ export interface JoinedData {
   resumed: boolean;
   /** Current game snapshot when a match is in progress. */
   game?: unknown;
+  /** Short-lived, non-authoritative fallback origin for an existing room. */
+  reconnectHint?: RoomReconnectHint;
 }
 export interface RoomData {
   room: RoomState;

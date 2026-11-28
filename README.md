@@ -13,14 +13,17 @@ Repository: https://github.com/debashis-sahoo/myArena.git
 | `shared/` | Types and constants shared by client and server (wire protocol, game registry, limits) |
 | `server/` | Node.js service: HTTP, Socket.IO, room engine (authoritative), health check |
 | `client/` | React + Vite single-page app (Hub, launch modal, room, chat) |
-| `render.yaml` | Render Blueprint for the production web service |
+| `infra/` | Bicep modules for Azure App Service S1, staging slot, identity, and monitoring |
+| `.github/workflows/azure-*.yml` | Validation and protected S1 release workflows |
+| `render.yaml` | Temporary Render rollback blueprint until the Azure migration is accepted |
 | `specs/001-platform-hub-rooms/` | Spec, plan, contracts, tasks and verification notes |
 | `specs/002-ludo-game-module/` | Ludo: spec, plan, contracts, tasks, quickstart and verification notes |
 | `specs/003-housie-tambola-module/` | Housie: spec, plan, contracts, tasks, quickstart, mockups and verification notes |
 | `specs/005-bingo-75-ball-module/` | Bingo: spec, plan, contracts, tasks, quickstart and verification notes |
 | `specs/006-uno-game-module/` | UNO: spec, plan, contracts, tasks, quickstart, verification notes and screenshot evidence |
 
-The server serves the built client from the same origin, so production needs one process, one port and no CORS.
+The server serves the built client from the same origin. Azure production uses one always-on
+authoritative process and permits a production-origin WebSocket reconnect to the staging slot.
 
 ## Run locally
 
@@ -31,7 +34,7 @@ npm install
 npm run dev          # shared watch + server on :10000 + Vite on :5173 (open http://localhost:5173)
 ```
 
-Production-style run (what Render does):
+Production-style run:
 
 ```powershell
 npm run build
@@ -50,19 +53,24 @@ npm run smoke -- --rooms 50    # optional load check: 50 rooms, about 200 socket
 Both need `npm run build -w shared -w server` first. Visual and multi-device checks are manual: see
 [specs/001-platform-hub-rooms/quickstart.md](specs/001-platform-hub-rooms/quickstart.md).
 
-## Deploy to Render
+## Deploy to Azure App Service S1
 
-1. In Render choose **New > Blueprint** and connect `https://github.com/debashis-sahoo/myArena.git`. Render reads
-   `render.yaml` (Web Service, Free plan, build `npm ci --include=dev && npm run build`, start `npm start`, health check
-   `/healthz`).
-2. After the first deploy, open the service URL and run the Render checks in the quickstart.
+The approved Azure topology is one Linux App Service S1 plan in Central India, one Web App,
+one staging slot, Always On, and one authoritative worker. GitHub OIDC builds an immutable ZIP,
+qualifies the candidate, requires protected `production` approval, then swaps slots without a
+post-swap runtime setting change.
 
-Notes for the Free plan:
+Read [.azure/deployment-plan.md](.azure/deployment-plan.md) and
+[specs/011-azure-release-pipeline/quickstart.md](specs/011-azure-release-pipeline/quickstart.md)
+before provisioning. Azure preflight, Bicep what-if, 500-connection qualification, protected
+approval, and the USD 80/month estimate gate are mandatory.
 
-- The service sleeps after about 15 minutes without inbound traffic and takes about a minute to wake. While anyone is in a
-  room, the Socket.IO heartbeat (every 4 s) keeps the connection and the service awake. The site shows "Waking up the
-  arena" while it starts.
-- A redeploy or restart ends all rooms. Players see a "room ended" screen and can start a new one.
+S1 is always on and intentionally does not scale to zero. Existing-room reconnects use an
+allowlisted short-lived hint while the prior slot drains for at most 30 minutes. Horizontal
+autoscale remains disabled because authoritative room state is process-local.
+
+Render remains only a temporary rollback source until Azure startup, secure WebSocket, reconnect,
+load, telemetry, and cost evidence is accepted.
 
 ## Ludo
 
@@ -135,15 +143,19 @@ room opened directly with Music on starts it on your first tap.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `PORT` | `10000` | Listening port (Render provides it). The server binds `0.0.0.0` |
-| `NODE_ENV` | `development` | Set to `production` on Render |
+| `PORT` | `10000` | Listening port. Azure supplies this value; the server binds `0.0.0.0` |
+| `NODE_ENV` | `development` | Set to `production` on Azure |
 | `LOG_LEVEL` | `info` | Log verbosity (JSON lines on stdout) |
 | `MAX_ROOMS` | `100` | Cap on live rooms |
 | `RECONNECT_WINDOW_MS` | `60000` | How long a disconnected player keeps their seat |
 | `REMOVAL_COOLDOWN_MS` | `60000` | How long a removed player must wait before rejoining |
 | `HOUSIE_MAX_PLAYERS` | `200` | Optional. The most people a Housie room may hold (2 to 500); raise or lower it without code changes |
 | `BINGO_MAX_PLAYERS` | `200` | Optional. The most people a Bingo room may hold (2 to 500); independent of `HOUSIE_MAX_PLAYERS` |
-| `MAX_SOCKETS` | `1500` | Optional. New rooms and new seats are refused (`SERVER_BUSY`) above this many connections; returning players are never refused |
+| `MAX_SOCKETS` | `500` | New rooms and new seats are refused (`SERVER_BUSY`) above this many connections; returning players are never refused |
+| `SLOT_IDENTITY` | `production` | Immutable physical slot identity: `production` or `staging` |
+| `PUBLIC_ORIGIN` | unset | Exact HTTPS production origin used for staging CORS |
+| `DRAIN_ORIGIN` | unset | Exact HTTPS staging origin issued in room reconnect hints |
+| `RELEASE_ID` | `local` | Artifact digest used in safe operational evidence |
 
 No secrets are required.
 

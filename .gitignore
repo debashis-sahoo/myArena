@@ -12,3 +12,6 @@ Thumbs.db
 .idea/
 *.tmp
 *.swp
+artifacts/
+release-evidence/
+infra/main.json

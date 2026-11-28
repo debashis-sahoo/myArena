@@ -1,0 +1,89 @@
+name: Azure validate
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  validate:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            shared/dist
+            server/dist
+            client/dist
+            ~/.cache/bicep
+          key: azure-${{ runner.os }}-${{ hashFiles('package-lock.json', 'shared/src/**', 'server/src/**', 'client/src/**', 'infra/**') }}
+          restore-keys: |
+            azure-${{ runner.os }}-
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run smoke
+      - run: az bicep build --file infra/main.bicep --stdout >/dev/null
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Environment protection assertion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pwsh -NoProfile -File scripts/azure/assert-production-environment.ps1
+
+      - name: Bicep what-if
+        run: |
+          az deployment group what-if \
+            --resource-group myArena \
+            --template-file infra/main.bicep \
+            --parameters infra/main.bicepparam
+
+      - name: Create planning cost estimate
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          @{
+            s1MonthlyUsd = 69.35
+            supportingMonthlyUsd = 3.00
+            transferMonthlyUsd = 1.00
+            telemetryMonthlyUsd = 0.00
+            artifactMonthlyUsd = 0.00
+            lowTrafficMonthlyUsd = 73.35
+            ceilingUsd = 80
+          } | ConvertTo-Json | Set-Content artifacts/cost-estimate.json
+
+      - run: pwsh -NoProfile -File scripts/azure/preflight.ps1 -CostEstimatePath artifacts/cost-estimate.json
+      - run: pwsh -NoProfile -File scripts/azure/verify-cost-budget.ps1
+      - run: pwsh -NoProfile -File scripts/verify/telemetry.ps1
+      - run: pwsh -NoProfile -File scripts/verify/metered-traffic.ps1
+
+      - name: Artifact dry run
+        run: npm run release:artifact
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: azure-validation-${{ github.sha }}
+          path: |
+            artifacts/*.zip
+            artifacts/*.manifest.json
+          if-no-files-found: error
+          retention-days: 3

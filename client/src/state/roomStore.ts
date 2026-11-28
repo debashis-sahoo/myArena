@@ -11,13 +11,24 @@ import {
   type LudoState,
   type RemovedData,
   type RoomData,
+  type RoomReconnectHint,
   type RoomState,
 } from '@myarena/shared';
 import { sfx } from '../audio/sfx';
 import { getGameFeed, resetGameFeeds } from '../games/feeds';
 import { clearDraft } from './chatDraft';
 import { guestInfo } from './guest';
-import { connectSocket, disconnectSocket, emitWithAck, socketInstance, type ClientAck, type ClientErrorCode } from './socket';
+import {
+  clearReconnectHint,
+  connectSocket,
+  disconnectSocket,
+  emitWithAck,
+  prepareReconnectFallback,
+  rememberReconnectHint,
+  socketInstance,
+  type ClientAck,
+  type ClientErrorCode,
+} from './socket';
 
 export type StatusKind =
   | 'not_found'
@@ -75,7 +86,7 @@ const IDLE: RoomView = {
 let view: RoomView = IDLE;
 let session: { gameId: string; roomId: string } | null = null;
 let joinedOnce = false;
-let wired = false;
+let wiredSocket: ReturnType<typeof socketInstance> | null = null;
 // Set by leaveRoom() so the room page does not re-join a room the player just left while the route is still changing.
 let leftRoomId: string | null = null;
 // Creates and joins in flight: the delayed disconnect after a leave must not cut them off (switching rooms joins right after leaving).
@@ -149,12 +160,14 @@ function endSession(status: RoomStatus): void {
   }
   session = null;
   joinedOnce = false;
+  clearReconnectHint();
   resetGameFeeds();
   set({ phase: 'status', status, room: null, you: null, invitePath: null, chat: [], unread: 0, drawerOpen: false, game: NO_GAME });
   disconnectSocket();
 }
 
 function applyJoined(gameId: string, data: JoinedData): void {
+  rememberReconnectHint(data.reconnectHint);
   session = { gameId, roomId: data.room.roomId };
   joinedOnce = true;
   markRoom(data.room.roomId, true);
@@ -184,9 +197,13 @@ function reasonStatus(reason: ClosedReason): RoomStatus {
 }
 
 function wire(): void {
-  if (wired) return;
-  wired = true;
   const s = socketInstance();
+  if (wiredSocket === s) return;
+  wiredSocket = s;
+
+  s.on(EVENTS.ROOM_RECONNECT_HINT, (hint: RoomReconnectHint) => {
+    if (hint.gameId === session?.gameId && hint.roomId === session.roomId) rememberReconnectHint(hint);
+  });
 
   s.on(EVENTS.ROOM_STATE, (state: RoomState) => {
     if (!view.room || state.roomId !== view.room.roomId || state.rev <= view.room.rev) return;
@@ -239,7 +256,12 @@ function wire(): void {
     const { gameId, roomId } = session;
     void emitWithAck<JoinedData>(EVENTS.ROOM_JOIN, { gameId, roomId, guest: guestInfo() }).then((res) => {
       if (res.ok) applyJoined(gameId, res.data);
-      else endSession({ kind: 'ended' });
+      else if (res.error.code === 'ROOM_NOT_FOUND' && prepareReconnectFallback()) {
+        wire();
+        connectSocket();
+      } else {
+        endSession({ kind: 'ended' });
+      }
     });
   });
 }
@@ -337,6 +359,7 @@ export function leaveRoom(): void {
   }
   session = null;
   joinedOnce = false;
+  clearReconnectHint();
   resetGameFeeds();
   set({ ...IDLE });
   if (!wasIn) {

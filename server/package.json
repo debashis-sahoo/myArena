@@ -8,6 +8,8 @@
     "dev": "tsx watch --clear-screen=false src/index.ts"
   },
   "dependencies": {
+    "@azure/identity": "^4.14.1",
+    "@azure/monitor-opentelemetry": "1.21.0",
     "@myarena/shared": "*",
     "express": "^4.21.2",
     "helmet": "^8.0.0",

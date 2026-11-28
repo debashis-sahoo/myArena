@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { retryNow, useConnection } from '../../state/socket';
 
-const GIVE_UP_MS = 90_000;
+const GIVE_UP_MS = 30_000;
 const SHOW_AFTER_MS = 2500;
 
-/** "Waking up" on a cold start, "Reconnecting" after a drop, manual retry after about 90 s (FR-042). */
+/** Genuine reconnect feedback for the always-on S1 deployment. */
 export function ConnectionBanner(): ReactElement | null {
   const conn = useConnection();
   const [, tick] = useState(0);
@@ -29,7 +29,7 @@ export function ConnectionBanner(): ReactElement | null {
         {gaveUp
           ? 'Still cannot reach the arena.'
           : waking
-            ? 'Waking up the arena... this can take up to a minute.'
+            ? 'Connecting to the arena...'
             : 'Connection lost. Reconnecting...'}
       </span>
       {gaveUp && (

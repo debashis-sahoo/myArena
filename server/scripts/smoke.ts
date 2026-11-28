@@ -67,12 +67,17 @@ async function connect(
   name: string,
   guest = newGuest(name),
   cookieHeader?: string,
+  includeCandidateVerifier = true,
 ): Promise<Client> {
   // A unique forwarded IP per client keeps per-IP limits from affecting the test.
   const n = ipCounter++;
   const socket = connectClient(url, {
     transports: ['websocket'],
     reconnection: false,
+    auth:
+      includeCandidateVerifier && process.env.CANDIDATE_VERIFIER_TOKEN
+        ? { candidateVerifier: process.env.CANDIDATE_VERIFIER_TOKEN }
+        : undefined,
     extraHeaders: {
       'x-forwarded-for': `10.${(n >> 16) & 255}.${(n >> 8) & 255}.${n & 255}`,
       ...(cookieHeader ? { cookie: cookieHeader } : {}),
@@ -171,6 +176,18 @@ const scenarios: Scenario[] = [
         'HOST_ENTRY_REQUIRED',
       );
       closeAll(visitor);
+      if (process.env.CANDIDATE_VERIFIER_TOKEN) {
+        const withoutCapability = await connect(url, 'WithoutVerifier', newGuest('WithoutVerifier'), undefined, false);
+        fail(
+          await emit(withoutCapability, EVENTS.ROOM_CREATE, {
+            gameId: 'ludo',
+            mode: 'online',
+            guest: withoutCapability.guest,
+          }),
+          'HOST_ENTRY_REQUIRED',
+        );
+        closeAll(withoutCapability);
+      }
     },
   ],
   [
@@ -658,6 +675,14 @@ async function freePort(): Promise<number> {
 
 async function startServer(): Promise<{ url: string; child: ChildProcess }> {
   const port = await freePort();
+  const slotIdentity = process.env.SMOKE_SLOT_IDENTITY ?? 'production';
+  const candidateVerifier = process.env.CANDIDATE_VERIFIER_TOKEN;
+  if (slotIdentity === 'staging' && !candidateVerifier) {
+    throw new Error('Staging smoke validation requires CANDIDATE_VERIFIER_TOKEN.');
+  }
+  const verifierHash = candidateVerifier
+    ? (await import('node:crypto')).createHash('sha256').update(candidateVerifier).digest('hex')
+    : '';
   const child = spawn(process.execPath, [path.join(root, 'server/dist/index.js')], {
     env: {
       ...process.env,
@@ -666,6 +691,13 @@ async function startServer(): Promise<{ url: string; child: ChildProcess }> {
       LOG_LEVEL: 'warn',
       RECONNECT_WINDOW_MS: String(WINDOW_MS),
       REMOVAL_COOLDOWN_MS: String(WINDOW_MS),
+      SLOT_IDENTITY: slotIdentity,
+      ...(verifierHash
+        ? {
+            CANDIDATE_VERIFIER_TOKEN_HASH: verifierHash,
+            CANDIDATE_VERIFIER_EXPIRES_UTC: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          }
+        : {}),
     },
     stdio: ['ignore', 'inherit', 'inherit'],
   });

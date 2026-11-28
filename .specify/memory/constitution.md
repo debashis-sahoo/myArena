@@ -2,15 +2,19 @@
 
 ## Core Principles
 
-### I. Repository and Render-Ready Hosting
+### I. Repository and Azure-Ready Hosting
 
 The canonical source repository MUST be `https://github.com/debashis-sahoo/myArena.git`.
-Production MUST target a Render.com Web Service with WebSocket support. Repository paths,
-deployment configuration, build and start scripts, and environment-variable contracts MUST
-work on Render without source edits or developer-machine assumptions. Deployment design MUST
-support zero-downtime builds and readiness-gated replacement of the running service.
+Production MUST target Microsoft Azure in the public cloud, using the canonical release scope
+defined below. The selected Azure compute service MUST support the application's HTTP and
+WebSocket requirements, and MUST be recorded in the deployment plan before implementation.
+Repository paths, infrastructure as code, build and start scripts, and environment-variable
+contracts MUST work in the selected Azure service without source edits or developer-machine
+assumptions. Deployment design MUST support readiness-gated releases and replacement of the
+running service without an avoidable outage.
 
-Rationale: A single, explicit hosting contract prevents local-only success and deployment drift.
+Rationale: One explicit Azure hosting contract prevents local-only success, accidental use of
+the wrong subscription, and deployment drift.
 
 ### II. Graphics-First Experience
 
@@ -75,10 +79,11 @@ services to one game's board or rules.
 
 ### V. Server-Authoritative Real-Time Play
 
-Real-time room communication MUST use WebSocket or Socket.io and work on Render. The backend
-MUST validate game state, dice outcomes, player turns, and winner determinations. Clients MUST
-submit action intents; they MUST NOT select dice results, advance turns, declare winners, or
-replace authoritative state through unchecked client payloads.
+Real-time room communication MUST use WebSocket or Socket.io and work through the selected
+Azure compute and ingress topology. The backend MUST validate game state, dice outcomes, player
+turns, and winner determinations. Clients MUST submit action intents; they MUST NOT select dice
+results, advance turns, declare winners, or replace authoritative state through unchecked client
+payloads.
 
 The backend MUST validate room membership, applicable host permissions, turn ownership, and
 move legality before accepting an action. Invalid or repeated actions MUST NOT produce illegal
@@ -90,24 +95,53 @@ Rationale: One authoritative state prevents divergent boards and client-controll
 
 ## Runtime and Deployment Constraints
 
-- Render configuration, such as `render.yaml`, a `Dockerfile`, or build and start scripts,
-  MUST use repository-relative paths and documented environment variables. Required defaults
-  MUST support deployment without modifying source; secrets MUST remain outside source control.
-- The web process MUST bind to Render's supplied `PORT` on `0.0.0.0`. Production browser
-  connections MUST use HTTPS and secure WebSockets, with compatible origin and proxy handling.
-- Builds MUST NOT stop the active service. The replacement MUST pass a readiness check before
-  receiving traffic, and shutdown MUST allow in-flight work to finish within the host's limits.
-- Zero-downtime deployment MUST NOT be interpreted as a guarantee that every existing WebSocket
-  survives service replacement. Clients MUST reconnect and resynchronize; deployment plans MUST
-  document how active room state is recovered or explicitly ended across process replacement.
+### Canonical Azure Release Destination
+
+- Cloud: Microsoft Azure public cloud.
+- Subscription: `DebFTESub`
+- Subscription ID: `ec7b61df-f90c-4c20-b089-847e999236d5`
+- Tenant ID: `70a8c117-8975-4f55-8790-bc32a6ce5f15`
+- Resource group: `myArena`
+- Resource group resource ID:
+  `/subscriptions/ec7b61df-f90c-4c20-b089-847e999236d5/resourceGroups/myArena`
+- Resource group metadata region: `centralindia`
+- The production compute service and region MUST be selected and documented in the migration
+  plan. Resources MUST be placed in `myArena` unless the maintainer approves a narrower or
+  provider-required exception.
+- The public Azure release URL is NOT established until the compute service is provisioned.
+  Deployment work MUST record and verify the resulting HTTPS endpoint; governance MUST NOT
+  invent or hard-code a future URL.
+
+- Azure deployment configuration and infrastructure as code MUST use repository-relative
+  paths, be placed under `infra/` unless a narrower convention is documented, and use
+  documented environment variables. Required defaults MUST support deployment without
+  modifying source; secrets MUST remain outside source control.
+- Feature plans MUST check the subscription's current Azure Policy assignments, regional
+  availability, quota, and cost before provisioning. The currently verified policy blocks
+  creation in `westeurope`; plans MUST NOT select that region without a documented policy
+  change.
+- Azure resources MUST use least-privilege RBAC and managed identity for workload
+  authentication where supported. Static credentials MUST NOT be committed to the repository.
+- The web process MUST bind to the port supplied by the selected Azure service or the
+  documented `PORT` contract on `0.0.0.0`. Production browser connections MUST use HTTPS and
+  secure WebSockets, with compatible origin, ingress, proxy, and session-affinity handling.
+- Deployments MUST NOT intentionally stop the active service before a replacement is ready.
+  The replacement MUST pass a readiness check before receiving traffic, and shutdown MUST
+  allow in-flight work to finish within the selected Azure service's limits.
+- Readiness-gated deployment MUST use the selected Azure platform's supported rollout
+  mechanism, such as slots, revisions, or staged instances, as defined in the deployment plan.
+- Readiness-gated release MUST NOT be interpreted as a guarantee that every existing
+  WebSocket survives service replacement. Clients MUST reconnect and resynchronize; deployment
+  plans MUST document how active room state is recovered or explicitly ended across process
+  replacement.
 - Platform and game boundaries MUST be explicit in feature plans. A game-specific rule change
   MUST NOT require rewriting the universal room wrapper or shared room services.
 
 ## Development Workflow and Quality Gates
 
 - Specifications and plans MUST identify applicable principles, platform versus game ownership,
-  server-authoritative transitions, Render implications, and visual acceptance criteria before
-  implementation begins.
+  server-authoritative transitions, Azure resource and policy implications, cost, and visual
+  acceptance criteria before implementation begins.
 - Each UI change MUST be inspected immediately in a browser. Before acceptance, affected views
   MUST be checked at phone, tablet, and desktop sizes, in both portrait and landscape where the
   device supports them, for readability, board fit, screen-space use, control access, overflow,
@@ -118,8 +152,10 @@ Rationale: One authoritative state prevents divergent boards and client-controll
 - Multiplayer state changes MUST be checked with at least two clients and reproducible
   checkpoints, covering legal and illegal actions, turn agreement, dice-result agreement where
   applicable, winner agreement, and disconnect/reconnect synchronization as affected.
-- Deployment changes MUST be verified on Render for startup, readiness, WebSocket connectivity,
-  and replacement/reconnect behavior. Local-only checks MUST NOT be presented as deployment
+- Deployment changes MUST be verified on the selected Azure service for startup, readiness,
+  HTTPS and WebSocket connectivity, managed identity or RBAC behavior as applicable, and
+  replacement/reconnect behavior. The verified public Azure release endpoint MUST be recorded
+  in the deployment evidence. Local-only checks MUST NOT be presented as deployment
   verification; unavailable verification MUST be recorded as pending.
 - Reviews MUST reject unexplained constitutional violations and missing required smoke or visual
   evidence. Automated test volume MUST NOT substitute for these focused acceptance checks.
@@ -147,4 +183,4 @@ Every feature review MUST record compliance with applicable principles and any a
 exceptions. Compliance MUST also be reviewed when changing game contracts, authoritative state
 handling, deployment topology, or the early-development testing policy.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-01
+**Version**: 2.0.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-27

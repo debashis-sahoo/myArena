@@ -16,11 +16,21 @@
     "dev": "npm run build -w shared && concurrently -k -n shared,server,client -c gray,cyan,magenta \"npm run dev -w shared\" \"npm run dev -w server\" \"npm run dev -w client\"",
     "build": "npm run build -w shared && npm run build -w server && npm run build -w client",
     "start": "node server/dist/index.js",
-    "smoke": "tsx server/scripts/smoke.ts"
+    "smoke": "tsx server/scripts/smoke.ts",
+    "azure:preflight": "pwsh -NoProfile -File scripts/azure/preflight.ps1",
+    "azure:environment": "pwsh -NoProfile -File scripts/azure/assert-production-environment.ps1",
+    "release:artifact": "node scripts/release/create-artifact.mjs",
+    "release:evidence": "node scripts/release/write-evidence.mjs",
+    "release:transfer": "node scripts/release/measure-transfer.mjs",
+    "verify:telemetry": "pwsh -NoProfile -File scripts/verify/telemetry.ps1",
+    "verify:metered": "pwsh -NoProfile -File scripts/verify/metered-traffic.ps1"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
+  },
+  "overrides": {
+    "@opentelemetry/instrumentation-http": "0.222.0"
   }
 }

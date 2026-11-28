@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { config } from './config.js';
 import { getServerPhase } from './serverState.js';
 
 export interface HealthStats {
@@ -16,6 +17,14 @@ export function healthHandler(getStats: () => HealthStats) {
       return;
     }
     const { rooms, connections } = getStats();
-    res.status(200).json({ status: 'ok', uptimeSec: Math.round(process.uptime()), rooms, connections });
+    res.status(200).json({
+      status: 'ok',
+      uptimeSec: Math.round(process.uptime()),
+      rooms,
+      connections,
+      slot: config.slotIdentity,
+      releaseId: config.releaseId,
+      acceptsPublicNewRooms: config.acceptsPublicNewRooms,
+    });
   };
 }

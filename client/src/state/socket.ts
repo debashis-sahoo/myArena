@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import type { Ack, ErrorCode } from '@myarena/shared';
+import type { Ack, ErrorCode, RoomReconnectHint } from '@myarena/shared';
 
 export type ConnStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting';
 
@@ -17,6 +17,8 @@ export type ClientErrorCode = ErrorCode | 'TIMEOUT';
 export type ClientAck<T> = { ok: true; data: T } | { ok: false; error: { code: ClientErrorCode; message: string; retryAfterMs?: number } };
 
 let socket: Socket | null = null;
+let activeOrigin: string | undefined;
+let reconnectHint: RoomReconnectHint | null = null;
 let snap: ConnSnapshot = { status: 'idle', attempts: 0, since: 0, everConnected: false };
 const listeners = new Set<() => void>();
 
@@ -28,9 +30,9 @@ function setSnap(patch: Partial<ConnSnapshot>): void {
 /** The shared socket, created on first use. Not connected until connectSocket(). */
 export function socketInstance(): Socket {
   if (socket) return socket;
-  // Same origin as the page (wss in production). Backoff 1 s up to 10 s with jitter, retried indefinitely
-  // so a Render cold start (about a minute) is survived (FR-042).
-  socket = io({
+  // Same origin as the page (wss in production). Backoff handles genuine reconnects on the
+  // always-on S1 service and the bounded staging fallback.
+  socket = io(activeOrigin, {
     autoConnect: false,
     transports: ['websocket', 'polling'],
     reconnection: true,
@@ -61,9 +63,12 @@ export function connectSocket(): Socket {
   return s;
 }
 
-/** Drop the connection when no room needs it, so an empty server can sleep (FR-041). */
+/** Drop the connection when no room needs it to avoid unnecessary metered idle traffic. */
 export function disconnectSocket(): void {
   socket?.disconnect();
+  socket?.removeAllListeners();
+  socket = null;
+  activeOrigin = undefined;
 }
 
 export function retryNow(): void {
@@ -81,6 +86,47 @@ export function emitWithAck<T>(event: string, payload: object, timeoutMs = 15_00
       else resolve(res);
     });
   });
+}
+
+export function rememberReconnectHint(hint: RoomReconnectHint | undefined): void {
+  if (!hint) {
+    reconnectHint = null;
+    return;
+  }
+  try {
+    const parsed = new URL(hint.origin);
+    if (
+      parsed.protocol !== 'https:' ||
+      parsed.origin !== hint.origin ||
+      !Number.isFinite(Date.parse(hint.validUntilUtc))
+    ) {
+      return;
+    }
+    reconnectHint = { ...hint };
+  } catch {
+    /* Ignore an invalid server hint; it is routing metadata, not authoritative state. */
+  }
+}
+
+export function clearReconnectHint(): void {
+  reconnectHint = null;
+}
+
+/** Switch to the exact server-issued draining origin only for an existing-room reconnect. */
+export function prepareReconnectFallback(): boolean {
+  if (
+    !reconnectHint ||
+    Date.now() >= Date.parse(reconnectHint.validUntilUtc) ||
+    activeOrigin === reconnectHint.origin
+  ) {
+    return false;
+  }
+  socket?.disconnect();
+  socket?.removeAllListeners();
+  socket = null;
+  activeOrigin = reconnectHint.origin;
+  setSnap({ status: 'reconnecting', since: snap.since || Date.now(), attempts: 0 });
+  return true;
 }
 
 export function useConnection(): ConnSnapshot {

@@ -10,9 +10,10 @@ import {
   type ChatMessage,
   type JoinedData,
   type LudoState,
+  type RoomReconnectHint,
 } from '@myarena/shared';
 import { config } from '../config.js';
-import { logger } from '../logger.js';
+import { logger, operational } from '../logger.js';
 import { Room, RoomError, type RoomEvents } from '../rooms/room.js';
 import { RoomStore } from '../rooms/roomStore.js';
 import { KeyedLimiter, TokenBucket, type TakeResult } from './rateLimit.js';
@@ -34,6 +35,7 @@ interface SocketData {
   chatBucket?: TokenBucket;
   actionBucket?: TokenBucket;
   hostEntry?: boolean;
+  candidateVerifier?: boolean;
 }
 
 function dataOf(socket: Socket): SocketData {
@@ -53,9 +55,21 @@ function enforce(result: TakeResult, message: string): void {
 
 /** Builds the room store (events fan out through Socket.IO) and registers all socket handlers. */
 export function createRealtime(io: Server, hostEntry: HostEntryCapability): { store: RoomStore } {
+  const reconnectHintFor = (gameId: string, roomId: string): RoomReconnectHint | undefined => {
+    if (!config.drainOrigin) return undefined;
+    return {
+      gameId,
+      roomId,
+      origin: config.drainOrigin,
+      validUntilUtc: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    };
+  };
+
   const events: RoomEvents = {
     stateChanged: (room) => {
       io.to(room.roomId).emit(EVENTS.ROOM_STATE, room.projection());
+      const reconnectHint = reconnectHintFor(room.game.id, room.roomId);
+      if (reconnectHint) io.to(room.roomId).emit(EVENTS.ROOM_RECONNECT_HINT, reconnectHint);
     },
     chat: (room, message) => {
       io.to(room.roomId).emit(EVENTS.CHAT_MESSAGE, message);
@@ -79,9 +93,29 @@ export function createRealtime(io: Server, hostEntry: HostEntryCapability): { st
     },
   };
   const store = new RoomStore(events);
+  const hintRefresh = setInterval(() => {
+    for (const room of store.all()) {
+      const reconnectHint = reconnectHintFor(room.game.id, room.roomId);
+      if (reconnectHint) io.to(room.roomId).emit(EVENTS.ROOM_RECONNECT_HINT, reconnectHint);
+    }
+  }, 60_000);
+  hintRefresh.unref();
 
   const createLimiter = new KeyedLimiter(5, 1 / 6);
   const joinLimiter = new KeyedLimiter(20, 2);
+  const capacityWarnings = new Set<number>();
+
+  function recordConnectionCapacity(): void {
+    const connections = io.engine.clientsCount;
+    for (const threshold of [350, 450]) {
+      if (connections >= threshold && !capacityWarnings.has(threshold)) {
+        capacityWarnings.add(threshold);
+        operational('warn', 'capacity', 'connection_warning', connections, 'connections');
+      } else if (connections < threshold && capacityWarnings.has(threshold)) {
+        capacityWarnings.delete(threshold);
+      }
+    }
+  }
 
   function roomOf(socket: Socket): Room {
     const { gameId, roomId } = dataOf(socket);
@@ -135,18 +169,30 @@ export function createRealtime(io: Server, hostEntry: HostEntryCapability): { st
   }
 
   io.on('connection', (socket) => {
+    recordConnectionCapacity();
     const d = dataOf(socket);
     d.joinBucket = new TokenBucket(10, 1);
     d.chatBucket = new TokenBucket(CHAT_BURST, CHAT_REFILL_PER_SEC);
     d.actionBucket = new TokenBucket(10, 5);
     d.hostEntry = hostEntry.validFromCookieHeader(socket.handshake.headers.cookie);
+    d.candidateVerifier = config.validCandidateVerifier(socket.handshake.auth?.candidateVerifier);
 
     handler(socket, EVENTS.ROOM_CREATE, createRoomSchema, (p) => {
+      if (!config.acceptsPublicNewRooms && !d.candidateVerifier) {
+        throw new RoomError('HOST_ENTRY_REQUIRED', 'New rooms are available only on the production slot.');
+      }
       if (!d.hostEntry) {
         throw new RoomError('HOST_ENTRY_REQUIRED', 'Open the host page to create a room.');
       }
       enforce(createLimiter.take(clientIp(socket)), 'You are creating rooms too quickly.');
       if (io.engine.clientsCount > config.maxSockets) {
+        operational(
+          'warn',
+          'capacity',
+          'new_connection_refused',
+          io.engine.clientsCount,
+          'connections',
+        );
         throw new RoomError('SERVER_BUSY', 'The arena is busy right now. Please try again soon.');
       }
       leaveCurrent(socket);
@@ -160,6 +206,7 @@ export function createRealtime(io: Server, hostEntry: HostEntryCapability): { st
         invitePath: room.inviteEnabled ? invitePathFor(room.game.id, room.roomId) : null,
         resumed: false,
         game: room.gameView(playerId) as LudoState | undefined,
+        reconnectHint: reconnectHintFor(room.game.id, room.roomId),
       };
       return data;
     });
@@ -194,6 +241,7 @@ export function createRealtime(io: Server, hostEntry: HostEntryCapability): { st
         invitePath: room.inviteEnabled ? invitePathFor(room.game.id, room.roomId) : null,
         resumed: result.resumed,
         game: room.gameView(result.playerId) as LudoState | undefined,
+        reconnectHint: reconnectHintFor(room.game.id, room.roomId),
       };
       return data;
     });
@@ -259,6 +307,7 @@ export function createRealtime(io: Server, hostEntry: HostEntryCapability): { st
     });
 
     socket.on('disconnect', (reason) => {
+      recordConnectionCapacity();
       const { gameId, roomId } = dataOf(socket);
       const room = gameId && roomId ? store.get(gameId, roomId) : undefined;
       if (room) {

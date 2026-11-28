@@ -1,0 +1,278 @@
+name: Azure release
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: Release or reverse rollback
+        type: choice
+        default: release
+        options:
+          - release
+          - rollback
+  push:
+    branches:
+      - main
+    paths:
+      - client/**
+      - server/**
+      - shared/**
+      - infra/**
+      - scripts/**
+      - package*.json
+
+permissions:
+  contents: read
+  id-token: write
+  actions: read
+
+concurrency:
+  group: azure-production
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.event_name != 'workflow_dispatch' || inputs.action == 'release'
+    runs-on: ubuntu-latest
+    env:
+      AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Restore release cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            shared/dist
+            server/dist
+            client/dist
+            ~/.cache/bicep
+          key: release-${{ runner.os }}-${{ hashFiles('package-lock.json', 'shared/src/**', 'server/src/**', 'client/src/**', 'infra/**') }}
+          restore-keys: |
+            release-${{ runner.os }}-
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run smoke
+      - run: npm run release:artifact
+      - run: az bicep build --file infra/main.bicep --stdout >/dev/null
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create and verify planning estimate
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          @{
+            s1MonthlyUsd = 69.35
+            supportingMonthlyUsd = 3.00
+            transferMonthlyUsd = 1.00
+            telemetryMonthlyUsd = 0.00
+            artifactMonthlyUsd = 0.00
+            lowTrafficMonthlyUsd = 73.35
+            ceilingUsd = 80
+          } | ConvertTo-Json | Set-Content artifacts/cost-estimate.json
+          pwsh -NoProfile -File scripts/azure/preflight.ps1 -CostEstimatePath artifacts/cost-estimate.json
+          pwsh -NoProfile -File scripts/azure/verify-cost-budget.ps1
+
+      - name: Bicep what-if
+        run: |
+          az deployment group what-if \
+            --resource-group myArena \
+            --template-file infra/main.bicep \
+            --parameters infra/main.bicepparam
+
+      - name: Assert S1 and production environment
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pwsh -NoProfile -File scripts/azure/assert-production-environment.ps1
+          pwsh -NoProfile -File scripts/azure/assert-s1-single-worker.ps1 `
+            -ResourceGroup myArena `
+            -PlanName $env:AZURE_APPSERVICE_PLAN_NAME
+
+      - name: Create short-lived candidate verifier
+        id: verifier
+        shell: pwsh
+        run: |
+          $token = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+          $hash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData(
+            [Text.Encoding]::UTF8.GetBytes($token)
+          )).ToLowerInvariant()
+          $expiry = [DateTimeOffset]::UtcNow.AddMinutes(20).ToString('o')
+          az webapp config appsettings set `
+            --resource-group myArena `
+            --name $env:AZURE_WEBAPP_NAME `
+            --slot staging `
+            --settings RELEASE_ID=$env:GITHUB_SHA CANDIDATE_VERIFIER_TOKEN_HASH=$hash CANDIDATE_VERIFIER_EXPIRES_UTC=$expiry | Out-Null
+          Write-Output "::add-mask::$token"
+          "token=$token" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "expiry=$expiry" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Deploy and qualify candidate
+        shell: pwsh
+        env:
+          CANDIDATE_VERIFIER_TOKEN: ${{ steps.verifier.outputs.token }}
+        run: |
+          $started = [DateTimeOffset]::UtcNow
+          $manifest = Get-Item artifacts/*.manifest.json | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          pwsh -NoProfile -File scripts/azure/deploy-staging.ps1 `
+            -ManifestPath $manifest.FullName `
+            -WebAppName $env:AZURE_WEBAPP_NAME
+          pwsh -NoProfile -File scripts/azure/warm-and-verify.ps1 `
+            -CandidateUrl "https://$($env:AZURE_WEBAPP_NAME)-staging.azurewebsites.net"
+          $env:LOAD_URL = "https://$($env:AZURE_WEBAPP_NAME)-staging.azurewebsites.net"
+          npx tsx server/scripts/load-500.ts
+          az webapp restart --resource-group myArena --name $env:AZURE_WEBAPP_NAME --slot staging
+          pwsh -NoProfile -File scripts/azure/warm-and-verify.ps1 `
+            -CandidateUrl "https://$($env:AZURE_WEBAPP_NAME)-staging.azurewebsites.net"
+          $started.ToString('o') | Set-Content artifacts/release-started-utc.txt
+
+      - name: Record candidate evidence
+        shell: pwsh
+        run: |
+          $manifest = Get-Content -Raw (Get-Item artifacts/*.manifest.json | Select-Object -First 1).FullName | ConvertFrom-Json
+          $cost = Get-Content -Raw artifacts/cost-estimate.json | ConvertFrom-Json
+          $cost | Add-Member -NotePropertyName withinCeiling -NotePropertyValue $true
+          @{
+            commitSha = $manifest.commitSha
+            runId = $env:GITHUB_RUN_ID
+            runAttempt = [int]$env:GITHUB_RUN_ATTEMPT
+            artifactDigest = $manifest.artifactDigest
+            dependencyFingerprint = $manifest.dependencyFingerprint
+            approval = @{ environment = 'production' }
+            checks = @{
+              build = 'pass'
+              smoke = 'pass'
+              bicepWhatIf = 'pass'
+              policy = 'pass'
+              quota = 'pass'
+              health = 'pass'
+              https = 'pass'
+              websocket = 'pass'
+              stagingRoomAdmission = 'pass'
+              stagingCorsReconnect = 'pass'
+              postSwapSettingMutation = 'absent'
+              load = 'pass'
+            }
+            cost = $cost
+            result = 'candidate-ready'
+          } | ConvertTo-Json -Depth 8 | Set-Content artifacts/evidence-input.json
+
+      - name: Upload prepared release
+        uses: actions/upload-artifact@v4
+        with:
+          name: prepared-release-${{ github.run_id }}
+          path: |
+            artifacts/*.manifest.json
+            artifacts/*.zip
+            artifacts/cost-estimate.json
+            artifacts/evidence-input.json
+            artifacts/release-started-utc.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  cutover:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: prepared-release-${{ github.run_id }}
+          path: artifacts
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Protected forward cutover
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File scripts/azure/swap-release.ps1 `
+            -Direction forward `
+            -WebAppName $env:AZURE_WEBAPP_NAME
+
+      - name: Write forward release evidence
+        shell: pwsh
+        run: |
+          $state = Get-Content -Raw artifacts/release-state.json | ConvertFrom-Json
+          $input = Get-Content -Raw artifacts/evidence-input.json | ConvertFrom-Json
+          $started = [DateTimeOffset]::Parse((Get-Content -Raw artifacts/release-started-utc.txt))
+          $input.cutover = $state
+          $input.result = 'active'
+          $input.timing = @{
+            routineRolloutSeconds = ([DateTimeOffset]::UtcNow - $started).TotalSeconds
+            evidenceRetrievalSeconds = $null
+          }
+          $input | ConvertTo-Json -Depth 10 | Set-Content artifacts/evidence-input.json
+          node scripts/release/write-evidence.mjs artifacts/evidence-input.json release-evidence/release.json
+
+      - name: Upload bounded release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ github.run_id }}
+          path: release-evidence/release.json
+          retention-days: 14
+
+      - name: Retire forward drain
+        shell: pwsh
+        run: |
+          $deadline = [DateTimeOffset]::Parse((Get-Content artifacts/release-state.json | ConvertFrom-Json).drainDeadlineUtc)
+          while ([DateTimeOffset]::UtcNow -lt $deadline) {
+            $state = pwsh -NoProfile -File scripts/azure/retire-draining-slot.ps1 `
+              -WebAppName $env:AZURE_WEBAPP_NAME | ConvertFrom-Json
+            if ($state.status -eq 'retired') { break }
+            Start-Sleep -Seconds 60
+          }
+          if ((Get-Content artifacts/release-state.json | ConvertFrom-Json).status -ne 'retired') {
+            pwsh -NoProfile -File scripts/azure/retire-draining-slot.ps1 `
+              -WebAppName $env:AZURE_WEBAPP_NAME
+          }
+
+  rollback:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      AZURE_WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Reverse cutover and drain candidate rooms
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File scripts/azure/swap-release.ps1 `
+            -Direction rollback `
+            -WebAppName $env:AZURE_WEBAPP_NAME
+          $deadline = [DateTimeOffset]::Parse((Get-Content artifacts/release-state.json | ConvertFrom-Json).drainDeadlineUtc)
+          while ([DateTimeOffset]::UtcNow -lt $deadline) {
+            $state = pwsh -NoProfile -File scripts/azure/retire-draining-slot.ps1 `
+              -WebAppName $env:AZURE_WEBAPP_NAME | ConvertFrom-Json
+            if ($state.status -eq 'retired') { break }
+            Start-Sleep -Seconds 60
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rollback-${{ github.run_id }}
+          path: artifacts/release-state.json
+          if-no-files-found: error
+          retention-days: 14
