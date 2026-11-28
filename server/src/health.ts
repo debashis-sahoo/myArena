@@ -25,6 +25,7 @@ export function healthHandler(getStats: () => HealthStats) {
       slot: config.slotIdentity,
       releaseId: config.releaseId,
       acceptsPublicNewRooms: config.acceptsPublicNewRooms,
+      candidateVerifierConfigured: config.candidateVerifierConfigured,
     });
   };
 }

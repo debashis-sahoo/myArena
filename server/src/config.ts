@@ -96,6 +96,11 @@ export const config = {
   publicOrigin,
   drainOrigin,
   acceptsPublicNewRooms: slotIdentity === 'production',
+  candidateVerifierConfigured:
+    slotIdentity === 'staging' &&
+    Boolean(verifierTokenHash) &&
+    Boolean(verifierExpiresUtc) &&
+    Date.now() < Date.parse(verifierExpiresUtc),
   validCandidateVerifier,
   maxRooms: intFromEnv('MAX_ROOMS', MAX_ROOMS),
   reconnectWindowMs: intFromEnv('RECONNECT_WINDOW_MS', RECONNECT_WINDOW_MS),
