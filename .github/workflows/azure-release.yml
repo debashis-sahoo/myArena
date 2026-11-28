@@ -110,14 +110,14 @@ jobs:
             --slot staging `
             --settings RELEASE_ID=$env:GITHUB_SHA CANDIDATE_VERIFIER_TOKEN_HASH=$hash CANDIDATE_VERIFIER_EXPIRES_UTC=$expiry | Out-Null
           Write-Output "::add-mask::$token"
-          "token=$token" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          [IO.File]::WriteAllText('artifacts/.candidate-verifier', $token)
           "expiry=$expiry" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Deploy and qualify candidate
         shell: pwsh
-        env:
-          CANDIDATE_VERIFIER_TOKEN: ${{ steps.verifier.outputs.token }}
         run: |
+          $env:CANDIDATE_VERIFIER_TOKEN = (Get-Content -Raw artifacts/.candidate-verifier).Trim()
           $started = [DateTimeOffset]::UtcNow
           $manifest = Get-Item artifacts/*.manifest.json | Sort-Object LastWriteTime -Descending | Select-Object -First 1
           pwsh -NoProfile -File scripts/azure/deploy-staging.ps1 `
@@ -135,6 +135,7 @@ jobs:
           pwsh -NoProfile -File scripts/azure/warm-and-verify.ps1 `
             -CandidateUrl "https://$($env:AZURE_WEBAPP_NAME)-staging.azurewebsites.net"
           if ($LASTEXITCODE -ne 0) { throw 'Post-load warm-up failed.' }
+          Remove-Item artifacts/.candidate-verifier -Force
           $started.ToString('o') | Set-Content artifacts/release-started-utc.txt
 
       - name: Record candidate evidence
