@@ -19,7 +19,7 @@ settings. This prevents an app-setting update from recycling the old process dur
 
 ## Candidate verification
 
-1. The release workflow generates a random verifier token, stores only its SHA-256 hash and a
+1. The release workflow generates a 256-bit lowercase-hex verifier token, stores only its SHA-256 hash and a
    short expiry on the physical staging slot, and applies these settings before starting the
    candidate.
 2. The verifier supplies the raw token in the Socket.IO handshake field
@@ -28,7 +28,8 @@ settings. This prevents an app-setting update from recycling the old process dur
 3. Candidate creation still requires the normal host-entry capability. The verifier only bypasses
    the staging identity's public room-creation prohibition for that controlled request.
 4. The token is masked by the workflow, rate-limited, never committed, never sent by a normal game
-   client, and remains slot-sticky on staging.
+   client,    and remains slot-sticky on staging. The restricted hex alphabet prevents Base64 punctuation
+   from being normalized by proxy or workflow transports.
 5. After swap, the verifier capability cannot enable production room creation because it is not
    attached to the physical production slot and ordinary staging gameplay still rejects public
    creation.

@@ -25,11 +25,16 @@ if ($LASTEXITCODE -ne 0) {
 }
 $deployed = $false
 for ($attempt = 1; $attempt -le 3; $attempt++) {
-  az webapp deployment source config-zip `
+  az webapp deploy `
     --resource-group $ResourceGroup `
     --name $WebAppName `
     --slot staging `
-    --src $zipPath
+    --type zip `
+    --src-path $zipPath `
+    --clean true `
+    --restart true `
+    --async false `
+    --enriched-errors true
   if ($LASTEXITCODE -eq 0) {
     $deployed = $true
     break
@@ -40,11 +45,6 @@ for ($attempt = 1; $attempt -le 3; $attempt++) {
 }
 if (-not $deployed) {
   throw 'Staging ZIP deployment failed after three bounded attempts.'
-}
-
-az webapp restart --resource-group $ResourceGroup --name $WebAppName --slot staging
-if ($LASTEXITCODE -ne 0) {
-  throw 'Unable to restart staging after ZIP deployment.'
 }
 
 [ordered]@{
