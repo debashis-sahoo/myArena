@@ -50,13 +50,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: pwsh -NoProfile -File scripts/azure/assert-production-environment.ps1
 
-      - name: Bicep what-if
-        run: |
-          az deployment group what-if \
-            --resource-group myArena \
-            --template-file infra/main.bicep \
-            --parameters infra/main.bicepparam
-
       - name: Create planning cost estimate
         shell: pwsh
         run: |

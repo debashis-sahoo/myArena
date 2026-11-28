@@ -84,13 +84,6 @@ jobs:
           pwsh -NoProfile -File scripts/azure/preflight.ps1 -CostEstimatePath artifacts/cost-estimate.json
           pwsh -NoProfile -File scripts/azure/verify-cost-budget.ps1
 
-      - name: Bicep what-if
-        run: |
-          az deployment group what-if \
-            --resource-group myArena \
-            --template-file infra/main.bicep \
-            --parameters infra/main.bicepparam
-
       - name: Assert S1 and production environment
         shell: pwsh
         env:

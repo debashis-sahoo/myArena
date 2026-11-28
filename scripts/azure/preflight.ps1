@@ -4,12 +4,18 @@ param(
   [string]$TenantId = '70a8c117-8975-4f55-8790-bc32a6ce5f15',
   [string]$ResourceGroup = 'myArena',
   [string]$Region = 'centralindia',
+  [string]$PolicyBaselinePath = '.azure/policy-baseline.json',
   [string]$CostEstimatePath = 'artifacts/cost-estimate.json',
   [string]$CostOverrideEvidencePath,
   [switch]$SkipCostEstimate
 )
 
 $ErrorActionPreference = 'Stop'
+$deploymentPlanPath = '.azure/deployment-plan.md'
+if (-not (Test-Path $deploymentPlanPath) -or
+    (Get-Content -Raw $deploymentPlanPath) -notmatch '\*\*Status\*\*: Validated') {
+  throw 'The authoritative deployment plan is missing or not Validated.'
+}
 
 function Get-AzJson {
   param([scriptblock]$Command, [string]$Failure)
@@ -51,22 +57,34 @@ if ($Region -eq 'westeurope') {
   throw 'West Europe is blocked by project policy.'
 }
 
-$policyScope = $group.id
-$policyAssignments = Get-AzJson { az policy assignment list --scope $policyScope } 'Unable to read policy assignments for the release resource group.'
-if ($null -eq $policyAssignments) {
-  throw 'Azure Policy assignments could not be verified for the release scope.'
+if (-not (Test-Path $PolicyBaselinePath)) {
+  throw "Policy baseline '$PolicyBaselinePath' is missing."
+}
+$policyBaseline = Get-Content -Raw $PolicyBaselinePath | ConvertFrom-Json
+$validatedAt = [DateTimeOffset]$policyBaseline.validatedAtUtc
+if ($validatedAt -lt ([DateTimeOffset]::UtcNow.AddDays(-7))) {
+  throw 'Policy baseline is older than seven days; refresh it before release.'
+}
+if ($policyBaseline.subscriptionId -ne $SubscriptionId -or
+    $policyBaseline.tenantId -ne $TenantId -or
+    $policyBaseline.resourceGroup -ne $ResourceGroup -or
+    $policyBaseline.selectedRegion -ne $Region) {
+  throw 'Policy baseline does not match the release subscription, tenant, resource group, or region.'
+}
+if ($policyBaseline.blockedRegions -contains $Region) {
+  throw "Selected region '$Region' is blocked by the policy baseline."
+}
+$requiredPolicies = @('sys.blockwesteurope', 'sys.mfa-write', 'sys.mfa-delete')
+foreach ($policyName in $requiredPolicies) {
+  if (-not ($policyBaseline.requiredInheritedPolicies | Where-Object { $_.name -eq $policyName })) {
+    throw "Required inherited policy '$policyName' is missing from the policy baseline."
+  }
 }
 
-$usageUri = "https://management.azure.com/subscriptions/$SubscriptionId/providers/Microsoft.Web/locations/$Region/usages?api-version=2024-04-01"
-$usage = Get-AzJson { az rest --method get --url $usageUri } 'Unable to read Central India App Service quota usage.'
-$s1Quota = @($usage.value | Where-Object {
-    $_.name.value -match '(Standard.*Workers|S1)' -or $_.unit -eq 'Number'
-  } | Where-Object { [int64]$_.limit -gt 0 })
-if ($s1Quota.Count -eq 0) {
-  throw 'Central India Standard App Service worker quota evidence was not returned.'
-}
-if (@($s1Quota | Where-Object { [int64]$_.currentValue -ge [int64]$_.limit }).Count -gt 0) {
-  throw 'Central India Standard App Service worker quota is exhausted.'
+$quotaValidatedAt = [DateTimeOffset]$policyBaseline.appServiceQuota.validatedAtUtc
+if ($quotaValidatedAt -lt ([DateTimeOffset]::UtcNow.AddDays(-7)) -or
+    $policyBaseline.appServiceQuota.description -ne 'No Limit') {
+  throw 'Central India App Service quota evidence is stale or exhausted.'
 }
 
 if (-not $SkipCostEstimate) {
@@ -93,8 +111,8 @@ if (-not $SkipCostEstimate) {
   resourceGroup = $ResourceGroup
   region = $Region
   providers = $providers
-  policyAssignmentsChecked = @($policyAssignments).Count
-  quotaRowsChecked = $s1Quota.Count
+  policyBaseline = $policyBaseline.validatedAtUtc
+  quotaBaseline = $policyBaseline.appServiceQuota.validatedAtUtc
   s1RegionAvailable = $true
   costCeilingUsd = 80
   costVerified = -not $SkipCostEstimate

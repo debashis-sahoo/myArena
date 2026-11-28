@@ -22,24 +22,53 @@ if (-not $clientId -or $LASTEXITCODE -ne 0) {
   throw 'Unable to create or resolve the OIDC Entra application.'
 }
 $objectId = az ad app show --id $clientId --query id -o tsv
-$subject = "repo:$($inputs.repository):environment:$($inputs.environment)"
-$credential = @{
-  name = 'github-production'
-  issuer = 'https://token.actions.githubusercontent.com'
-  subject = $subject
-  audiences = @('api://AzureADTokenExchange')
-} | ConvertTo-Json -Compress
-$credentials = az ad app federated-credential list --id $objectId | ConvertFrom-Json
-if (-not ($credentials | Where-Object { $_.subject -eq $subject -and $_.issuer -eq 'https://token.actions.githubusercontent.com' })) {
-  $temp = New-TemporaryFile
-  try {
-    Set-Content -Path $temp.FullName -Value $credential
-    az ad app federated-credential create --id $objectId --parameters "@$($temp.FullName)" | Out-Null
+$repository = gh api "repos/$($inputs.repository)" | ConvertFrom-Json
+$owner = gh api "users/$($repository.owner.login)" | ConvertFrom-Json
+$subjectPrefix = "repo:$($repository.owner.login)@$($owner.id)/$($repository.name)@$($repository.id)"
+$desiredCredentials = @(
+  @{
+    name = 'github-main'
+    subject = "${subjectPrefix}:ref:refs/heads/main"
+  },
+  @{
+    name = 'github-pull-request'
+    subject = "${subjectPrefix}:pull_request"
+  },
+  @{
+    name = 'github-production'
+    subject = "${subjectPrefix}:environment:$($inputs.environment)"
+  }
+)
+$credentials = @(az ad app federated-credential list --id $objectId | ConvertFrom-Json)
+foreach ($desired in $desiredCredentials) {
+  $existing = @($credentials | Where-Object { $_.name -eq $desired.name })
+  if ($existing.Count -gt 0 -and (
+      $existing[0].subject -ne $desired.subject -or
+      $existing[0].issuer -ne 'https://token.actions.githubusercontent.com'
+    )) {
+    az ad app federated-credential delete --id $objectId --federated-credential-id $desired.name | Out-Null
     if ($LASTEXITCODE -ne 0) {
-      throw 'Unable to create the GitHub OIDC federated credential.'
+      throw "Unable to replace outdated GitHub OIDC credential '$($desired.name)'."
     }
-  } finally {
-    Remove-Item -LiteralPath $temp.FullName -Force
+    $existing = @()
+  }
+  if ($existing.Count -eq 0) {
+    $credential = @{
+      name = $desired.name
+      issuer = 'https://token.actions.githubusercontent.com'
+      subject = $desired.subject
+      audiences = @('api://AzureADTokenExchange')
+    } | ConvertTo-Json -Compress
+    $temp = New-TemporaryFile
+    try {
+      Set-Content -Path $temp.FullName -Value $credential
+      az ad app federated-credential create --id $objectId --parameters "@$($temp.FullName)" | Out-Null
+      if ($LASTEXITCODE -ne 0) {
+        throw "Unable to create GitHub OIDC federated credential '$($desired.name)'."
+      }
+    } finally {
+      Remove-Item -LiteralPath $temp.FullName -Force
+    }
   }
 }
 
@@ -65,5 +94,5 @@ if (-not $roleAssignments) {
   tenantId = $inputs.tenantId
   subscriptionId = $inputs.subscriptionId
   resourceGroupScope = $scope
-  federatedSubject = $subject
+  federatedSubjects = @($desiredCredentials.subject)
 } | ConvertTo-Json

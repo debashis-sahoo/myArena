@@ -71,8 +71,8 @@ These items are not marked complete or represented as deployment validation.
   assignment on the Application Insights resource.
 - 2026-11-28: production Web App is Running with Always On, WebSockets, HTTPS-only, Node.js 22,
   one worker, and `/healthz`.
-- 2026-11-28: GitHub OIDC client and federated credential were created for
-  `repo:debashis-sahoo/myArena:environment:production`.
+- 2026-11-28: GitHub OIDC client and exact hardened `main`, `pull_request`, and
+  `environment:production` federated credentials were created.
 - Blocked before app deployment: GitHub CLI is authenticated to `msft.ghe.com`, while GitHub.com
   authentication is invalid. No source commit, push, ZIP deployment, protected swap, or public
   cutover has been performed.

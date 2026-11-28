@@ -183,8 +183,9 @@ validation, protected approval, preflight, and the 500-connection S1 gate pass.
   Application Insights.
 - Production Web App: Running, HTTPS only, Always On, WebSockets, Node.js 22, one worker.
 - Slot settings: `SLOT_IDENTITY`, `PUBLIC_ORIGIN`, and `DRAIN_ORIGIN` are slot-sticky.
-- OIDC client ID: `8d68dc0c-934c-4de9-8ed4-8483c403539b`, with a production-environment
-  federated subject and resource-group Website Contributor role.
+- OIDC client ID: `8d68dc0c-934c-4de9-8ed4-8483c403539b`, with exact hardened `main`,
+  `pull_request`, and `environment:production` federated subjects and resource-group Website
+  Contributor role.
 - Live RBAC: production and staging managed identities each have `Monitoring Metrics Publisher`
   on the Application Insights resource.
 - Application artifact: pending. A clean source-controlled commit and valid GitHub.com
